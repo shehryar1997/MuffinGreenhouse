@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Muffin Nursery — Global Styles (Emilkowalski Inspired) */
+
+/* Font imports */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  :root {
+    /* Design System Colors */
+    --cream: #FAF7F2;
+    --lime: #D4F542;
+    --orange: #E85A3C;
+    --dark: #1A1A1A;
+    --blue: #7EC8E3;
+    --coral: #E85A3C;
+    
+    /* CSS Variables mapped to design tokens */
+    --background: 43 33% 94%;
+    --foreground: 0 0% 10%;
+    
+    --card: 43 33% 94%;
+    --card-foreground: 0 0% 10%;
+    
+    --popover: 43 33% 94%;
+    --popover-foreground: 0 0% 10%;
+    
+    --primary: 15 80% 56%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 75 90% 60%;
+    --secondary-foreground: 0 0% 10%;
+    
+    --muted: 30 10% 85%;
+    --muted-foreground: 30 5% 40%;
+    
+    --accent: 15 80% 56%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 30 10% 75%;
+    --input: 30 10% 85%;
+    --ring: 15 80% 56%;
+    
+    --radius: 0.5rem;
+    
+    /* Custom font variables */
+    --font-serif: 'Playfair Display', Georgia, serif;
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body { 
+    @apply bg-[#FAF7F2] text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4 { 
+    @apply font-serif tracking-tight; 
+    font-weight: 500;
+  }
+  code, pre { font-family: var(--font-mono); }
+  
+  /* Selection styling */
+  ::selection { background: #E85A3C; color: white; }
+  
+  /* Focus visible styling */
+  :focus-visible { 
+    @apply outline-none;
+    outline: 2px solid #E85A3C;
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  
+  /* Text balance for headings */
+  .text-balance { text-wrap: balance; }
+  
+  /* Vertical text utility */
+  .writing-vertical { writing-mode: vertical-rl; text-orientation: mixed; }
+  
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { 
+      animation-duration: 0.01ms !important; 
+      animation-iteration-count: 1 !important; 
+      transition-duration: 0.01ms !important; 
+    }
+  }
+  
+  /* Screen reader only */
+  .sr-only { 
+    @apply absolute w-px h-px p-0 -mx-px -mt-px overflow-hidden whitespace-nowrap border-0; 
+    clip: rect(0, 0, 0, 0); 
+  }
+  
+  /* Custom colors */
+  .text-lime { color: #D4F542; }
+  .text-orange { color: #E85A3C; }
+  .text-cream { color: #FAF7F2; }
+  .text-dark { color: #1A1A1A; }
+  .bg-lime { background-color: #D4F542; }
+  .bg-orange { background-color: #E85A3C; }
+  .bg-cream { background-color: #FAF7F2; }
+  .bg-dark { background-color: #1A1A1A; }
+}
