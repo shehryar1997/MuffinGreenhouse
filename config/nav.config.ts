@@ -77,20 +77,15 @@ export const mainNav: NavItem[] = [
     hasMegaMenu: true,
   },
   {
-    id: "plant-finder",
-    label: "Plant Finder",
-    href: "/plant-finder",
-    featured: true,
+    id: "muffin",
+    label: "MUFFIN AI",
+    href: "/muffin",
+    isAi: true,
   },
   {
     id: "events",
     label: "Events",
     href: "/events",
-  },
-  {
-    id: "muffin",
-    label: "Muffin",
-    href: "/muffin",
   },
   {
     id: "journal",
@@ -126,8 +121,7 @@ export const mobileNav: NavItem[] = [
   { id: "mobile-plants", label: "Plants", href: "/shop", children: shopMegaMenuSections.find(s => s.id === "plants")?.items },
   { id: "mobile-tools", label: "Tools & Equipment", href: "/shop", children: shopMegaMenuSections.find(s => s.id === "tools-equipment")?.items },
   { id: "mobile-by-need", label: "By Need", href: "/shop-by-need", children: shopByNeedCategories },
-  { id: "mobile-finder", label: "Plant Finder", href: "/plant-finder" },
-  { id: "mobile-muffin", label: "Muffin", href: "/muffin" },
-  { id: "mobile-journal", label: "Journal", href: "/journal" },
+  { id: "mobile-muffin", label: "MUFFIN AI", href: "/muffin", isAi: true },
   { id: "mobile-events", label: "Events", href: "/events" },
+  { id: "mobile-journal", label: "Journal", href: "/journal" },
 ]

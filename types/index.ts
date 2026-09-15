@@ -204,6 +204,7 @@ export interface NavItem {
   children?: NavItem[]
   featured?: boolean
   hasMegaMenu?: boolean
+  isAi?: boolean
 }
 
 export interface MegaMenuSection {

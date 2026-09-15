@@ -186,11 +186,18 @@ function MoodPlantsGrid({ mood, theme }: { mood: Mood; theme: import("@/lib/mood
 // Build use cases list from nav config
 const useCasesList = shopByNeedCategories.map((cat) => {
   const slug = cat.href.replace("/shop-by-need/", "")
+  const descriptions: Record<string, string> = {
+    "low-light-survivors": "Thrive where the sun doesn't shine",
+    "balcony-rooftop": "Wind and heat warriors for outdoor spaces",
+    "air-purifying": "Breathe better with NASA-approved greens",
+    "pet-safe": "Non-toxic for curious cats and dogs",
+    "beginner-proof": "Hard to kill, easy to love",
+    "statement-plants": "Big, bold, and conversation-starting"
+  }
   return {
     key: slug,
     title: cat.label,
-    // Pet-Safe and Balcony & Rooftop are accented in original design
-    accent: slug === "pet-safe" || slug === "balcony-rooftop",
+    description: descriptions[slug] || "Curated for real homes",
   }
 })
 
@@ -333,10 +340,10 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <KineticHeading delay={0.1}>
               <h2 className="font-serif leading-[0.9] tracking-tight">
-                <KineticLine className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#1A1A1A]" delay={0}><LiftText>Less</LiftText></KineticLine>
-                <KineticLine className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#1A1A1A]" delay={0.08}><LiftText>guesswork.</LiftText></KineticLine>
-                <KineticLine className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#A5C930]" delay={0.16}><LiftText>More</LiftText></KineticLine>
-                <KineticLine className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#A5C930]" delay={0.24}><LiftText>green.</LiftText></KineticLine>
+                <KineticLine className="block text-[clamp(2.5rem,10vw,5rem)] text-[#1A1A1A]" delay={0}><LiftText>Less</LiftText></KineticLine>
+                <KineticLine className="block text-[clamp(2.5rem,10vw,5rem)] text-[#1A1A1A]" delay={0.08}><LiftText>guesswork.</LiftText></KineticLine>
+                <KineticLine className="block text-[clamp(2.5rem,10vw,5rem)] text-[#A5C930]" delay={0.16}><LiftText>More</LiftText></KineticLine>
+                <KineticLine className="block text-[clamp(2.5rem,10vw,5rem)] text-[#A5C930]" delay={0.24}><LiftText>green.</LiftText></KineticLine>
               </h2>
             </KineticHeading>
             <FadeIn delay={0.2}>
@@ -397,9 +404,10 @@ export default function HomePage() {
               {["soft","bright","moody"].map((m) => {
                 const theme = moodThemes[m as Mood]
                 const isSelected = selectedMood === m
+                const currentTheme = moodThemes[selectedMood as Mood]
                 return (
-                  <button 
-                    key={m} 
+                  <button
+                    key={m}
                     onClick={() => {
                       setSelectedMood(m)
                       // ponytail: Scroll products into view on mood change for UX
@@ -407,8 +415,8 @@ export default function HomePage() {
                       if (grid) {
                         grid.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }
-                    }} 
-                    className={`px-5 py-2 rounded-full text-xs font-medium tracking-wide border transition-all duration-300 ${isSelected ? theme.buttonActive : `${theme.buttonInactive} ${theme.buttonInactiveText} hover:${theme.borderHover}`}`}
+                    }}
+                    className={`px-5 py-2 rounded-full text-xs font-medium tracking-wide border transition-all duration-300 ${isSelected ? theme.buttonActive : `${theme.buttonInactive} ${!isSelected ? currentTheme.accent : theme.buttonInactiveText} hover:${theme.borderHover}`}`}
                   >
                     {m.toUpperCase()}
                   </button>
@@ -442,10 +450,10 @@ export default function HomePage() {
           <FadeIn delay={0.2}>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {useCasesList.map((uc) => (
-                <Link key={uc.key} href={`/shop-by-need/${uc.key}`} className={`group p-8 border border-forest-200/50 hover:border-[#D4F542] transition-colors relative overflow-hidden ${uc.accent ? 'bg-[#E8F5A8]' : 'bg-transparent hover:bg-white'}`}>
+                <Link key={uc.key} href={`/shop-by-need/${uc.key}`} className="group p-8 bg-[#E8F5A8] border border-forest-200/50 hover:border-[#D4F542] hover:bg-[#D4F542] transition-colors relative overflow-hidden">
                   <span className="text-[#E85A3C] text-2xl absolute top-6 right-6">*</span>
                   <h3 className="font-serif text-2xl mb-2">{uc.title}</h3>
-                  <p className="font-mono text-[10px] tracking-widest text-forest-500 uppercase">Curated for real homes</p>
+                  <p className="font-mono text-[10px] tracking-widest text-forest-500 uppercase">{uc.description}</p>
                 </Link>
               ))}
             </div>

@@ -13,7 +13,7 @@ export default function ShopByNeedPage({ params }: { params: { slug: string } })
   if (!useCase) return notFound()
 
   return (
-    <div className="bg-cream-100 min-h-screen py-12">
+    <div className="bg-cream-100 min-h-screen pt-28 pb-12">
       <div className="container mx-auto px-4 max-w-6xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -27,9 +27,9 @@ export default function ShopByNeedPage({ params }: { params: { slug: string } })
         </motion.div>
 
         {products.length > 0 ? (
-          <div className="product-grid">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product, i) => (
+              <ProductCard key={product.id} product={product} index={i} />
             ))}
           </div>
         ) : (

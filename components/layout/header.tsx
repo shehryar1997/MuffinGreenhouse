@@ -3,7 +3,7 @@
 import { useState, useRef } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, ShoppingBag, Menu, X, User, Star } from "lucide-react"
+import { Search, ShoppingBag, Menu, X, User, Star, Sparkles } from "lucide-react"
 import { mainNav, shopMegaMenuSections } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
@@ -53,17 +53,17 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
-            {mainNav.slice(0, 5).map((item) => (
+            {mainNav.map((item) => (
               item.hasMegaMenu ? (
                 <div 
                   key={item.id} 
-                  className="relative"
+                  className="relative inline-flex items-center"
                   onMouseEnter={handleShopMenuEnter}
                   onMouseLeave={handleShopMenuLeave}
                 >
                   <Link 
                     href={item.href} 
-                    className="font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-[#1A1A1A] transition-colors py-2"
+                    className="font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-[#1A1A1A] transition-colors py-2 inline-block"
                   >
                     {item.label}
                   </Link>
@@ -147,6 +147,17 @@ export function Header() {
                     )}
                   </AnimatePresence>
                 </div>
+              ) : item.isAi ? (
+                <Link 
+                  key={item.id}
+                  href={item.href} 
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-forest-300 bg-forest-50/50 hover:bg-forest-100 hover:border-forest-400 transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-forest-600" />
+                  <span className="font-mono text-xs font-bold tracking-widest uppercase text-forest-700">
+                    {item.label}
+                  </span>
+                </Link>
               ) : (
                 <Link 
                   key={item.id}
@@ -229,9 +240,18 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <span className="font-mono text-sm text-forest-400">{String(i + 1).padStart(2, '0')}</span>
-                      <span className="font-serif text-4xl text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors">
-                        {item.label}
-                      </span>
+                      {item.isAi ? (
+                        <span className="flex items-center gap-2">
+                          <span className="font-serif text-4xl text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors">
+                            {item.label}
+                          </span>
+                          <Sparkles className="w-5 h-5 text-forest-500" />
+                        </span>
+                      ) : (
+                        <span className="font-serif text-4xl text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors">
+                          {item.label}
+                        </span>
+                      )}
                     </Link>
                   </motion.div>
                 ))}

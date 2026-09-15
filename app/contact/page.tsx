@@ -5,7 +5,7 @@ import { MessageCircle, Mail, MapPin } from "lucide-react"
 
 export default function ContactPage() {
   return (
-    <div className="bg-cream-100 min-h-screen py-20">
+    <div className="bg-cream-100 min-h-screen pt-32 pb-20">
       <div className="container mx-auto px-4 max-w-3xl">
         <div className="text-center mb-12">
           <p className="font-mono text-sm text-forest-500 mb-2">Get in Touch</p>

@@ -7,13 +7,18 @@ const nextConfig = {
       { protocol: 'https', hostname: 'ik.imagekit.io' },
       { protocol: 'https', hostname: 'images.pexels.com' },
     ],
+    formats: ['image/webp', 'image/avif'], // ponytail: Optimized image formats
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: ['lucide-react', 'framer-motion', 'recharts'],
+    scrollRestoration: true,
   },
-  // Disable static export for dynamic rendering during development
-  // Use 'export' only when you need to build for static hosting
-  // output: 'export',
+  // ponytail: Production build optimizations
+  poweredByHeader: false,
+  compress: true,
+  trailingSlash: false,
 }
 
 export default nextConfig

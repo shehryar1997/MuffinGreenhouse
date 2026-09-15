@@ -1,1 +1,2 @@
-# Graphify Knowledge Graph Before making cross-file changes, check graphify-out/graph.json for how files relate to each other, if present.
+# Graphify
+# ponytail: Disabled - 01-project-map.md is the single source of truth for file relationships

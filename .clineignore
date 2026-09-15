@@ -1,0 +1,69 @@
+# Build output
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Lockfiles
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Static assets
+public/
+*.ico
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# IDE and tooling
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Agent skills (CRITICAL: Exclude all skills to save tokens)
+.agents/
+.agents/skills/**
+.agents/skills/**/SKILL.md
+.agents/skills/**/CHANGELOG.md
+.agents/skills/**/references/**
+.agents/skills/**/rules/**

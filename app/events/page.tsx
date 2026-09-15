@@ -15,7 +15,7 @@ export default function EventsPage() {
   return (
     <div className="bg-cream-100 min-h-screen">
       <div className="container mx-auto px-4 max-w-5xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="py-20 text-center">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="pt-32 pb-20 text-center">
           <p className="font-mono text-sm text-forest-500 mb-2">Calendar</p>
           <h1 className="font-serif text-display text-forest-900 mb-4">Events & Workshops</h1>
           <p className="text-forest-600 text-body-lg max-w-xl mx-auto">

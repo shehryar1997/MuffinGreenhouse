@@ -5,19 +5,20 @@ import { motion } from "framer-motion"
 import { ChevronDown } from "lucide-react"
 
 const faqs = [
-  { question: "Where are you located?", answer: "We are based in Clifton, Karachi. You can visit our nursery by appointment or order online for delivery across Karachi." },
+  { question: "Where are you located?", answer: "We are based in DHA Phase 6, Karachi. You can visit our nursery or order online for delivery across Karachi." },
   { question: "How do I know which plant is right for my space?", answer: "Take our Plant Finder quiz at /plant-finder or use the filters on our shop page. Consider light, space, and how much you can realistically water." },
   { question: "Do you deliver outside Karachi?", answer: "Currently we only deliver within Karachi city limits. For special requests outside Karachi, please WhatsApp us." },
-  { question: "What if my plant dies?", answer: "We offer 30-day health guarantee on all plants. If something goes wrong, contact us with photos and we will help troubleshoot or replace." },
+  { question: "What if my plant arrives damaged?", answer: "Standard plants: Report within 24 hours with clear photos. Aroids & Premium plants (Monstera, Philodendron, etc): You get 72 hours since they can show transit stress later. Read more on /our-guarantee." },
+  { question: "Why only 72 hours for Aroids?", answer: "Aroids are delicate and expensive. They might look fine on arrival but develop issues 1-3 days later due to transit shock. The 72-hour window lets you properly acclimate them and report any real transit damage, while protecting both of us from premature claims." },
   { question: "How do I pay?", answer: "We accept credit cards (online), bank transfer, JazzCash, and Easypaisa. For manual payments, we will send you details after checkout." },
-  { question: "Can I pick up my order?", answer: "Yes! Select 'Pickup' at checkout. We offer pickup from our Clifton location. You'll get the address after confirming your order." },
+  { question: "Can I pick up my order?", answer: "Yes! Select 'Pickup' at checkout. We offer pickup from our DHA Phase 6 location. You'll get the address after confirming your order." },
 ]
 
 export default function FAQPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
 
   return (
-    <div className="bg-cream-100 min-h-screen py-20">
+    <div className="bg-cream-100 min-h-screen pt-32 pb-20">
       <div className="container mx-auto px-4 max-w-3xl">
         <div className="text-center mb-12">
           <p className="font-mono text-sm text-forest-500 mb-2">Help</p>

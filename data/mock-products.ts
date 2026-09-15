@@ -88,7 +88,7 @@ const createPlant = (id: string, name: string, slug: string, cat: Category, pric
     "bright"
   
   return { 
-    id, name, slug, category: cat, description: `${name} — locally grown in Karachi`, price, currency: "PKR", stockStatus, stockCount: stock, images: [{ id: `img-${id}`, url: imageUrl, alt: name, sortOrder: 1 }], careInfo: { light: "Bright indirect", water: "Weekly", humidity: "Average", temperature: "20-30°C", soil: "Well-draining", fertilizer: "Monthly", toxicity: "Check label" }, variants: [{ id: `var-${id}`, name: "Standard", price, stockStatus, stockCount: stock, sku: slug.substring(0, 3).toUpperCase() + "001" }], useCaseTags: ["beginner", ...extraTags], isNewArrival: id.includes("-new"), isPetSafe: id.includes("-safe"), difficulty: "beginner", lightRequirement: "medium", waterRequirement: "medium", size: "medium", moodTags: extraProps.moodTags ?? [defaultMoodTag], createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-09-01T00:00:00Z", ...extraProps 
+    id, name, slug, category: cat, description: `${name} — locally grown in Karachi`, price, currency: "PKR", stockStatus, stockCount: stock, images: [{ id: `img-${id}`, url: imageUrl, alt: name, sortOrder: 1 }], careInfo: { light: "Bright indirect", water: "Weekly", humidity: "Average", temperature: "20-30°C", soil: "Well-draining", fertilizer: "Monthly", toxicity: "Check label" }, variants: [{ id: `var-${id}`, name: "Standard", price, stockStatus, stockCount: stock, sku: slug.substring(0, 3).toUpperCase() + "001" }], useCaseTags: ["beginner-proof", ...extraTags], isNewArrival: id.includes("-new"), isPetSafe: id.includes("-safe"), difficulty: "beginner", lightRequirement: "medium", waterRequirement: "medium", size: "medium", moodTags: extraProps.moodTags ?? [defaultMoodTag], createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-09-01T00:00:00Z", ...extraProps 
   }
 }
 
@@ -96,46 +96,46 @@ const createTool = (id: string, name: string, slug: string, cat: Category, price
 
 // === AROIDS ===
 const aroids = [
-  createPlant("prod-001", "Monstera Deliciosa", "monstera-deliciosa", categories.aroids, 2500, 8, "in_stock", "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80"),
-  createPlant("prod-aroid-002", "Pink Princess Philodendron", "pink-princess-philodendron", categories.aroids, 8500, 3, "low_stock", "https://images.unsplash.com/photo-1628506471177-2832323c5e81?w=800&q=80", ["statement"]),
-  createPlant("prod-aroid-003", "Philodendron Brasil", "philodendron-brasil", categories.aroids, 1800, 12, "in_stock", "https://images.unsplash.com/photo-1600417148561-5b3e7a19de18?w=800&q=80", ["beginner"]),
-  createPlant("prod-aroid-004", "Anthurium Red", "anthurium-red", categories.aroids, 3200, 6, "in_stock", "https://images.unsplash.com/photo-1593691509543-c55ba2c66769?w=800&q=80", ["air-purifying"]),
-  createPlant("prod-aroid-005", "Alocasia Polly", "alocasia-polly", categories.aroids, 3800, 4, "low_stock", "https://images.unsplash.com/photo-1612363228248-93c30113d8e1?w=800&q=80"),
-  createPlant("prod-aroid-006", "ZZ Plant", "zz-plant", categories.aroids, 2800, 15, "in_stock", "https://images.unsplash.com/photo-1631197721633-254365f354d9?w=800&q=80", ["low-light", "air-purifying"], { lightRequirement: "low" }),
-  createPlant("prod-aroid-007", "Pothos Golden", "pothos-golden", categories.aroids, 1200, 20, "in_stock", "https://images.unsplash.com/photo-1600417148561-5b3e7a19de18?w=800&q=80", ["beginner", "trailing"]),
-  createPlant("prod-aroid-008", "Syngonium Pink", "syngonium-pink", categories.aroids, 1800, 10, "in_stock", "https://images.unsplash.com/photo-1600417148561-5b3e7a19de18?w=800&q=80"),
+  createPlant("prod-001", "Monstera Deliciosa", "monstera-deliciosa", categories.aroids, 2500, 8, "in_stock", "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80", ["statement-plants"], { size: "large" }),
+  createPlant("prod-aroid-002", "Pink Princess Philodendron", "pink-princess-philodendron", categories.aroids, 8500, 3, "low_stock", "https://images.unsplash.com/photo-1628506471177-2832323c5e81?w=800&q=80", ["statement-plants", "beginner-proof"]),
+  createPlant("prod-aroid-003", "Philodendron Brasil", "philodendron-brasil", categories.aroids, 1800, 12, "in_stock", "https://images.unsplash.com/photo-1600417148561-5b3e7a19de18?w=800&q=80", ["beginner-proof", "pet-safe"], { isPetSafe: true }),
+  createPlant("prod-aroid-004", "Anthurium Red", "anthurium-red", categories.aroids, 3200, 6, "in_stock", "https://images.unsplash.com/photo-1593691509543-c55ba2c66769?w=800&q=80", ["air-purifying", "beginner-proof"]),
+  createPlant("prod-aroid-005", "Alocasia Polly", "alocasia-polly", categories.aroids, 3800, 4, "low_stock", "https://images.unsplash.com/photo-1612363228248-93c30113d8e1?w=800&q=80", ["statement-plants"]),
+  createPlant("prod-aroid-006", "ZZ Plant", "zz-plant", categories.aroids, 2800, 15, "in_stock", "https://images.unsplash.com/photo-1631197721633-254365f354d9?w=800&q=80", ["low-light-survivors", "air-purifying", "beginner-proof"], { lightRequirement: "low" }),
+  createPlant("prod-aroid-007", "Pothos Golden", "pothos-golden", categories.aroids, 1200, 20, "in_stock", "https://images.unsplash.com/photo-1600417148561-5b3e7a19de18?w=800&q=80", ["beginner-proof", "low-light-survivors", "air-purifying"], { lightRequirement: "low" }),
+  createPlant("prod-aroid-008", "Syngonium Pink", "syngonium-pink", categories.aroids, 1800, 10, "in_stock", "https://images.unsplash.com/photo-1600417148561-5b3e7a19de18?w=800&q=80", ["pet-safe", "beginner-proof"], { isPetSafe: true }),
 ]
 
 // === SANSEVIERIAS ===
 const sansevierias = [
-  createPlant("prod-003", "Snake Plant", "snake-plant", categories.sansevierias, 1800, 25, "in_stock", "https://images.unsplash.com/photo-1599598425947-240a7d7c5b1d?w=800&q=80", ["low-light", "air-purifying"], { lightRequirement: "low" }),
-  createPlant("prod-sans-002", "Laurentii Snake Plant", "laurentii-snake-plant", categories.sansevierias, 2200, 12, "in_stock", "https://images.unsplash.com/photo-1598880940371-c756e015fea1?w=800&q=80", ["statement"]),
-  createPlant("prod-sans-003", "Cylindrical Snake Plant", "cylindrical-snake-plant", categories.sansevierias, 2600, 8, "in_stock", "https://images.unsplash.com/photo-1599598425947-240a7d7c5b1d?w=800&q=80"),
-  createPlant("prod-sans-004", "Whale Fin Sansevieria", "whale-fin-sansevieria", categories.sansevierias, 4800, 3, "low_stock", "https://images.unsplash.com/photo-1599598425947-240a7d7c5b1d?w=800&q=80", ["rare"]),
+  createPlant("prod-003", "Snake Plant", "snake-plant", categories.sansevierias, 1800, 25, "in_stock", "https://images.unsplash.com/photo-1599598425947-240a7d7c5b1d?w=800&q=80", ["low-light-survivors", "air-purifying", "beginner-proof"], { lightRequirement: "low" }),
+  createPlant("prod-sans-002", "Laurentii Snake Plant", "laurentii-snake-plant", categories.sansevierias, 2200, 12, "in_stock", "https://images.unsplash.com/photo-1598880940371-c756e015fea1?w=800&q=80", ["statement-plants", "air-purifying", "beginner-proof", "low-light-survivors"]),
+  createPlant("prod-sans-003", "Cylindrical Snake Plant", "cylindrical-snake-plant", categories.sansevierias, 2600, 8, "in_stock", "https://images.unsplash.com/photo-1599598425947-240a7d7c5b1d?w=800&q=80", ["statement-plants", "beginner-proof"]),
+  createPlant("prod-sans-004", "Whale Fin Sansevieria", "whale-fin-sansevieria", categories.sansevierias, 4800, 3, "low_stock", "https://images.unsplash.com/photo-1599598425947-240a7d7c5b1d?w=800&q=80", ["statement-plants", "low-light-survivors"]),
 ]
 
 // === AGAVES ===
 const agaves = [
-  createPlant("prod-agave-001", "Blue Agave", "blue-agave", categories.agaves, 4500, 6, "in_stock", "https://images.unsplash.com/photo-1509587584298-0f3b3a3a1797?w=800&q=80", ["statement"], { lightRequirement: "full_sun", size: "large" }),
-  createPlant("prod-agave-002", "Century Plant", "century-plant", categories.agaves, 5800, 3, "low_stock", "https://images.unsplash.com/photo-1509587584298-0f3b3a3a1797?w=800&q=80", ["statement"], { lightRequirement: "full_sun" }),
+  createPlant("prod-agave-001", "Blue Agave", "blue-agave", categories.agaves, 4500, 6, "in_stock", "https://images.unsplash.com/photo-1509587584298-0f3b3a3a1797?w=800&q=80", ["statement-plants", "balcony-rooftop"], { lightRequirement: "full_sun", size: "large" }),
+  createPlant("prod-agave-002", "Century Plant", "century-plant", categories.agaves, 5800, 3, "low_stock", "https://images.unsplash.com/photo-1509587584298-0f3b3a3a1797?w=800&q=80", ["statement-plants", "balcony-rooftop"], { lightRequirement: "full_sun", size: "large" }),
 ]
 
 // === MANGAVES ===
 const mangaves = [
-  createPlant("prod-mangave-001", "Mangave Silver Fox", "mangave-silver-fox", categories.mangaves, 3800, 5, "in_stock", "https://images.unsplash.com/photo-1509587584298-0f3b3a3a1797?w=800&q=80"),
-  createPlant("prod-mangave-002", "Mangave Macho Mocha", "mangave-macho-mocha", categories.mangaves, 4200, 4, "in_stock", "https://images.unsplash.com/photo-1509587584298-0f3b3a3a1797?w=800&q=80", ["statement"]),
+  createPlant("prod-mangave-001", "Mangave Silver Fox", "mangave-silver-fox", categories.mangaves, 3800, 5, "in_stock", "https://images.unsplash.com/photo-1509587584298-0f3b3a3a1797?w=800&q=80", ["balcony-rooftop", "statement-plants"], { lightRequirement: "full_sun" }),
+  createPlant("prod-mangave-002", "Mangave Macho Mocha", "mangave-macho-mocha", categories.mangaves, 4200, 4, "in_stock", "https://images.unsplash.com/photo-1509587584298-0f3b3a3a1797?w=800&q=80", ["statement-plants", "balcony-rooftop"], { lightRequirement: "full_sun" }),
 ]
 
 // === HOYAS ===
 const hoyas = [
-  createPlant("prod-002", "Hoya Kerrii", "hoya-kerrii", categories.hoyas, 1200, 15, "in_stock", "https://images.unsplash.com/photo-1459411552884-8419b9b3cc2a?w=800&q=80", ["beginner", "pet-safe"], { isPetSafe: true }),
-  createPlant("prod-hoyas-002", "Hoya Carnosa", "hoya-carnosa", categories.hoyas, 1800, 10, "in_stock", "https://images.unsplash.com/photo-1459411552884-8419b9b3cc2a?w=800&q=80", ["pet-safe", "trailing"], { isPetSafe: true }),
+  createPlant("prod-002", "Hoya Kerrii", "hoya-kerrii", categories.hoyas, 1200, 15, "in_stock", "https://images.unsplash.com/photo-1459411552884-8419b9b3cc2a?w=800&q=80", ["beginner-proof", "pet-safe"], { isPetSafe: true }),
+  createPlant("prod-hoyas-002", "Hoya Carnosa", "hoya-carnosa", categories.hoyas, 1800, 10, "in_stock", "https://images.unsplash.com/photo-1459411552884-8419b9b3cc2a?w=800&q=80", ["pet-safe", "beginner-proof", "air-purifying"], { isPetSafe: true }),
 ]
 
 // === ORCHIDS ===
 const orchids = [
-  createPlant("prod-orchid-001", "Phalaenopsis Orchid", "phalaenopsis-orchid", categories.orchids, 3500, 8, "in_stock", "https://images.unsplash.com/photo-1566633806327-68e152aaf26d?w=800&q=80", ["elegant", "statement"]),
-  createPlant("prod-orchid-002", "Dendrobium Orchid", "dendrobium-orchid", categories.orchids, 4200, 5, "in_stock", "https://images.unsplash.com/photo-1566633806327-68e152aaf26d?w=800&q=80", ["elegant"]),
+  createPlant("prod-orchid-001", "Phalaenopsis Orchid", "phalaenopsis-orchid", categories.orchids, 3500, 8, "in_stock", "https://images.unsplash.com/photo-1566633806327-68e152aaf26d?w=800&q=80", ["statement-plants", "air-purifying", "beginner-proof"]),
+  createPlant("prod-orchid-002", "Dendrobium Orchid", "dendrobium-orchid", categories.orchids, 4200, 5, "in_stock", "https://images.unsplash.com/photo-1566633806327-68e152aaf26d?w=800&q=80", ["statement-plants", "air-purifying"]),
 ]
 
 // === TOOLS & EQUIPMENT ===
@@ -191,12 +191,12 @@ export const mockEvents: Event[] = [
   { id: "evt-003", slug: "plant-parents-101", title: "Plant Parents 101", description: "Everything you need to know about caring for your first plants. We cover watering, light, soil, and common mistakes new plant parents make.", type: "workshop", datetime: "2024-09-01T10:00:00Z", location: "Muffin Nursery", price: 1500, spotsTotal: 12, spotsRemaining: 0, image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80", isUpcoming: false },
 ]
 export const useCases: Record<string, { title: string; desc: string; icon: string }> = {
-  "low-light-survivors": { title: "Low-light Survivors", desc: "Thrive where the sun doesn't shine", icon: "🌙" },
+  "low-light-survivors": { title: "Low-Light Survivors", desc: "Thrive where the sun doesn't shine", icon: "🌙" },
+  "balcony-rooftop": { title: "Balcony & Rooftop", desc: "Wind and heat warriors", icon: "🏠" },
+  "air-purifying": { title: "Air-Purifying", desc: "NASA-approved fresh air", icon: "💨" },
   "pet-safe": { title: "Pet-Safe", desc: "Non-toxic for curious cats and dogs", icon: "🐾" },
   "beginner-proof": { title: "Beginner-Proof", desc: "Hard to kill, easy to love", icon: "💚" },
   "statement-plants": { title: "Statement Plants", desc: "Big, bold, and conversation-starting", icon: "✨" },
-  "air-purifying": { title: "Air-purifying", desc: "NASA-approved fresh air", icon: "💨" },
-  "balcony-rooftop": { title: "Balcony & Rooftop", desc: "Wind and heat warriors", icon: "🏠" },
 }
 
 // Icons for Shop by Need categories - matches the slugs in nav.config.ts
@@ -216,6 +216,7 @@ export const mockJournalPosts: JournalPost[] = [
 
 export const getProductBySlug = (slug: string): Product | undefined => mockProducts.find((p) => p.slug === slug)
 export const getProductsByCategory = (categorySlug: string): Product[] => mockProducts.filter((p) => p.category.slug === categorySlug)
+export const getProductsByUseCase = (useCaseSlug: string): Product[] => mockProducts.filter((p) => p.useCaseTags.includes(useCaseSlug))
 export const getWeeklySoldCount = (): number => 14
 export const plantOfTheDay = mockProducts[0]
 
