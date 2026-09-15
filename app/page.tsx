@@ -6,7 +6,9 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Plus } from "lucide-react"
 import { shopByNeedCategories } from "@/config/nav.config"
-import { shopByNeedIcons, mockProducts, mockEvents } from "@/data/mock-products"
+import { mockProducts } from "@/lib/data/products"
+import { mockEvents } from "@/lib/data/events"
+import { shopByNeedIcons } from "@/lib/data/products"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useParallax } from "@/hooks/use-parallax"
 import { moodThemes, filterProductsByMood, Mood } from "@/lib/mood-utils"
@@ -109,6 +111,58 @@ function LiftText({ children, className = "" }: { children: string; className?: 
         </motion.span>
       ))}
     </span>
+  )
+}
+
+// AnimatedHeading: Unified microinteraction for headlines
+// Applies KineticLine entrance + LiftText hover to each line
+// ponytail: Single source of truth for heading microinteractions
+interface AnimatedHeadingProps {
+  /** Array of text lines - each renders as separate block with entrance animation */
+  lines: string[]
+  /**
+   * Base className applied to each line wrapper.
+   * Can be a string (applied to all lines) or array of strings (one per line).
+   */
+  className?: string | string[]
+  /** Stagger delay between lines (in seconds), default: 0.08 */
+  stagger?: number
+  /** Initial delay before first line animates (in seconds), default: 0 */
+  delay?: number
+}
+
+function AnimatedHeading({ lines, className = "", stagger = 0.08, delay = 0 }: AnimatedHeadingProps) {
+  const prefersReducedMotion = useReducedMotion()
+
+  // ponytail: Handle per-line or shared className
+  const getLineClass = (index: number): string => {
+    if (Array.isArray(className)) {
+      return className[index] || className[className.length - 1] || ""
+    }
+    return className
+  }
+
+  // ponytail: Reduced motion fallback - render static text
+  if (prefersReducedMotion) {
+    return (
+      <>
+        {lines.map((line, i) => (
+          <span key={i} className={`block ${getLineClass(i)}`}>
+            {line}
+          </span>
+        ))}
+      </>
+    )
+  }
+
+  return (
+    <>
+      {lines.map((line, i) => (
+        <KineticLine key={i} className={getLineClass(i)} delay={delay + i * stagger}>
+          <LiftText>{line}</LiftText>
+        </KineticLine>
+      ))}
+    </>
   )
 }
 
@@ -292,10 +346,15 @@ export default function HomePage() {
             <KineticHeading delay={0.1}>
               <div>
                 <h1 className="font-serif leading-[0.85] tracking-tight">
-                  <KineticLine className="block text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]" delay={0}><LiftText>Good</LiftText></KineticLine>
-                  <KineticLine className="block text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]" delay={0.08}><LiftText>plants.</LiftText></KineticLine>
-                  <KineticLine className="block text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]" delay={0.16}><LiftText>Good</LiftText></KineticLine>
-                  <KineticLine className="block text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]" delay={0.24}><LiftText>energy.</LiftText></KineticLine>
+                  <AnimatedHeading
+                    lines={["Good", "plants.", "Good", "energy."]}
+                    className={[
+                      "text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]",
+                      "text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]",
+                      "text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]",
+                      "text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]",
+                    ]}
+                  />
                 </h1>
                 <div className="mt-8 flex items-start gap-4">
                   <p className="text-forest-600 text-lg max-w-xs">Green things worth collecting - sourced globally, acclimated for<br />Pakistan.</p>
@@ -340,10 +399,15 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <KineticHeading delay={0.1}>
               <h2 className="font-serif leading-[0.9] tracking-tight">
-                <KineticLine className="block text-[clamp(2.5rem,10vw,5rem)] text-[#1A1A1A]" delay={0}><LiftText>Less</LiftText></KineticLine>
-                <KineticLine className="block text-[clamp(2.5rem,10vw,5rem)] text-[#1A1A1A]" delay={0.08}><LiftText>guesswork.</LiftText></KineticLine>
-                <KineticLine className="block text-[clamp(2.5rem,10vw,5rem)] text-[#A5C930]" delay={0.16}><LiftText>More</LiftText></KineticLine>
-                <KineticLine className="block text-[clamp(2.5rem,10vw,5rem)] text-[#A5C930]" delay={0.24}><LiftText>green.</LiftText></KineticLine>
+                <AnimatedHeading
+                  lines={["Less", "guesswork.", "More", "green."]}
+                  className={[
+                    "text-[clamp(2.5rem,10vw,5rem)] text-[#1A1A1A]",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-[#1A1A1A]",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-[#A5C930]",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-[#A5C930]",
+                  ]}
+                />
               </h2>
             </KineticHeading>
             <FadeIn delay={0.2}>
@@ -391,8 +455,10 @@ export default function HomePage() {
           </FadeIn>
           <FadeIn delay={0.1}>
             <h2 className="font-serif leading-[0.9] tracking-tight mb-16">
-              <span className={`block text-[clamp(2.5rem,8vw,5.5rem)] ${moodThemes[selectedMood as Mood].textPrimary}`}>Pick your</span>
-              <span className={`block text-[clamp(2.5rem,8vw,5.5rem)] ${moodThemes[selectedMood as Mood].accent}`}>atmosphere.</span>
+              <AnimatedHeading
+                lines={["Pick your", "atmosphere."]}
+                className={`text-[clamp(2.5rem,8vw,5.5rem)] ${moodThemes[selectedMood as Mood].textPrimary}`}
+              />
             </h2>
           </FadeIn>
           <FadeIn delay={0.2}>
@@ -444,7 +510,7 @@ export default function HomePage() {
           </FadeIn>
           <FadeIn delay={0.1}>
             <h2 className="font-serif text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A] leading-[0.95] tracking-tight mb-16">
-              Find your kind of green.
+              <AnimatedHeading lines={["Find your kind of green."]} />
             </h2>
           </FadeIn>
           <FadeIn delay={0.2}>
@@ -475,8 +541,10 @@ export default function HomePage() {
           <div className="grid lg:grid-cols-2 gap-16">
             <FadeIn delay={0.1}>
               <h2 className="font-serif leading-[0.95] tracking-tight">
-                <span className="block text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A]">We killed a lot of plants</span>
-                <span className="block text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A]">so you do not have to.</span>
+                <AnimatedHeading
+                  lines={["We killed a lot of", "plants", "so you do not have to."]}
+                  className="text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A] whitespace-nowrap"
+                />
               </h2>
             </FadeIn>
             <FadeIn delay={0.2}>
@@ -503,7 +571,7 @@ export default function HomePage() {
                 <span className="mx-2 text-[#1A1A1A]/30">/</span>
                 <span className="font-mono text-xs tracking-widest text-[#1A1A1A]/60">IN THE GREENHOUSE</span>
                 <h2 className="font-serif text-[clamp(2.5rem,6vw,5rem)] text-[#1A1A1A] leading-[0.9] tracking-tight mt-8">
-                  Get your<br />hands dirty.
+                  <AnimatedHeading lines={["Get your", "hands dirty."]} className="text-[clamp(2.5rem,6vw,5rem)]" />
                 </h2>
                 <p className="text-[#1A1A1A]/70 mt-6 max-w-xs">Workshops, plant walks, and small rituals for curious people.</p>
               </div>

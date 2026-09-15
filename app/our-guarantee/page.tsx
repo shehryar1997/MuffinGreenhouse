@@ -1,6 +1,3 @@
-"use client"
-
-import { motion } from "framer-motion"
 import { Check, X, MessageCircle, Shield, AlertCircle } from "lucide-react"
 
 export default function GuaranteePage() {
@@ -14,9 +11,7 @@ export default function GuaranteePage() {
         </div>
 
         {/* Plant Health Guarantee Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="bg-gradient-to-br from-clay-500/10 to-clay-500/5 border border-clay-500/20 rounded-2xl p-8 mb-6"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -50,13 +45,10 @@ export default function GuaranteePage() {
             <MessageCircle className="w-5 h-5" />
             WhatsApp for Claims
           </a>
-        </motion.div>
+        </div>
 
         {/* What's Not Covered */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
+        <div
           className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6"
         >
           <div className="flex items-start gap-3">
@@ -70,7 +62,7 @@ export default function GuaranteePage() {
               </p>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Coverage Grid */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -106,10 +98,7 @@ export default function GuaranteePage() {
         </div>
 
         {/* Quick Reference */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+        <div
           className="bg-forest-300 text-cream-100 rounded-2xl p-8 text-center"
         >
           <h3 className="font-serif text-xl mb-4">Quick Reference</h3>
@@ -119,7 +108,7 @@ export default function GuaranteePage() {
               <div>2 hours • Clear photos required • Replacement or store credit</div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         <p className="text-center text-forest-500 mt-8">
           We package with care. You care for plants. We both win.

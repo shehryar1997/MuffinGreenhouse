@@ -1,6 +1,3 @@
-"use client"
-
-import { motion } from "framer-motion"
 import { MessageCircle, Mail, MapPin } from "lucide-react"
 
 export default function ContactPage() {
@@ -10,27 +7,23 @@ export default function ContactPage() {
         <div className="text-center mb-12">
           <p className="font-mono text-sm text-forest-500 mb-2">Get in Touch</p>
           <h1 className="font-serif text-display text-forest-900 mb-4">Contact Us</h1>
-          <p className="text-forest-600">Questions? We're here to help.</p>
+          <p className="text-forest-600">Questions? We&apos;re here to help.</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          <motion.a
+          <a
             href="https://wa.me/923001234567"
             target="_blank"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            rel="noopener noreferrer"
             className="bg-green-500 text-white rounded-2xl p-8 hover:bg-green-600 transition-colors"
           >
             <MessageCircle className="w-10 h-10 mb-4" />
             <h2 className="font-serif text-xl mb-2">WhatsApp</h2>
             <p className="opacity-80 text-sm">Fastest way to reach us</p>
             <p className="font-mono mt-4">+92 300 1234567</p>
-          </motion.a>
+          </a>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+          <div
             className="bg-cream-200 rounded-2xl p-8"
           >
             <Mail className="w-10 h-10 text-clay-500 mb-4" />
@@ -39,7 +32,7 @@ export default function ContactPage() {
             <a href="mailto:hello@muffin.pk" className="font-mono text-clay-500 hover:underline">
               hello@muffin.pk
             </a>
-          </motion.div>
+          </div>
         </div>
 
         <div className="mt-8 bg-forest-300 text-cream-100 rounded-2xl p-8">

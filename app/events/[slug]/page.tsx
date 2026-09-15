@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { getEventBySlug } from "@/data/mock-products"
+import { getEventBySlug } from "@/lib/data/events"
 import { notFound } from "next/navigation"
 import EventDetailClient from "./event-detail-client"
 

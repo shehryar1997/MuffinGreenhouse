@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Send, Bot, User, Leaf } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { getMuffinResponse, MUFFIN_QUICK_REPLIES } from "@/lib/muffin-engine"
 
 interface Message { id: string; text: string; sender: "user" | "bot"; timestamp: Date }
 
-const quickReplies = ["What's low maintenance?", "Pet safe plants", "Workshop schedule", "Care tips", "Track my order"]
+const quickReplies = MUFFIN_QUICK_REPLIES
 
 export default function MuffinPage() {
   const [messages, setMessages] = useState<Message[]>([
@@ -25,18 +26,9 @@ export default function MuffinPage() {
     setMessages(m => [...m, userMsg])
     setInput("")
     setTimeout(() => {
-      const botResponse = getBotResponse(input.toLowerCase())
+      const botResponse = getMuffinResponse(input)
       setMessages(m => [...m, { id: (Date.now() + 1).toString(), text: botResponse, sender: "bot", timestamp: new Date() }])
     }, 500)
-  }
-
-  const getBotResponse = (text: string): string => {
-    if (text.includes("low maintenance") || text.includes("easy")) return "Snake plants and ZZ plants are nearly impossible to kill! Check them out in our shop."
-    if (text.includes("pet") || text.includes("cat") || text.includes("dog")) return "Hoya Kerrii and Calathea are pet-safe. Filter by 'Pet Safe' in our shop!"
-    if (text.includes("workshop") || text.includes("event")) return "Next workshop is Oct 15: Plant Parents 101. Reserve at /events"
-    if (text.includes("care") || text.includes("water")) return "Check our Care Almanac for guides. Rule of thumb: water when top inch of soil is dry."
-    if (text.includes("track") || text.includes("order")) return "Login to your account at /account/orders to track. Need help? WhatsApp us!"
-    return "I can help with plant recommendations, care tips, or workshops. What would you like to know?"
   }
 
   return (

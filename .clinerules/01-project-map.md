@@ -27,19 +27,23 @@ Do not regenerate the full map unless explicitly asked to.
 `app/shop-by-need/page.tsx` — Shop by need landing — N/A — N/A
 `app/shop-by-need/[slug]/page.tsx` — Need category page — N/A — N/A
 `app/plant-finder/page.tsx` — Plant finder quiz — N/A — N/A
-`app/events/page.tsx` — Events listing — N/A — N/A
+`app/events/page.tsx` — Events listing — Server Component — @/data/mock-products, ./events-grid
+`app/events/events-grid.tsx` — Client component for event cards with hover animations — EventCard, EventsGrid — @/types, framer-motion
 `app/events/[slug]/page.tsx` — Event detail wrapper — N/A — N/A
 `app/events/[slug]/event-detail-client.tsx` — Event detail content [LARGE] — N/A — N/A
-`app/journal/page.tsx` — Journal/blog listing — N/A — N/A
+`app/journal/page.tsx` — Journal/blog listing — Server Component — @/data/mock-products, ./journal-grid
+`app/journal/journal-grid.tsx` — Client component for journal cards with hover animations — JournalGrid — @/types, framer-motion
 `app/journal/[slug]/page.tsx` — Journal post page — N/A — N/A
 `app/muffin/page.tsx` — Muffin mascot/character page — N/A — N/A
-`app/our-story/page.tsx` — About page — N/A — N/A
-`app/visit-us/page.tsx` — Visit/contact page — N/A — N/A
-`app/reviews/page.tsx` — Customer reviews — N/A — N/A
-`app/faq/page.tsx` — FAQ page — N/A — N/A
-`app/delivery-and-pickup/page.tsx` — Delivery info — N/A — N/A
-`app/our-guarantee/page.tsx` — Guarantee page — N/A — N/A
-`app/contact/page.tsx` — Contact form — N/A — N/A
+`app/our-story/page.tsx` — About page — Server Component — N/A
+`app/visit-us/page.tsx` — Visit/contact page — Server Component — N/A
+`app/reviews/page.tsx` — Customer reviews — Server Component — @/data/mock-products, ./reviews-grid
+`app/reviews/reviews-grid.tsx` — Client component for review cards with stagger animations — ReviewsGrid — @/types, framer-motion
+`app/faq/page.tsx` — FAQ page — Server Component — ./faq-accordion
+`app/faq/faq-accordion.tsx` — Client component for FAQ accordion with state — FAQAccordion — framer-motion
+`app/delivery-and-pickup/page.tsx` — Delivery info — Server Component — N/A
+`app/our-guarantee/page.tsx` — Guarantee page — Server Component — N/A
+`app/contact/page.tsx` — Contact page — Server Component — N/A
 `app/checkout/page.tsx` — Checkout flow — N/A — N/A
 `app/account/page.tsx` — Account dashboard — N/A — N/A
 `app/account/login/page.tsx` — Login page — N/A — N/A
@@ -63,9 +67,9 @@ Do not regenerate the full map unless explicitly asked to.
 `components/ui/slider.tsx` — Range slider — Slider — @radix-ui/react-slider
 `components/ui/sonner.tsx` — Toast notifications — Toaster — sonner, next-themes
 `components/ui/whatsapp-button.tsx` — WhatsApp CTA button — WhatsAppButton — N/A
+`components/shop/product-filters.tsx` — Shared filter UI + logic — ProductFilters, FilterSidebar, MAX_PRICE — @/components/ui/*, @/types
 
 ### /config
-`config/categories.ts` — Category definitions — plantCategories, useCaseCategories, moodCategories — N/A
 `config/nav.config.ts` — Navigation config — siteConfig, shopByNeedCategories, shopMegaMenuSections, mainNav, footerNav, mobileNav — @/types
 
 ### /data
@@ -84,7 +88,7 @@ Do not regenerate the full map unless explicitly asked to.
 `types/index.ts` — Core TypeScript types — Category, Product, ProductImage, CareInfo, ProductVariant, Review, CartItem, Cart, User, Address, Order, MyPlant, Event, JournalPost, NavItem, etc. — N/A
 
 ## Shared dependencies
-- `@/types` — Imported by: data/mock-products.ts, lib/mood-utils.ts, lib/plant-utils.ts, components/providers/cart-provider.tsx, components/providers/search-provider.tsx, components/ui/product-card.tsx
+- `@/types` — Imported by: data/mock-products.ts, lib/mood-utils.ts, lib/plant-utils.ts, components/providers/cart-provider.tsx, components/providers/search-provider.tsx, components/ui/product-card.tsx, components/shop/product-filters.tsx
 - `@/lib/utils` — Imported by: components/ui/* (7 files), components/layout/header.tsx, components/layout/footer.tsx
 - `@/config/nav.config` — Imported by: components/layout/header.tsx, components/layout/shop-mega-menu.tsx, components/layout/footer.tsx, app/page.tsx
 - `@/data/mock-products` — Imported by: app/page.tsx, app/shop/*, components/light-filter-teaser.tsx
@@ -92,3 +96,4 @@ Do not regenerate the full map unless explicitly asked to.
 - `@/components/providers/cart-provider` — Imported by: components/cart/cart-drawer.tsx, components/ui/product-card.tsx, app/layout.tsx
 - `@/components/providers/search-provider` — Imported by: components/search/search-drawer.tsx, components/layout/header.tsx, app/layout.tsx
 - `@/components/providers/theme-provider` — Imported by: app/layout.tsx
+- `@/components/shop/product-filters` — Imported by: app/shop/all/page.tsx, app/shop/[category]/page.tsx

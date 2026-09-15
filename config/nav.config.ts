@@ -97,9 +97,15 @@ export const mainNav: NavItem[] = [
 export const footerNav = {
   shop: [
     { id: "footer-aroids", label: "Aroids", href: "/shop/aroids" },
-    { id: "footer-hoya", label: "Hoya", href: "/shop/hoya" },
-    { id: "footer-cacti", label: "Cacti", href: "/shop/cacti-succulents" },
+    { id: "footer-sansevierias", label: "Sansevierias", href: "/shop/sansevierias" },
+    { id: "footer-agaves", label: "Agaves", href: "/shop/agaves" },
+    { id: "footer-mangaves", label: "Mangaves", href: "/shop/mangaves" },
+    { id: "footer-hoyas", label: "Hoyas", href: "/shop/hoyas" },
     { id: "footer-orchids", label: "Orchids", href: "/shop/orchids" },
+    { id: "footer-planting-media", label: "Planting Media", href: "/shop/planting-media" },
+    { id: "footer-fertilizer", label: "Fertilizer", href: "/shop/fertilizer" },
+    { id: "footer-pots", label: "Pots", href: "/shop/pots" },
+    { id: "footer-other-equipment", label: "Other Equipment", href: "/shop/other-equipment" },
   ],
   help: [
     { id: "footer-faq", label: "FAQ", href: "/faq" },

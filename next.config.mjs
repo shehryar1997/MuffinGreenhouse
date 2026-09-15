@@ -12,7 +12,7 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   experimental: {
-    optimizePackageImports: ['lucide-react', 'framer-motion', 'recharts'],
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
     scrollRestoration: true,
   },
   // ponytail: Production build optimizations

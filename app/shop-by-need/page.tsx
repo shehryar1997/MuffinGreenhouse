@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { shopByNeedCategories } from "@/config/nav.config"
-import { shopByNeedIcons } from "@/data/mock-products"
+import { shopByNeedIcons } from "@/lib/data/products"
 import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 

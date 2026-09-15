@@ -1,6 +1,3 @@
-"use client"
-
-import { motion } from "framer-motion"
 import { Truck, Store, Clock, Package } from "lucide-react"
 
 export default function DeliveryPickupPage() {
@@ -14,9 +11,7 @@ export default function DeliveryPickupPage() {
 
         <div className="space-y-8">
           {/* Karachi */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+          <div
             className="bg-white rounded-2xl p-8 border border-forest-200/50"
           >
             <div className="flex items-center gap-4 mb-4">
@@ -33,13 +28,10 @@ export default function DeliveryPickupPage() {
               <li>Plants travel first-class: custom boxes, moisture retention, the works</li>
               <li>Live tracking via WhatsApp — watch your green friend roll up in style</li>
             </ul>
-          </motion.div>
+          </div>
 
           {/* Pickup */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+          <div
             className="bg-cream-200 rounded-2xl p-8"
           >
             <div className="flex items-center gap-4 mb-4">
@@ -56,13 +48,10 @@ export default function DeliveryPickupPage() {
               <li>Personal care advice from the Muffinman himself (yes, he's real)</li>
               <li>Open daily 12 PM — 9 PM for your botanical convenience</li>
             </ul>
-          </motion.div>
+          </div>
 
           {/* Other Cities */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+          <div
             className="bg-white rounded-2xl p-8 border border-forest-200/50"
           >
             <div className="flex items-center gap-4 mb-4">
@@ -81,13 +70,10 @@ export default function DeliveryPickupPage() {
               <li>2-3 day delivery to your doorstep</li>
               <li>Rates calculated at checkout based on your location</li>
             </ul>
-          </motion.div>
+          </div>
 
           {/* Guarantee */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+          <div
             className="bg-forest-300 text-cream-100 rounded-2xl p-8 text-center"
           >
             <Clock className="w-10 h-10 mx-auto mb-4 opacity-80" />
@@ -96,7 +82,7 @@ export default function DeliveryPickupPage() {
               We offer replacement or store credit for dead plants — your choice.<br/>
               We package with care. You care for plants. We both win.
             </p>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

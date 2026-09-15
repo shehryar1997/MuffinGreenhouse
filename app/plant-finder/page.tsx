@@ -4,8 +4,9 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { mockProducts } from "@/data/mock-products"
-import { Product } from "@/types"
+import { findMatchingPlants } from "@/lib/muffin-engine"
+import { getAllProducts } from "@/lib/data/products"
+import type { Product } from "@/types"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -16,12 +17,7 @@ const questions = [
 ]
 
 function findPlants(answers: Record<string, string>): Product[] {
-  return mockProducts.filter(p => {
-    const lightMatch = !answers.light || p.lightRequirement === answers.light || answers.light === "medium"
-    const waterMatch = answers.water === p.waterRequirement || answers.water === "low"
-    const petMatch = answers.pets === "no" || p.isPetSafe
-    return lightMatch && waterMatch && petMatch && p.stockStatus !== "out_of_stock"
-  }).slice(0, 3)
+  return findMatchingPlants(answers).slice(0, 3)
 }
 
 export default function PlantFinderPage() {
@@ -34,7 +30,7 @@ export default function PlantFinderPage() {
     const newAns = { ...answers, [questions[step].id]: val }
     setAnswers(newAns)
     if (step < questions.length - 1) setStep(step + 1)
-    else { setMatches(findPlants(newAns).length > 0 ? findPlants(newAns) : mockProducts.slice(0, 3)); setStep(questions.length) }
+    else { setMatches(findPlants(newAns).length > 0 ? findPlants(newAns) : getAllProducts().slice(0, 3)); setStep(questions.length) }
   }
 
   return (

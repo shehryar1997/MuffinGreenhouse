@@ -1,6 +1,3 @@
-"use client"
-
-import { motion } from "framer-motion"
 import { MapPin, Clock, Car, Coffee, Dog } from "lucide-react"
 import Image from "next/image"
 
@@ -8,11 +5,11 @@ export default function VisitUsPage() {
   return (
     <div className="bg-cream-100 min-h-screen">
       <div className="container mx-auto px-4 pt-32 pb-20 max-w-5xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-16">
+        <div className="text-center mb-16">
           <p className="font-mono text-sm text-forest-500 mb-2">Location</p>
           <h1 className="font-serif text-display text-forest-900 mb-4">Visit the Nursery</h1>
           <p className="text-forest-600 max-w-xl mx-auto">Browse plants in person, get advice from our team, and say hi to Bruno.</p>
-        </motion.div>
+        </div>
 
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Info */}
@@ -93,9 +90,7 @@ export default function VisitUsPage() {
           </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
+        <div
           className="mt-16 bg-white border border-forest-200/50 rounded-2xl p-8 text-center max-w-2xl mx-auto"
         >
           <Car className="w-10 h-10 text-clay-500 mx-auto mb-4" />
@@ -103,7 +98,7 @@ export default function VisitUsPage() {
             <strong>Free parking</strong> available on the lane. For all Karachi orders, 
             we offer free pickup or delivery starting at PKR 200.
           </p>
-        </motion.div>
+        </div>
       </div>
     </div>
   )

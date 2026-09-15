@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Send, X, Sparkle } from "lucide-react"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { getMuffinResponse, MUFFIN_QUICK_REPLIES } from "@/lib/muffin-engine"
 
 interface Message {
   id: string
@@ -11,20 +12,9 @@ interface Message {
   sender: "user" | "bot"
 }
 
-const quickReplies = [
-  "Low light survivors",
-  "Pet safe plants", 
-  "Beginner friendly",
-  "Workshop schedule",
-]
+const quickReplies = MUFFIN_QUICK_REPLIES
 
-const responses: Record<string, string> = {
-  "low": "Snake plants, Pothos, ZZ — all indestructible. 18 in stock.",
-  "pet": "Spider plant, Peperomia, Calathea. All non-toxic. 🐾",
-  "beginner": "Snake plant. Water once a month. That's it.",
-  "workshop": "Next one: Feb 10, Repotting. /events",
-  "default": "Ask about plants, care, or orders.",
-}
+// ponytail: Responses now from getMuffinResponse()
 
 export function MuffinWidget() {
   const [isOpen, setIsOpen] = useState(false)
@@ -39,21 +29,12 @@ export function MuffinWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: prefersReducedMotion ? "auto" : "smooth" })
   }, [messages, prefersReducedMotion])
 
-  const getResponse = (text: string) => {
-    const lower = text.toLowerCase()
-    if (lower.includes("low") || lower.includes("dark")) return responses["low"]
-    if (lower.includes("pet")) return responses["pet"]
-    if (lower.includes("beginner") || lower.includes("easy")) return responses["beginner"]
-    if (lower.includes("workshop")) return responses["workshop"]
-    return responses["default"]
-  }
-
   const handleSend = () => {
     if (!input.trim()) return
     setMessages(prev => [...prev, { id: Date.now().toString(), text: input, sender: "user" }])
     setInput("")
     setTimeout(() => {
-      setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getResponse(input), sender: "bot" }])
+      setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getMuffinResponse(input), sender: "bot" }])
     }, 600)
   }
 
@@ -103,7 +84,7 @@ export function MuffinWidget() {
                       key={q}
                       onClick={() => {
                         setMessages(prev => [...prev, { id: Date.now().toString(), text: q, sender: "user" }])
-                        setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getResponse(q), sender: "bot" }])
+                        setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getMuffinResponse(q), sender: "bot" }])
                       }}
                       className="px-3 py-1 text-xs bg-[#f5f2eb] rounded-full hover:bg-[#e8e3da] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2"
                     >
@@ -168,7 +149,7 @@ export function MuffinWidget() {
                         key={q}
                         onClick={() => {
                           setMessages(prev => [...prev, { id: Date.now().toString(), text: q, sender: "user" }])
-                          setTimeout(() => setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getResponse(q), sender: "bot" }]), 400)
+                          setTimeout(() => setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getMuffinResponse(q), sender: "bot" }]), 400)
                         }}
                         className="px-3 py-1 text-xs bg-[#f5f2eb] rounded-full hover:bg-[#e8e3da] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2"
                       >

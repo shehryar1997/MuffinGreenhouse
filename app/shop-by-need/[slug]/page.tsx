@@ -3,12 +3,12 @@
 import { useMemo } from "react"
 import { notFound } from "next/navigation"
 import { motion } from "framer-motion"
-import { mockProducts, useCases } from "@/data/mock-products"
+import { getAllProducts, useCases } from "@/lib/data/products"
 import { ProductCard } from "@/components/ui/product-card"
 
 export default function ShopByNeedPage({ params }: { params: { slug: string } }) {
   const useCase = useCases[params.slug]
-  const products = useMemo(() => mockProducts.filter(p => p.useCaseTags.includes(params.slug)), [params.slug])
+  const products = useMemo(() => getAllProducts().filter(p => p.useCaseTags.includes(params.slug)), [params.slug])
 
   if (!useCase) return notFound()
 

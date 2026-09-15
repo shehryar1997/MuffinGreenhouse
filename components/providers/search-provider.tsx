@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from "react"
 import { Product } from "@/types"
-import { mockProducts } from "@/data/mock-products"
+import { getAllProducts } from "@/lib/data/products"
 
 interface SearchState {
   isOpen: boolean
@@ -46,7 +46,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Search products by name (case-insensitive)
-    const results = mockProducts.filter((product) =>
+    const results = getAllProducts().filter((product) =>
       product.name.toLowerCase().includes(trimmedQuery)
     )
 

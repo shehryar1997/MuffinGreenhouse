@@ -9,6 +9,7 @@ import { Footer } from "@/components/layout/footer"
 import { CartDrawer } from "@/components/cart/cart-drawer"
 import { SearchDrawer } from "@/components/search/search-drawer"
 import { MuffinWidget } from "@/components/ui/muffin-widget"
+import { WhatsAppButton } from "@/components/ui/whatsapp-button"
 import "./globals.css"
 
 const playfair = Playfair_Display({ 
@@ -68,6 +69,7 @@ export default function RootLayout({
               <CartDrawer />
               <SearchDrawer />
               <MuffinWidget />
+              <WhatsAppButton />
               <Toaster position="bottom-right" />
             </CartProvider>
           </SearchProvider>

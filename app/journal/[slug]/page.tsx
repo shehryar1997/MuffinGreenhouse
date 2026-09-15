@@ -2,7 +2,7 @@
 
 import { notFound } from "next/navigation"
 import { motion } from "framer-motion"
-import { mockJournalPosts } from "@/data/mock-products"
+import { mockJournalPosts } from "@/lib/data/journal"
 import { Calendar, User, ArrowLeft } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
