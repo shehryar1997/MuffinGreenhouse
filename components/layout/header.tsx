@@ -1,18 +1,37 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, ShoppingBag, Menu, X, User } from "lucide-react"
-import { mainNav, mobileNav } from "@/config/nav.config"
+import { Search, ShoppingBag, Menu, X, User, Star } from "lucide-react"
+import { mainNav, shopMegaMenuSections } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
+import { useSearch } from "@/components/providers/search-provider"
 import { Badge } from "@/components/ui/badge"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [shopMenuOpen, setShopMenuOpen] = useState(false)
+  const shopMenuTimeout = useRef<NodeJS.Timeout | null>(null)
   const { toggleCart, itemCount } = useCart()
+  const { openSearch } = useSearch()
+
+  const handleShopMenuEnter = () => {
+    if (shopMenuTimeout.current) {
+      clearTimeout(shopMenuTimeout.current)
+      shopMenuTimeout.current = null
+    }
+    setShopMenuOpen(true)
+  }
+
+  const handleShopMenuLeave = () => {
+    shopMenuTimeout.current = setTimeout(() => {
+      setShopMenuOpen(false)
+    }, 150)
+  }
 
   return (
+    <>
     <motion.header
       className="fixed top-0 left-0 right-0 z-50 bg-[#FAF7F2]/95 backdrop-blur-sm"
       initial={{ y: -100 }}
@@ -34,16 +53,115 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
-            {mainNav.slice(0, 4).map((item) => (
-              <Link key={item.id} href={item.href} className="font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-[#1A1A1A] transition-colors">
-                {item.label}
-              </Link>
+            {mainNav.slice(0, 5).map((item) => (
+              item.hasMegaMenu ? (
+                <div 
+                  key={item.id} 
+                  className="relative"
+                  onMouseEnter={handleShopMenuEnter}
+                  onMouseLeave={handleShopMenuLeave}
+                >
+                  <Link 
+                    href={item.href} 
+                    className="font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-[#1A1A1A] transition-colors py-2"
+                  >
+                    {item.label}
+                  </Link>
+                  
+                  {/* Shop Mega Menu */}
+                  <AnimatePresence>
+                    {shopMenuOpen && (
+                      <>
+                        {/* Backdrop overlay */}
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="fixed inset-0 top-20 bg-black/10 z-40"
+                          onClick={() => setShopMenuOpen(false)}
+                        />
+                        
+                        {/* Mega menu - centered on screen */}
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.25 }}
+                          className="fixed inset-x-0 top-20 z-50"
+                        >
+                          <div 
+                            className="bg-[#FAF7F2] border border-forest-200/50 shadow-2xl rounded-lg overflow-hidden"
+                            onMouseEnter={handleShopMenuEnter}
+                            onMouseLeave={handleShopMenuLeave}
+                          >
+                            <div className="px-10 py-10">
+                              <div className="grid grid-cols-3 gap-12">
+                                {shopMegaMenuSections.map((section) => (
+                                  <div key={section.id} className="space-y-5">
+                                    <div className="flex items-center gap-2 border-b border-forest-200/50 pb-3">
+                                      <h3 className="font-serif text-lg text-forest-900">
+                                        {section.title}
+                                      </h3>
+                                    </div>
+                                    <ul className="space-y-1">
+                                      {section.items.map((item) => (
+                                        <li key={item.id}>
+                                          <Link
+                                            href={item.href}
+                                            className="group flex items-center justify-between py-2 px-2 -mx-2 rounded-md font-mono text-sm text-forest-600 hover:text-[#1A1A1A] hover:bg-forest-100/50 transition-all"
+                                            onClick={() => setShopMenuOpen(false)}
+                                          >
+                                            <span className="flex items-center gap-2">
+                                              <span className="relative">
+                                                {item.label}
+                                                {item.featured && (
+                                                  <span className="ml-1.5 inline-flex items-center">
+                                                    <Star className="w-2.5 h-2.5 fill-[#E85A3C] text-[#E85A3C]" />
+                                                  </span>
+                                                )}
+                                              </span>
+                                            </span>
+                                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-forest-400">→</span>
+                                          </Link>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="bg-forest-50 px-8 py-4 border-t border-forest-200/30">
+                              <Link 
+                                href="/shop/all" 
+                                className="flex items-center justify-center gap-2 font-mono text-xs tracking-widest uppercase text-forest-700 hover:text-[#E85A3C] transition-colors"
+                                onClick={() => setShopMenuOpen(false)}
+                              >
+                                <span>View All Products</span>
+                                <span>→</span>
+                              </Link>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <Link 
+                  key={item.id}
+                  href={item.href} 
+                  className="font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-[#1A1A1A] transition-colors"
+                >
+                  {item.label}
+                </Link>
+              )
             ))}
           </nav>
 
           {/* Actions */}
           <div className="flex items-center gap-6">
-            <button className="p-2 hover:opacity-60 transition-opacity hidden sm:flex">
+            <button onClick={openSearch} className="p-2 hover:opacity-60 transition-opacity hidden sm:flex">
               <Search className="w-5 h-5 text-forest-700" />
             </button>
             <Link href="/account" className="p-2 hover:opacity-60 transition-opacity hidden sm:flex">
@@ -54,10 +172,12 @@ export function Header() {
             <button
               className="flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-forest-600"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
             >
               <span className="hidden sm:inline">{mobileMenuOpen ? 'Close' : 'Menu'}</span>
-              <span className="text-[#E85A3C] font-semibold sm:hidden">&#8594;</span>
-              <span className="text-[#E85A3C] font-semibold hidden sm:inline">&#8594;</span>
+              <span className="text-[#E85A3C] font-semibold sm:hidden" aria-hidden="true">&#8594;</span>
+              <span className="text-[#E85A3C] font-semibold hidden sm:inline" aria-hidden="true">&#8594;</span>
             </button>
 
             {/* Cart */}
@@ -71,21 +191,35 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile/Overlay Menu */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
+    </motion.header>
+
+    {/* Mobile/Overlay Menu - Rendered outside header for proper z-index stacking */}
+    <AnimatePresence>
+      {mobileMenuOpen && (
+        <>
+          {/* Backdrop overlay with blur */}
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 top-20 bg-[#FAF7F2] z-40"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100]"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* Slide-in menu panel */}
+          <motion.div
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-[#FAF7F2] z-[100] shadow-2xl"
           >
-            <div className="container mx-auto px-6 py-12">
+            <div className="h-full overflow-y-auto px-6 py-12 pt-24">
               <nav className="space-y-8">
                 {mainNav.map((item, i) => (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.1 }}
                   >
@@ -110,8 +244,9 @@ export function Header() {
               </div>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.header>
+        </>
+      )}
+    </AnimatePresence>
+  </>
   )
 }

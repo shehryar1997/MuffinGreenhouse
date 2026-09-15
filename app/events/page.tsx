@@ -4,13 +4,13 @@ import { motion } from "framer-motion"
 import { Clock, MapPin, Users, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { mockEvents } from "@/data/mock-products"
+import { mockEvents, getUpcomingEvents, getPastEvents } from "@/data/mock-products"
 import Link from "next/link"
 import Image from "next/image"
 
 export default function EventsPage() {
-  const upcoming = mockEvents.filter(e => e.isUpcoming)
-  const past = mockEvents.filter(e => !e.isUpcoming)
+  const upcoming = getUpcomingEvents()
+  const past = getPastEvents()
 
   return (
     <div className="bg-cream-100 min-h-screen">

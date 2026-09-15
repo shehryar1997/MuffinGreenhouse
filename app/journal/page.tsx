@@ -34,7 +34,7 @@ export default function JournalPage() {
                 </div>
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-3">
-                    {post.tags.map((tag) => (
+                    {post.tags.map((tag: string) => (
                       <Badge key={tag} variant="outline">{tag}</Badge>
                     ))}
                   </div>

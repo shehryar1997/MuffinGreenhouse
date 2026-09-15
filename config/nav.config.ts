@@ -1,7 +1,7 @@
 // Muffin Nursery — Navigation Configuration
 // Single source of truth for header, footer, mega-menu, and mobile nav
 
-import { NavItem } from "@/types"
+import { NavItem, MegaMenuSection } from "@/types"
 
 export const siteConfig = {
   name: "Muffin",
@@ -22,6 +22,48 @@ export const siteConfig = {
   },
 }
 
+// Shop by Need categories — reused across mega-menu and other sections
+export const shopByNeedCategories: NavItem[] = [
+  { id: "need-low-light", label: "Low-Light Survivors", href: "/shop-by-need/low-light-survivors" },
+  { id: "need-balcony", label: "Balcony & Rooftop", href: "/shop-by-need/balcony-rooftop" },
+  { id: "need-air", label: "Air-Purifying", href: "/shop-by-need/air-purifying" },
+  { id: "need-pet", label: "Pet-Safe", href: "/shop-by-need/pet-safe" },
+  { id: "need-beginner", label: "Beginner-Proof", href: "/shop-by-need/beginner-proof", featured: true },
+  { id: "need-statement", label: "Statement Plants", href: "/shop-by-need/statement-plants" },
+]
+
+// Mega-menu sections for the Shop navigation item
+export const shopMegaMenuSections: MegaMenuSection[] = [
+  {
+    id: "plants",
+    title: "Plants",
+    items: [
+      { id: "shop-all", label: "All Plants", href: "/shop/all" },
+      { id: "shop-aroids", label: "Aroids", href: "/shop/aroids", featured: true },
+      { id: "shop-sansevierias", label: "Sansevierias", href: "/shop/sansevierias" },
+      { id: "shop-agaves", label: "Agaves", href: "/shop/agaves" },
+      { id: "shop-mangaves", label: "Mangaves", href: "/shop/mangaves" },
+      { id: "shop-hoyas", label: "Hoyas", href: "/shop/hoyas", featured: true },
+      { id: "shop-orchids", label: "Orchids", href: "/shop/orchids" },
+    ],
+  },
+  {
+    id: "tools-equipment",
+    title: "Tools & Equipment",
+    items: [
+      { id: "shop-planting-media", label: "Planting Media", href: "/shop/planting-media" },
+      { id: "shop-fertilizer", label: "Fertilizer", href: "/shop/fertilizer" },
+      { id: "shop-pots", label: "Pots", href: "/shop/pots" },
+      { id: "shop-other-equipment", label: "Other Equipment", href: "/shop/other-equipment" },
+    ],
+  },
+  {
+    id: "shop-by-need",
+    title: "Shop by Need",
+    items: shopByNeedCategories,
+  },
+]
+
 export const mainNav: NavItem[] = [
   {
     id: "home",
@@ -31,37 +73,19 @@ export const mainNav: NavItem[] = [
   {
     id: "shop",
     label: "Shop",
-    href: "/shop",
-    children: [
-      { id: "shop-all", label: "All Plants", href: "/shop/all" },
-      { id: "shop-aroids", label: "Aroids", href: "/shop/aroids", featured: true },
-      { id: "shop-sansevierias", label: "Sansevierias", href: "/shop/sansevierias" },
-      { id: "shop-agave", label: "Agave", href: "/shop/agave" },
-      { id: "shop-mangave", label: "Mangave", href: "/shop/mangave" },
-      { id: "shop-adenium", label: "Adenium", href: "/shop/adenium" },
-      { id: "shop-hoya", label: "Hoya", href: "/shop/hoya", featured: true },
-      { id: "shop-orchids", label: "Orchids", href: "/shop/orchids" },
-      { id: "shop-cacti", label: "Cacti & Succulents", href: "/shop/cacti-succulents" },
-    ],
-  },
-  {
-    id: "shop-by-need",
-    label: "By Need",
-    href: "/shop-by-need",
-    children: [
-      { id: "need-low-light", label: "Low Light Survivors", href: "/shop-by-need/low-light-survivors" },
-      { id: "need-balcony", label: "Balcony & Rooftop", href: "/shop-by-need/balcony-rooftop" },
-      { id: "need-air", label: "Air Purifying", href: "/shop-by-need/air-purifying" },
-      { id: "need-pet", label: "Pet Safe", href: "/shop-by-need/pet-safe" },
-      { id: "need-beginner", label: "Beginner Proof", href: "/shop-by-need/beginner-proof", featured: true },
-      { id: "need-statement", label: "Statement Plants", href: "/shop-by-need/statement-plants" },
-    ],
+    href: "/shop/all",
+    hasMegaMenu: true,
   },
   {
     id: "plant-finder",
     label: "Plant Finder",
     href: "/plant-finder",
     featured: true,
+  },
+  {
+    id: "events",
+    label: "Events",
+    href: "/events",
   },
   {
     id: "muffin",
@@ -99,8 +123,9 @@ export const footerNav = {
 export const mobileNav: NavItem[] = [
   { id: "mobile-home", label: "Home", href: "/" },
   { id: "mobile-shop", label: "Shop All", href: "/shop/all" },
-  { id: "mobile-plants", label: "Plants", href: "/shop", children: mainNav.find(n => n.id === "shop")?.children },
-  { id: "mobile-by-need", label: "By Need", href: "/shop-by-need", children: mainNav.find(n => n.id === "shop-by-need")?.children },
+  { id: "mobile-plants", label: "Plants", href: "/shop", children: shopMegaMenuSections.find(s => s.id === "plants")?.items },
+  { id: "mobile-tools", label: "Tools & Equipment", href: "/shop", children: shopMegaMenuSections.find(s => s.id === "tools-equipment")?.items },
+  { id: "mobile-by-need", label: "By Need", href: "/shop-by-need", children: shopByNeedCategories },
   { id: "mobile-finder", label: "Plant Finder", href: "/plant-finder" },
   { id: "mobile-muffin", label: "Muffin", href: "/muffin" },
   { id: "mobile-journal", label: "Journal", href: "/journal" },

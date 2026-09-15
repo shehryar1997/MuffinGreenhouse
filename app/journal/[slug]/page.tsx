@@ -58,7 +58,7 @@ export default function JournalPostPage({ params }: { params: { slug: string } }
 
         {/* Tags */}
         <div className="flex flex-wrap gap-2 mt-12 pt-8 border-t border-forest-200">
-          {post.tags.map((tag) => (
+          {post.tags.map((tag: string) => (
             <span key={tag} className="px-3 py-1 bg-forest-200/50 text-forest-700 rounded-full text-sm">
               #{tag}
             </span>

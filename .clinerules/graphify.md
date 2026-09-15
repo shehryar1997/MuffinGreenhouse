@@ -1,0 +1,1 @@
+# Graphify Knowledge Graph Before making cross-file changes, check graphify-out/graph.json for how files relate to each other, if present.

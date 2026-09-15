@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef, useEffect } from "react"
 import { Drawer } from "vaul"
 import { X, Minus, Plus, ShoppingBag, ArrowRight } from "lucide-react"
 import Image from "next/image"
@@ -10,6 +11,14 @@ import { Button } from "@/components/ui/button"
 
 export function CartDrawer() {
   const { cart, toggleCart, removeItem, updateQuantity, itemCount } = useCart()
+  const browsePlantsRef = useRef<HTMLAnchorElement>(null)
+  
+  // Focus the "Browse Plants" link when cart becomes empty
+  useEffect(() => {
+    if (cart && cart.items.length === 0 && browsePlantsRef.current) {
+      browsePlantsRef.current.focus()
+    }
+  }, [cart?.items.length])
   const v = (p: any) => p.variant?.price ?? p.price
   
   if (!cart) return null
@@ -37,7 +46,7 @@ export function CartDrawer() {
               </div>
               <p className="font-serif text-xl text-[#1A1A1A] mb-2">Your cart is empty</p>
               <p className="text-forest-500 mb-8">Find something green to take home</p>
-              <Link href="/shop/all" onClick={() => toggleCart(false)} className="inline-flex items-center gap-2 font-mono text-xs tracking-widest uppercase border-b border-[#1A1A1A] pb-2 hover:text-[#E85A3C] hover:border-[#E85A3C] transition-colors">
+              <Link ref={browsePlantsRef} href="/shop/all" onClick={() => toggleCart(false)} className="inline-flex items-center gap-2 font-mono text-xs tracking-widest uppercase border-b border-[#1A1A1A] pb-2 hover:text-[#E85A3C] hover:border-[#E85A3C] transition-colors outline-offset-4 focus:outline-2 focus:outline-[#E85A3C]">
                 Browse Plants <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -63,7 +72,7 @@ export function CartDrawer() {
                             <Plus className="w-3 h-3 text-forest-600" />
                           </button>
                         </div>
-                        <button onClick={() => removeItem(item.product.id, item.variant?.id)} className="text-xs text-forest-400 hover:text-[#E85A3C] underline font-mono">Remove</button>
+                        <button onClick={() => removeItem(item.product.id, item.variant?.id)} className="text-xs text-forest-400 hover:text-[#E85A3C] underline font-mono" aria-label={`Remove ${item.product.name} from cart`}>Remove</button>
                       </div>
                     </div>
                   </div>

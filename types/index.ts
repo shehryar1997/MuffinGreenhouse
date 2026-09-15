@@ -184,19 +184,6 @@ export interface JournalPost {
   publishedAt: string
 }
 
-
-export interface JournalPost {
-  id: string
-  slug: string
-  title: string
-  excerpt: string
-  content: string
-  author: string
-  coverImage: string
-  tags: string[]
-  publishedAt: string
-}
-
 // Muffin Intelligence types
 export interface QuizAnswer {
   questionId: string
@@ -216,4 +203,15 @@ export interface NavItem {
   icon?: string
   children?: NavItem[]
   featured?: boolean
+  hasMegaMenu?: boolean
+}
+
+export interface MegaMenuSection {
+  id: string
+  title: string
+  items: NavItem[]
+}
+
+export interface MegaMenuItem extends NavItem {
+  sections: MegaMenuSection[]
 }

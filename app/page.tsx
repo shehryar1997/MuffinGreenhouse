@@ -1,36 +1,267 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Plus } from "lucide-react"
-import { mockProducts, useCases } from "@/data/mock-products"
+import { shopByNeedCategories } from "@/config/nav.config"
+import { shopByNeedIcons, mockProducts, mockEvents } from "@/data/mock-products"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { useParallax } from "@/hooks/use-parallax"
+import { moodThemes, filterProductsByMood, Mood } from "@/lib/mood-utils"
+import { LightFilterTeaser } from "@/components/light-filter-teaser"
+import { formatPrice } from "@/lib/utils"
 
-const FadeIn = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
-  <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay }}>
-    {children}
-  </motion.div>
-)
+const FadeIn = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
+  const prefersReducedMotion = useReducedMotion()
 
-const placeholderProducts = [
-  { bg: "bg-[#D4F542]", name: "Money Plant (Pothos)", stars: "4.8" },
-  { bg: "bg-[#F5E6D3]", name: "Monstera Deliciosa", note: "ONLY 2 LEFT", stars: "4.9" },
-  { bg: "bg-[#E85A3C]", name: "Snake Plant", stars: "4.9" },
-  { bg: "bg-[#7EC8E3]", name: "Areca Palm", soldOut: true, stars: "4.7" }
-]
+  if (prefersReducedMotion) {
+    return <div>{children}</div>
+  }
 
-const useCasesList = [
-  { key: "low-light-survivors", title: "Low-Light Survivors", accent: false },
-  { key: "balcony-rooftop", title: "Balcony & Rooftop", accent: true },
-  { key: "air-purifying", title: "Air-Purifying", accent: false },
-  { key: "pet-safe", title: "Pet-Safe", accent: false },
-  { key: "beginner-proof", title: "Beginner-Proof", accent: false },
-  { key: "statement-plants", title: "Statement Plants", accent: false }
-]
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay }}>
+      {children}
+    </motion.div>
+  )
+}
+
+// Kinetic type animation: container wrapper that triggers viewport detection
+// Respects prefers-reduced-motion - falls back to static rendering
+function KineticHeading({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const prefersReducedMotion = useReducedMotion()
+
+  if (prefersReducedMotion) {
+    return <div>{children}</div>
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.4, delay }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+// Individual word/line animation with stagger support
+// Each line animates independently with subtle fade + vertical slide
+function KineticLine({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const prefersReducedMotion = useReducedMotion()
+
+  // ponytail: If reduced motion preferred, render plain span without animation
+  if (prefersReducedMotion) {
+    return <span className={className}>{children}</span>
+  }
+
+  return (
+    <motion.span
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{
+        duration: 0.35, // snappy: under 400ms per element
+        delay, // 60-100ms offset between lines, configurable per instance
+        ease: [0.25, 0.46, 0.45, 0.94], // ease-out style curve
+      }}
+      className={`block ${className}`}
+    >
+      {children}
+    </motion.span>
+  )
+}
+
+// LiftText: Premium letter stagger lift effect
+// Each letter subtly rises on hover with staggered timing - refined yet playful
+// ponytail: Fine-grained letter animation requires splitting text, but worth it for the effect
+function LiftText({ children, className = "" }: { children: string; className?: string }) {
+  const prefersReducedMotion = useReducedMotion()
+  const [isHovered, setIsHovered] = useState(false)
+
+  if (prefersReducedMotion) {
+    return <span className={className}>{children}</span>
+  }
+
+  const letters = children.split("")
+
+  return (
+    <span
+      className={`inline-block ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {letters.map((letter, index) => (
+        <motion.span
+          key={index}
+          className="inline-block"
+          animate={isHovered ? { y: -3 } : { y: 0 }}
+          transition={{
+            duration: 0.25,
+            delay: index * 0.02, // 20ms stagger per letter
+            ease: [0.22, 1, 0.36, 1], // Premium ease-out
+          }}
+        >
+          {letter === " " ? "\u00A0" : letter}
+        </motion.span>
+      ))}
+    </span>
+  )
+}
+
+// ponytail: Extracted into component for cleaner page code
+function MoodPlantsGrid({ mood, theme }: { mood: Mood; theme: import("@/lib/mood-utils").MoodTheme }) {
+  // Filter products by mood using the reusable helper function
+  const moodProducts = useMemo(() => filterProductsByMood(mockProducts, mood), [mood])
+  
+  // Show first 4 products, or fallback if none match
+  const displayProducts = moodProducts.length >= 4 
+    ? moodProducts.slice(0, 4) 
+    : moodProducts.length > 0 
+      ? moodProducts.slice(0, 4) 
+      : mockProducts.slice(0, 4)
+
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {displayProducts.map((product, i) => (
+        <Link key={product.id} href={`/shop/product/${product.slug}`} className="group cursor-pointer block">
+          <div className={`relative aspect-[3/4] overflow-hidden ${theme.bgSecondary}`}>
+            {product.images[0]?.url ? (
+              <Image 
+                src={product.images[0].url} 
+                alt={product.images[0].alt || product.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 768px) 50vw, 25vw"
+              />
+            ) : null}
+            <span className={`absolute top-3 left-3 font-mono text-xs ${theme.textPrimary}`}>{String(i+1).padStart(2,'0')}</span>
+            {product.stockStatus === "out_of_stock" && (
+              <span className={`absolute top-3 right-3 font-mono text-[10px] tracking-wider uppercase px-2 py-1 rounded-sm ${theme.bg === "bg-forest-300" ? "bg-cream-100 text-forest-900" : "bg-forest-900 text-white"}`}>
+                Sold Out
+              </span>
+            )}
+            {product.stockStatus === "low_stock" && (
+              <span className="absolute top-3 right-3 font-mono text-[10px] tracking-wider uppercase bg-clay-500 text-white px-2 py-1 rounded-sm">
+                Only {product.stockCount} left
+              </span>
+            )}
+          </div>
+          <div className="mt-4 flex items-start justify-between">
+            <div>
+              <div className={`flex items-center gap-2 text-xs mb-1 ${theme.textMuted}`}>
+                {product.stockStatus === "out_of_stock" ? (
+                  <span className={theme.textSecondary}>SOLD OUT</span>
+                ) : (
+                  <>
+                    <span>★ 4.{8 + (i % 2)}</span>
+                    {product.isNewArrival && <span className={theme.accentText}>NEW</span>}
+                  </>
+                )}
+              </div>
+              <h3 className={`font-serif text-lg transition-colors ${theme.textPrimary} group-hover:${theme.accent.replace("text-", "")}`}>
+                {product.name}
+              </h3>
+              <p className={`font-mono text-sm mt-1 ${theme.textSecondary}`}>
+                {formatPrice(product.price)}
+              </p>
+            </div>
+            <button 
+              className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${theme.border} ${theme.textSecondary} hover:${theme.bgSecondary} hover:${theme.borderHover}`}
+              onClick={(e) => e.preventDefault()}
+              aria-label={`Add ${product.name} to cart`}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+// Build use cases list from nav config
+const useCasesList = shopByNeedCategories.map((cat) => {
+  const slug = cat.href.replace("/shop-by-need/", "")
+  return {
+    key: slug,
+    title: cat.label,
+    // Pet-Safe and Balcony & Rooftop are accented in original design
+    accent: slug === "pet-safe" || slug === "balcony-rooftop",
+  }
+})
+
+// Component with cursor-reactive parallax effect on the Monstera image
+// Disabled on touch devices and when prefers-reduced-motion is set
+function ParallaxMonstera() {
+  const { offset, containerRef } = useParallax({ maxOffset: 8 })
+  const prefersReducedMotion = useReducedMotion()
+
+  // If reduced motion is preferred, render static version
+  if (prefersReducedMotion) {
+    return (
+      <FadeIn delay={0.2}>
+        <div className="relative">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-[#FAF7F2]" style={{ borderBottom: 'none' }}>
+            <Image src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80" alt="Monstera plant" fill className="object-cover" priority />
+            <div className="absolute bottom-0 left-0 right-0 h-3 bg-[#D4F542]" />
+          </div>
+        </div>
+      </FadeIn>
+    )
+  }
+
+  return (
+    <FadeIn delay={0.2}>
+      <div ref={containerRef as React.RefObject<HTMLDivElement>} className="relative">
+        <div
+          className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-[#FAF7F2]"
+          style={{ borderBottom: 'none' }}
+        >
+          <div
+            className="absolute inset-[-16px]"
+            style={{
+              transform: `translate(${offset.x}px, ${offset.y}px)`,
+              transition: 'transform 50ms ease-out',
+            }}
+          >
+            <Image
+              src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80"
+              alt="Monstera plant"
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 h-3 bg-[#D4F542] z-10" />
+        </div>
+      </div>
+    </FadeIn>
+  )
+}
+
+function AnimatedBadge({ prefersReducedMotion }: { prefersReducedMotion: boolean }) {
+  if (prefersReducedMotion) {
+    return (
+      <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-[#D4F542] flex items-center justify-center">
+        <span className="font-mono text-xs">M / G</span>
+      </div>
+    )
+  }
+
+  return (
+    <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ duration: 0.8, type: "spring" }} className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-[#D4F542] flex items-center justify-center">
+      <span className="font-mono text-xs">M / G</span>
+    </motion.div>
+  )
+}
 
 export default function HomePage() {
   const [selectedMood, setSelectedMood] = useState("soft")
+  const prefersReducedMotion = useReducedMotion()
   useEffect(() => {}, [])
 
   return (
@@ -39,9 +270,7 @@ export default function HomePage() {
       <section className="min-h-screen">
         <div className="container mx-auto px-6 lg:px-12 pt-8 pb-20">
           <div className="flex justify-end mb-8">
-            <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ duration: 0.8, type: "spring" }} className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-[#D4F542] flex items-center justify-center">
-              <span className="font-mono text-xs">M / G</span>
-            </motion.div>
+            <AnimatedBadge prefersReducedMotion={prefersReducedMotion} />
           </div>
 
           <FadeIn>
@@ -53,30 +282,22 @@ export default function HomePage() {
           </FadeIn>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <FadeIn delay={0.1}>
+            <KineticHeading delay={0.1}>
               <div>
                 <h1 className="font-serif leading-[0.85] tracking-tight">
-                  <span className="block text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]">Good</span>
-                  <span className="block text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]">plants.</span>
-                  <span className="block text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]">Good</span>
-                  <span className="block text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]">energy.</span>
+                  <KineticLine className="block text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]" delay={0}><LiftText>Good</LiftText></KineticLine>
+                  <KineticLine className="block text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]" delay={0.08}><LiftText>plants.</LiftText></KineticLine>
+                  <KineticLine className="block text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]" delay={0.16}><LiftText>Good</LiftText></KineticLine>
+                  <KineticLine className="block text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]" delay={0.24}><LiftText>energy.</LiftText></KineticLine>
                 </h1>
                 <div className="mt-8 flex items-start gap-4">
-                  <p className="text-forest-600 text-lg max-w-xs">Green things for people who want their spaces to feel more alive. Curated in Karachi, delivered with care.</p>
+                  <p className="text-forest-600 text-lg max-w-xs">Green things worth collecting - sourced globally, acclimated for<br />Pakistan.</p>
                   <div className="rotate-90"><ArrowRight className="w-5 h-5 text-[#E85A3C]" /></div>
                 </div>
               </div>
-            </FadeIn>
+            </KineticHeading>
 
-            <FadeIn delay={0.2}>
-              <div className="relative">
-                <div className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-[#FAF7F2]" style={{ borderBottom: 'none' }}>
-                  <Image src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80" alt="Monstera plant" fill className="object-cover" priority />
-                  <div className="absolute bottom-0 left-0 right-0 h-3 bg-[#D4F542]" />
-                </div>
-                <div className="absolute -right-4 bottom-20 text-xs font-mono tracking-widest" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>N 25 ARC</div>
-              </div>
-            </FadeIn>
+            <ParallaxMonstera />
           </div>
         </div>
       </section>
@@ -86,11 +307,13 @@ export default function HomePage() {
         <motion.div className="flex whitespace-nowrap" animate={{ x: ['0%', '-50%'] }} transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}>
           {[...Array(4)].map((_, i) => (
             <div key={i} className="flex items-center gap-12 px-12">
-              <span className="text-white font-medium text-sm tracking-wide">Home-grown and loved</span>
+              <span className="text-white font-medium text-sm tracking-wide">Curated for the modern collector</span>
               <span className="text-[#D4F542] text-lg">&#10022;</span>
-              <span className="text-white font-medium text-sm tracking-wide">Plants for real homes</span>
+              <span className="text-white font-medium text-sm tracking-wide">Rare plants for one of a kind spaces</span>
               <span className="text-[#D4F542] text-lg">&#10022;</span>
-              <span className="text-white font-medium text-sm tracking-wide">Honest care advice</span>
+              <span className="text-white font-medium text-sm tracking-wide">We are here for every leaf, long after purchase</span>
+              <span className="text-[#D4F542] text-lg">&#10022;</span>
+              <span className="text-white font-medium text-sm tracking-wide">Hand-picked before they ever reach you</span>
               <span className="text-[#D4F542] text-lg">&#10022;</span>
             </div>
           ))}
@@ -108,15 +331,17 @@ export default function HomePage() {
             </div>
           </FadeIn>
           <div className="grid lg:grid-cols-2 gap-16 items-start">
-            <FadeIn delay={0.1}>
+            <KineticHeading delay={0.1}>
               <h2 className="font-serif leading-[0.9] tracking-tight">
-                <span className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#1A1A1A]">Less guesswork.</span>
-                <span className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#E85A3C]">More green.</span>
+                <KineticLine className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#1A1A1A]" delay={0}><LiftText>Less</LiftText></KineticLine>
+                <KineticLine className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#1A1A1A]" delay={0.08}><LiftText>guesswork.</LiftText></KineticLine>
+                <KineticLine className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#A5C930]" delay={0.16}><LiftText>More</LiftText></KineticLine>
+                <KineticLine className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#A5C930]" delay={0.24}><LiftText>green.</LiftText></KineticLine>
               </h2>
-            </FadeIn>
+            </KineticHeading>
             <FadeIn delay={0.2}>
               <div className="lg:pt-4">
-                <p className="text-forest-600 text-lg mb-8 max-w-sm">Tell us about your space, and we will point you toward something that will actually thrive there.</p>
+                <p className="text-forest-600 text-lg mb-8 max-w-sm">Tell us about your light, your space, your habits, and we'll match you with a plant built to thrive there.</p>
                 <Link href="/plant-finder" className="inline-flex items-center gap-3 font-mono text-xs tracking-widest uppercase border-b border-forest-300 pb-2 hover:text-[#E85A3C] hover:border-[#E85A3C] transition-colors group">
                   Find Your Match
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
@@ -131,7 +356,7 @@ export default function HomePage() {
       <section className="py-16 border-t border-forest-200/50">
         <div className="container mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-3 gap-12">
-            {[{num:"01",title:"Choose your light",desc:"Sun, shade, or somewhere in between"},{num:"02",title:"Meet your plant",desc:"We match you with a green companion"},{num:"03",title:"Keep it alive",desc:"Simple care, honest advice, zero guilt"}].map((step,i)=> (
+            {[{num:"01",title:"Choose your light",desc:"Sun, shade, or somewhere between — tell us how your space lives."},{num:"02",title:"Meet your plant",desc:"Matched from our current rarities, not a generic list."},{num:"03",title:"Keep it alive",desc:"Considered care, from someone who stays with you after."}].map((step,i)=> (
               <FadeIn key={i} delay={i*0.1}>
                 <div className="border-t border-forest-300 pt-6">
                   <span className="font-mono text-xs text-[#E85A3C]">{step.num}</span>
@@ -141,58 +366,59 @@ export default function HomePage() {
               </FadeIn>
             ))}
           </div>
+          
+          {/* Light Filter Teaser - positioned below the three-step row */}
+          <LightFilterTeaser />
         </div>
       </section>
 
-      {/* Section 003 - Dark Atmosphere */}
-      <section className="py-24 lg:py-32 bg-[#1A1A1A]">
+      {/* Section 003 - Atmosphere Picker */}
+      <section className={`py-24 lg:py-32 transition-colors duration-500 ${moodThemes[selectedMood as Mood].bg}`}>
         <div className="container mx-auto px-6 lg:px-12">
           <FadeIn>
             <div className="mb-16">
-              <span className="font-mono text-xs text-forest-400">003</span>
-              <span className="mx-3 text-forest-600">/</span>
-              <span className="font-mono text-xs tracking-widest text-forest-400">THE COLLECTION</span>
+              <span className={`font-mono text-xs ${moodThemes[selectedMood as Mood].textMuted}`}>003</span>
+              <span className={`mx-3 ${moodThemes[selectedMood as Mood].textSecondary}`}>/</span>
+              <span className={`font-mono text-xs tracking-widest ${moodThemes[selectedMood as Mood].textMuted}`}>THE COLLECTION</span>
             </div>
           </FadeIn>
           <FadeIn delay={0.1}>
             <h2 className="font-serif leading-[0.9] tracking-tight mb-16">
-              <span className="block text-[clamp(2.5rem,8vw,5.5rem)] text-white">Pick your</span>
-              <span className="block text-[clamp(2.5rem,8vw,5.5rem)] text-[#E85A3C]">atmosphere.</span>
+              <span className={`block text-[clamp(2.5rem,8vw,5.5rem)] ${moodThemes[selectedMood as Mood].textPrimary}`}>Pick your</span>
+              <span className={`block text-[clamp(2.5rem,8vw,5.5rem)] ${moodThemes[selectedMood as Mood].accent}`}>atmosphere.</span>
             </h2>
           </FadeIn>
           <FadeIn delay={0.2}>
-            <p className="text-forest-400 text-sm mb-8">Not every plant belongs in every room.</p>
+            <p className={`text-sm mb-8 ${moodThemes[selectedMood as Mood].textSecondary}`}>Not every plant belongs in every room.</p>
           </FadeIn>
           <FadeIn delay={0.3}>
             <div className="flex items-center gap-3 mb-12 flex-wrap">
-              <span className="font-mono text-xs text-forest-500 uppercase mr-4">My room feels</span>
-              {["soft","bright","moody"].map((m) => (
-                <button key={m} onClick={() => setSelectedMood(m)} className={`px-5 py-2 rounded-full text-xs font-medium tracking-wide border transition-all duration-300 ${selectedMood === m ? 'bg-[#D4F542] text-[#1A1A1A] border-[#D4F542]' : 'bg-transparent text-white border-forest-600 hover:border-[#D4F542]'}`}>
-                  {m.toUpperCase()}
-                </button>
-              ))}
+              <span className={`font-mono text-xs uppercase mr-4 ${moodThemes[selectedMood as Mood].textMuted}`}>My room feels</span>
+              {["soft","bright","moody"].map((m) => {
+                const theme = moodThemes[m as Mood]
+                const isSelected = selectedMood === m
+                return (
+                  <button 
+                    key={m} 
+                    onClick={() => {
+                      setSelectedMood(m)
+                      // ponytail: Scroll products into view on mood change for UX
+                      const grid = document.getElementById('mood-products-grid')
+                      if (grid) {
+                        grid.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }
+                    }} 
+                    className={`px-5 py-2 rounded-full text-xs font-medium tracking-wide border transition-all duration-300 ${isSelected ? theme.buttonActive : `${theme.buttonInactive} ${theme.buttonInactiveText} hover:${theme.borderHover}`}`}
+                  >
+                    {m.toUpperCase()}
+                  </button>
+                )
+              })}
             </div>
           </FadeIn>
           <FadeIn delay={0.4}>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {placeholderProducts.map((p, i) => (
-                <div key={i} className="group cursor-pointer">
-                  <div className={`relative aspect-[3/4] overflow-hidden ${p.bg}`}>
-                    <span className="absolute top-3 left-3 font-mono text-xs text-[#1A1A1A]">{String(i+1).padStart(2,'0')}</span>
-                  </div>
-                  <div className="mt-4 flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 text-forest-500 text-xs mb-1">
-                        {p.soldOut ? <span className="text-forest-400">SOLD OUT</span> : <><span>&#9733; {p.stars}</span>{p.note && <span className="text-[#E85A3C]">{p.note}</span>}</>}
-                      </div>
-                      <h3 className="font-serif text-lg text-white group-hover:text-[#D4F542] transition-colors">{p.name}</h3>
-                    </div>
-                    <button className="w-8 h-8 rounded-full border border-forest-600 flex items-center justify-center hover:bg-[#D4F542] hover:border-[#D4F542] hover:text-[#1A1A1A] transition-colors text-white">
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div id="mood-products-grid">
+              <MoodPlantsGrid mood={selectedMood as Mood} theme={moodThemes[selectedMood as Mood]} />
             </div>
           </FadeIn>
         </div>
@@ -276,16 +502,13 @@ export default function HomePage() {
             </FadeIn>
             <FadeIn delay={0.1}>
               <div className="space-y-8">
-                <div className="border-b border-[#1A1A1A]/20 pb-8">
-                  <span className="font-mono text-xs text-[#E85A3C]">RS. 500</span>
-                  <h3 className="font-serif text-xl mt-2 text-[#1A1A1A]">Repotting Workshop: Spring Ready</h3>
-                  <p className="font-mono text-[10px] text-[#1A1A1A]/60 tracking-widest mt-2 uppercase">Nursery Pickup Point, DHA Phase 6</p>
-                </div>
-                <div className="border-b border-[#1A1A1A]/20 pb-8">
-                  <span className="font-mono text-xs text-[#E85A3C]">FREE</span>
-                  <h3 className="font-serif text-xl mt-2 text-[#1A1A1A]">Free Plant Walk: Karachi&apos;s Urban Greenery</h3>
-                  <p className="font-mono text-[10px] text-[#1A1A1A]/60 tracking-widest mt-2 uppercase">Frere Hall Gardens</p>
-                </div>
+                {mockEvents.slice(0, 2).map((event) => (
+                  <Link key={event.id} href={`/events/${event.slug}`} className="block border-b border-[#1A1A1A]/20 pb-8 group hover:opacity-80 transition-opacity">
+                    <span className="font-mono text-xs text-[#E85A3C]">{event.price === 0 ? "FREE" : `PKR ${event.price}`}</span>
+                    <h3 className="font-serif text-xl mt-2 text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors">{event.title}</h3>
+                    <p className="font-mono text-[10px] text-[#1A1A1A]/60 tracking-widest mt-2 uppercase">{event.location}</p>
+                  </Link>
+                ))}
               </div>
             </FadeIn>
           </div>

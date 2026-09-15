@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Send, X, Sparkle } from "lucide-react"
+import { useReducedMotion } from "@/hooks/use-reduced-motion"
 
 interface Message {
   id: string
@@ -32,10 +33,11 @@ export function MuffinWidget() {
   ])
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
+  const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
-  }, [messages])
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: prefersReducedMotion ? "auto" : "smooth" })
+  }, [messages, prefersReducedMotion])
 
   const getResponse = (text: string) => {
     const lower = text.toLowerCase()
@@ -59,24 +61,19 @@ export function MuffinWidget() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-[#d95d2c] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform"
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-[#d95d2c] text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2"
       >
         <Sparkle className="w-5 h-5" />
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
+      {isOpen && (
+        prefersReducedMotion ? (
           <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <div
               onClick={() => setIsOpen(false)}
               className="fixed inset-0 bg-black/20 z-50"
             />
-            <motion.div
-              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 flex flex-col"
-            >
+            <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 flex flex-col">
               <div className="p-4 border-b flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-[#d95d2c] rounded-full flex items-center justify-center">
@@ -84,10 +81,10 @@ export function MuffinWidget() {
                   </div>
                   <span className="font-medium">Muffin</span>
                 </div>
-                <button onClick={() => setIsOpen(false)}><X className="w-5 h-5" /></button>
+                <button onClick={() => setIsOpen(false)} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2"><X className="w-5 h-5" /></button>
               </div>
 
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 overscroll-contain">
                 {messages.map((m) => (
                   <div key={m.id} className={`flex ${m.sender === "user" ? "justify-end" : ""}`}>
                     <div className={`max-w-[80%] px-4 py-2 text-sm rounded-full ${
@@ -106,9 +103,9 @@ export function MuffinWidget() {
                       key={q}
                       onClick={() => {
                         setMessages(prev => [...prev, { id: Date.now().toString(), text: q, sender: "user" }])
-                        setTimeout(() => setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getResponse(q), sender: "bot" }]), 400)
+                        setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getResponse(q), sender: "bot" }])
                       }}
-                      className="px-3 py-1 text-xs bg-[#f5f2eb] rounded-full hover:bg-[#e8e3da]"
+                      className="px-3 py-1 text-xs bg-[#f5f2eb] rounded-full hover:bg-[#e8e3da] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2"
                     >
                       {q}
                     </button>
@@ -122,15 +119,81 @@ export function MuffinWidget() {
                     placeholder="Ask..."
                     className="flex-1 px-4 py-2 border rounded-full text-sm focus:outline-none focus:border-[#d95d2c]"
                   />
-                  <button onClick={handleSend} className="w-10 h-10 bg-[#d95d2c] text-white rounded-full flex items-center justify-center">
+                  <button onClick={handleSend} className="w-10 h-10 bg-[#d95d2c] text-white rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2">
                     <Send className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           </>
-        )}
-      </AnimatePresence>
+        ) : (
+          <AnimatePresence>
+            <>
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setIsOpen(false)}
+                className="fixed inset-0 bg-black/20 z-50"
+              />
+              <motion.div
+                initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 flex flex-col"
+              >
+                <div className="p-4 border-b flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-[#d95d2c] rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">M</span>
+                    </div>
+                    <span className="font-medium">Muffin</span>
+                  </div>
+                  <button onClick={() => setIsOpen(false)} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2"><X className="w-5 h-5" /></button>
+                </div>
+
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 overscroll-contain">
+                  {messages.map((m) => (
+                    <div key={m.id} className={`flex ${m.sender === "user" ? "justify-end" : ""}`}>
+                      <div className={`max-w-[80%] px-4 py-2 text-sm rounded-full ${
+                        m.sender === "user" ? "bg-[#1a1a1a] text-white" : "bg-[#f5f2eb] text-[#1a1a1a]"
+                      }`}>
+                        {m.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-4 border-t">
+                  <div className="flex gap-2 flex-wrap mb-3">
+                    {quickReplies.map(q => (
+                      <button
+                        key={q}
+                        onClick={() => {
+                          setMessages(prev => [...prev, { id: Date.now().toString(), text: q, sender: "user" }])
+                          setTimeout(() => setMessages(prev => [...prev, { id: (Date.now()+1).toString(), text: getResponse(q), sender: "bot" }]), 400)
+                        }}
+                        className="px-3 py-1 text-xs bg-[#f5f2eb] rounded-full hover:bg-[#e8e3da] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      value={input}
+                      onChange={e => setInput(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && handleSend()}
+                      placeholder="Ask..."
+                      className="flex-1 px-4 py-2 border rounded-full text-sm focus:outline-none focus:border-[#d95d2c]"
+                    />
+                    <button onClick={handleSend} className="w-10 h-10 bg-[#d95d2c] text-white rounded-full flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d95d2c] focus-visible:ring-offset-2">
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          </AnimatePresence>
+        )
+      )}
     </>
   )
 }

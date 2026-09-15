@@ -11,6 +11,9 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
+  // Disable static export for dynamic rendering during development
+  // Use 'export' only when you need to build for static hosting
+  // output: 'export',
 }
 
 export default nextConfig

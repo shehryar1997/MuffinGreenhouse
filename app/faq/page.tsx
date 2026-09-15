@@ -28,14 +28,24 @@ export default function FAQPage() {
           {faqs.map((faq, index) => (
             <div key={index} className="border border-forest-200 rounded-xl overflow-hidden bg-white">
               <button
-                className="w-full flex items-center justify-between p-6 text-left"
+                className="w-full flex items-center justify-between p-6 text-left cursor-pointer hover:bg-forest-50 transition-colors"
                 onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                aria-expanded={openIndex === index}
+                aria-controls={`faq-answer-${index}`}
+                id={`faq-question-${index}`}
               >
                 <span className="font-medium text-forest-900">{faq.question}</span>
-                <ChevronDown className={`w-5 h-5 text-forest-500 transition-transform ${openIndex === index ? "rotate-180" : ""}`} />
+                <ChevronDown className={`w-5 h-5 text-forest-500 transition-transform ${openIndex === index ? "rotate-180" : ""}`} aria-hidden="true" />
               </button>
               {openIndex === index && (
-                <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} className="px-6 pb-6">
+                <motion.div 
+                  initial={{ height: 0 }} 
+                  animate={{ height: "auto" }} 
+                  className="px-6 pb-6"
+                  id={`faq-answer-${index}`}
+                  role="region"
+                  aria-labelledby={`faq-question-${index}`}
+                >
                   <p className="text-forest-600">{faq.answer}</p>
                 </motion.div>
               )}
