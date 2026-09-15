@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from "react"
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react"
 import { Product } from "@/types"
 import { getAllProducts } from "@/lib/data/products"
 
@@ -28,6 +28,21 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     query: "",
     results: [],
   })
+  const [products, setProducts] = useState<Product[]>([])
+
+  // Fetch products once on mount
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const allProducts = await getAllProducts()
+        setProducts(allProducts)
+      } catch {
+        // Silently fail - empty results until products load
+        setProducts([])
+      }
+    }
+    loadProducts()
+  }, [])
 
   const openSearch = useCallback(() => {
     setState((prev) => ({ ...prev, isOpen: true }))
@@ -39,19 +54,19 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
 
   const setQuery = useCallback((query: string) => {
     const trimmedQuery = query.trim().toLowerCase()
-    
+
     if (trimmedQuery === "") {
       setState((prev) => ({ ...prev, query: "", results: [] }))
       return
     }
 
-    // Search products by name (case-insensitive)
-    const results = getAllProducts().filter((product) =>
+    // Search products by name (case-insensitive) from cached products
+    const results = products.filter((product) =>
       product.name.toLowerCase().includes(trimmedQuery)
     )
 
     setState((prev) => ({ ...prev, query, results }))
-  }, [])
+  }, [products])
 
   const clearSearch = useCallback(() => {
     setState({

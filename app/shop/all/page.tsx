@@ -1,11 +1,9 @@
-"use client"
-
 import { getAllProducts } from "@/lib/data/products"
 import { ProductCard } from "@/components/ui/product-card"
 import { ProductFilters, FilterSidebar } from "@/components/shop/product-filters"
 
-export default function ShopAllPage() {
-  const allProducts = getAllProducts()
+export default async function ShopAllPage() {
+  const allProducts = await getAllProducts()
   return (
     <ProductFilters products={allProducts}>
       {(filteredProducts, helpers) => {

@@ -1,13 +1,15 @@
-"use client"
-
 import { ProductCard } from "@/components/ui/product-card"
 import { ProductFilters, FilterSidebar } from "@/components/shop/product-filters"
-import { getAllProducts, categoryMeta } from "@/lib/data/products"
-import { useParams } from "next/navigation"
+import { getProductsByCategory, categoryMeta } from "@/lib/data/products"
 
-export default function ShopCategoryPage() {
-  const params = useParams()
-  const categorySlug = params.category as string
+interface ShopCategoryPageProps {
+  params: {
+    category: string
+  }
+}
+
+export default async function ShopCategoryPage({ params }: ShopCategoryPageProps) {
+  const categorySlug = params.category
 
   const meta = categoryMeta[categorySlug] || {
     title: categorySlug.charAt(0).toUpperCase() + categorySlug.slice(1).replace(/-/g, " "),
@@ -15,7 +17,7 @@ export default function ShopCategoryPage() {
     tagline: "Quality plants for Karachi."
   }
 
-  const categoryProducts = getAllProducts().filter((p) => p.category.slug === categorySlug)
+  const categoryProducts = await getProductsByCategory(categorySlug)
   const isPlantCategory = !["planting-media", "fertilizer", "pots", "other-equipment"].includes(categorySlug)
 
   return (
