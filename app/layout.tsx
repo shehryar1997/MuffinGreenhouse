@@ -4,30 +4,25 @@ import { ThemeProvider } from "@/components/providers/theme-provider"
 import { CartProvider } from "@/components/providers/cart-provider"
 import { SearchProvider } from "@/components/providers/search-provider"
 import { Toaster } from "@/components/ui/sonner"
-import { Header } from "@/components/layout/header"
-import { Footer } from "@/components/layout/footer"
-import { CartDrawer } from "@/components/cart/cart-drawer"
-import { SearchDrawer } from "@/components/search/search-drawer"
-import { MuffinWidget } from "@/components/ui/muffin-widget"
-import { WhatsAppButton } from "@/components/ui/whatsapp-button"
+import { SiteChrome } from "@/components/layout/site-chrome"
 import "./globals.css"
 
-const playfair = Playfair_Display({ 
-  subsets: ["latin"], 
+const playfair = Playfair_Display({
+  subsets: ["latin"],
   variable: "--font-serif",
   display: "swap",
   weight: ["400", "500", "600"],
 })
 
-const inter = Inter({ 
-  subsets: ["latin"], 
+const inter = Inter({
+  subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
   weight: ["300", "400", "500", "600"],
 })
 
-const jetbrains = JetBrains_Mono({ 
-  subsets: ["latin"], 
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
   weight: ["400", "500"],
@@ -61,15 +56,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <SearchProvider>
             <CartProvider>
-              <div className="relative min-h-screen flex flex-col">
-                <Header />
-                <main id="main-content" className="flex-1">{children}</main>
-                <Footer />
-              </div>
-              <CartDrawer />
-              <SearchDrawer />
-              <MuffinWidget />
-              <WhatsAppButton />
+              <SiteChrome>{children}</SiteChrome>
               <Toaster position="bottom-right" />
             </CartProvider>
           </SearchProvider>
