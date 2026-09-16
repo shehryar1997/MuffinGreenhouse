@@ -107,43 +107,43 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <h3 className="font-serif text-xl mb-4">Care Requirements</h3>
               <div className="grid grid-cols-2 gap-3">
                 {/* Light */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
-                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-100 h-full">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Sun className="w-5 h-5 text-amber-600" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-amber-700/80 font-medium uppercase tracking-wide">Light</p>
-                    <p className="text-sm font-semibold text-amber-900 truncate">{product.careInfo.light}</p>
+                  <div>
+                    <p className="text-xs text-amber-700/80 font-medium uppercase tracking-wide mb-1">Light</p>
+                    <p className="text-sm font-semibold text-amber-900 leading-relaxed">{product.careInfo.light}</p>
                   </div>
                 </div>
                 {/* Water */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100 h-full">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Droplets className="w-5 h-5 text-blue-600" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-blue-700/80 font-medium uppercase tracking-wide">Water</p>
-                    <p className="text-sm font-semibold text-blue-900 truncate">{product.careInfo.water}</p>
+                  <div>
+                    <p className="text-xs text-blue-700/80 font-medium uppercase tracking-wide mb-1">Water</p>
+                    <p className="text-sm font-semibold text-blue-900 leading-relaxed">{product.careInfo.water}</p>
                   </div>
                 </div>
                 {/* Humidity */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-sky-50 border border-sky-100">
-                  <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-sky-50 border border-sky-100 h-full">
+                  <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <CloudRain className="w-5 h-5 text-sky-600" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-sky-700/80 font-medium uppercase tracking-wide">Humidity</p>
-                    <p className="text-sm font-semibold text-sky-900 truncate">{product.careInfo.humidity}</p>
+                  <div>
+                    <p className="text-xs text-sky-700/80 font-medium uppercase tracking-wide mb-1">Humidity</p>
+                    <p className="text-sm font-semibold text-sky-900 leading-relaxed">{product.careInfo.humidity}</p>
                   </div>
                 </div>
                 {/* Temperature */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-orange-50 border border-orange-100">
-                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-orange-50 border border-orange-100 h-full">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Thermometer className="w-5 h-5 text-orange-600" />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-orange-700/80 font-medium uppercase tracking-wide">Temperature</p>
-                    <p className="text-sm font-semibold text-orange-900 truncate">{product.careInfo.temperature}</p>
+                  <div>
+                    <p className="text-xs text-orange-700/80 font-medium uppercase tracking-wide mb-1">Temperature</p>
+                    <p className="text-sm font-semibold text-orange-900 leading-relaxed">{product.careInfo.temperature}</p>
                   </div>
                 </div>
               </div>
