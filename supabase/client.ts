@@ -11,6 +11,9 @@ export const supabase = createClient(supabaseUrl, supabaseKey)
 // ============================================================================
 // TYPES (match your existing @/types)
 // ============================================================================
+// ponytail: care info, category, and tags are now flat columns directly on
+// products (mirrors the old Airtable Products table 1:1) -- no more nested
+// joined objects for those. Only images/variants remain separate linked tables.
 export interface SupabaseProduct {
   id: string
   sku: string
@@ -31,14 +34,31 @@ export interface SupabaseProduct {
   is_pet_safe: boolean
   is_featured: boolean
   category_id: string
+  category_name: string
+  category_slug: string
   published_at: string | null
   created_at: string
-  category?: { id: string; name: string; slug: string }
+  updated_at: string
+
+  // Care info -- flat, was previously a joined care_info object
+  light: string | null
+  water: string | null
+  humidity: string | null
+  temperature: string | null
+  soil: string | null
+  fertilizer: string | null
+  toxicity: string | null
+  light_summary: string | null
+  water_summary: string | null
+  pet_safe_note: string | null
+
+  // Tags -- flat text[], was previously joined junction tables
+  use_case_tags: string[]
+  mood_tags: string[]
+
+  // Still separate linked tables, same as Airtable
   images?: SupabaseProductImage[]
   variants?: SupabaseProductVariant[]
-  care_info?: SupabaseCareInfo
-  use_cases?: string[]
-  moods?: string[]
 }
 
 export interface SupabaseProductImage {
@@ -57,16 +77,6 @@ export interface SupabaseProductVariant {
   stock_status: string
   stock_count: number
   is_default: boolean
-}
-
-export interface SupabaseCareInfo {
-  light: string
-  water: string
-  humidity: string
-  temperature: string
-  soil: string
-  fertilizer: string
-  toxicity: string
 }
 
 export interface SearchFilters {
