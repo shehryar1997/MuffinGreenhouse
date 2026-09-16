@@ -28,7 +28,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
   const isOutOfStock = product.stockStatus === "out_of_stock"
   const currentPrice = selectedVariant?.price || product.price
-  const currentCompareAt = selectedVariant?.compareAtPrice ?? product.compareAtPrice
+  const currentCompareAt = product.compareAtPrice
   const currentStockCount = selectedVariant?.stockCount ?? product.stockCount
 
   return (
