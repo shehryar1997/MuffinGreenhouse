@@ -10,38 +10,17 @@ export { mockProducts, shopByNeedIcons, useCases, categoryMeta, mockReviews } fr
 // ============================================================================
 // Supabase Query Configuration
 // ============================================================================
+// NOTE: care info, category, and tags now live directly as flat columns on
+// `products` (light, water, humidity, temperature, soil, fertilizer, toxicity,
+// light_summary, water_summary, pet_safe_note, category_name, category_slug,
+// use_case_tags, mood_tags) -- no more joins needed for those. Only images
+// and variants remain separate linked tables, same as in Airtable.
 
 const PRODUCT_SELECT = `
   *,
-  category:categories(id, name, slug),
   images:product_images(id, url, alt_text, sort_order, is_primary),
-  variants:product_variants(id, sku, name, price, stock_status, stock_count, is_default),
-  care_info(light, water, humidity, temperature, soil, fertilizer, toxicity),
-  product_use_cases(use_case_tags(slug)),
-  product_moods(mood_tags(slug))
+  variants:product_variants(id, sku, name, price, stock_status, stock_count, is_default)
 `
-
-interface RawSupabaseRow {
-  id: string
-  product_use_cases?: Array<{ use_case_tags: { slug: string } }>
-  product_moods?: Array<{ mood_tags: { slug: string } }>
-  care_info?: Array<Record<string, string>> | Record<string, string>
-  [key: string]: unknown
-}
-
-function normalizeRow(row: RawSupabaseRow): SupabaseProduct {
-  const use_cases = (row.product_use_cases ?? [])
-    .map((puc) => puc.use_case_tags?.slug)
-    .filter(Boolean) as string[]
-  const moods = (row.product_moods ?? [])
-    .map((pm) => pm.mood_tags?.slug)
-    .filter(Boolean) as string[]
-  const careInfo = (Array.isArray(row.care_info) ? row.care_info[0] : row.care_info) as
-    | Record<string, string>
-    | undefined
-  return { ...row, use_cases, moods, care_info: careInfo } as SupabaseProduct
-}
-
 
 // ============================================================================
 // Product Fetching Functions
@@ -60,7 +39,7 @@ export async function getAllProducts(): Promise<Product[]> {
     return []
   }
 
-  return (data ?? []).map((row) => mapSupabaseProductToProduct(normalizeRow((row as unknown) as RawSupabaseRow)))
+  return (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct))
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | undefined> {
@@ -82,17 +61,14 @@ export async function getProductBySlug(slug: string): Promise<Product | undefine
     return undefined
   }
 
-  return mapSupabaseProductToProduct(normalizeRow((data as unknown) as RawSupabaseRow))
+  return mapSupabaseProductToProduct(data as unknown as SupabaseProduct)
 }
 
 export async function getProductsByCategory(categorySlug: string): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
-    .select(PRODUCT_SELECT.replace(
-      "category:categories(id, name, slug)",
-      "category:categories!inner(id, name, slug)"
-    ))
-    .eq("category.slug", categorySlug)
+    .select(PRODUCT_SELECT)
+    .eq("category_slug", categorySlug)
     .not("published_at", "is", null)
     .order("sort_order", { foreignTable: "product_images", ascending: true })
     .order("sort_order", { foreignTable: "product_variants", ascending: true })
@@ -102,37 +78,30 @@ export async function getProductsByCategory(categorySlug: string): Promise<Produ
     return []
   }
 
-  return (data ?? []).map((row) => mapSupabaseProductToProduct(normalizeRow((row as unknown) as RawSupabaseRow)))
+  return (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct))
+}
+
+// use_case_tags is now a flat text[] of tag NAMES on products (e.g. "Beginner-Proof"),
+// matching Airtable's multi-select choices exactly. Routing still uses slugs, so this
+// fixed mapping (same 6 values as the Airtable "Use Case Tags" field) converts between
+// them -- deliberately not derived by string transformation, since names like
+// "Balcony & Rooftop" and "Air-Purifying" don't reconstruct cleanly from a slug.
+const USE_CASE_SLUG_TO_LABEL: Record<string, string> = {
+  "low-light-survivors": "Low-Light Survivors",
+  "balcony-rooftop": "Balcony & Rooftop",
+  "air-purifying": "Air-Purifying",
+  "pet-safe": "Pet-Safe",
+  "beginner-proof": "Beginner-Proof",
+  "statement-plants": "Statement Plants",
 }
 
 export async function getProductsByUseCase(useCaseSlug: string): Promise<Product[]> {
-  const { data: tagData, error: tagError } = await supabase
-    .from("use_case_tags")
-    .select("id")
-    .eq("slug", useCaseSlug)
-    .maybeSingle()
-
-  if (tagError || !tagData) {
-    if (tagError) console.error("Error fetching use case tag:", tagError)
-    return []
-  }
-
-  const { data: links, error: linksError } = await supabase
-    .from("product_use_cases")
-    .select("product_id")
-    .eq("use_case_id", tagData.id)
-
-  if (linksError || !links?.length) {
-    if (linksError) console.error("Error fetching product use case links:", linksError)
-    return []
-  }
-
-  const productIds = links.map((l) => l.product_id)
+  const label = USE_CASE_SLUG_TO_LABEL[useCaseSlug] ?? useCaseSlug
 
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_SELECT)
-    .in("id", productIds)
+    .contains("use_case_tags", [label])
     .not("published_at", "is", null)
     .order("sort_order", { foreignTable: "product_images", ascending: true })
     .order("sort_order", { foreignTable: "product_variants", ascending: true })
@@ -142,11 +111,11 @@ export async function getProductsByUseCase(useCaseSlug: string): Promise<Product
     return []
   }
 
-  return (data ?? []).map((row) => mapSupabaseProductToProduct(normalizeRow((row as unknown) as RawSupabaseRow)))
+  return (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct))
 }
 
 export async function getWeeklySoldCount(): Promise<number> {
-  // ponytail: Returning 0 as required — no order data exists yet.
+  // ponytail: Returning 0 as required -- no order data exists yet.
   // Real order counting should NOT be fabricated. Implement when orders table is ready.
   return 0
 }
@@ -167,7 +136,7 @@ export async function getPlantOfTheDay(): Promise<Product> {
   }
 
   if (data) {
-    return mapSupabaseProductToProduct(normalizeRow((data as unknown) as RawSupabaseRow))
+    return mapSupabaseProductToProduct(data as unknown as SupabaseProduct)
   }
 
   // Fallback: get first published product
@@ -186,5 +155,5 @@ export async function getPlantOfTheDay(): Promise<Product> {
     throw new Error("No products available")
   }
 
-  return mapSupabaseProductToProduct(normalizeRow((fallback as unknown) as RawSupabaseRow))
+  return mapSupabaseProductToProduct(fallback as unknown as SupabaseProduct)
 }

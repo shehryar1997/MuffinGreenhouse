@@ -1,16 +1,17 @@
 import { Product, Category, ProductImage, ProductVariant, CareInfo } from '@/types'
-import { SupabaseProduct, SupabaseProductImage, SupabaseProductVariant, SupabaseCareInfo } from '@/supabase/client'
+import { SupabaseProduct, SupabaseProductImage, SupabaseProductVariant } from '@/supabase/client'
 
 /**
  * Maps a SupabaseProduct (snake_case) to the app's Product type (camelCase)
- * ponytail: Assumes category data is populated via Supabase join
+ * ponytail: care info, category, and tags are now flat columns directly on
+ * the products row (no joins) -- mirrors the Airtable Products table 1:1.
  */
 export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
   return {
     id: row.id,
     name: row.name,
     slug: row.slug,
-    category: mapSupabaseCategory(row.category!, row.category_id),
+    category: mapSupabaseCategory(row),
     description: row.description,
     price: row.price,
     compareAtPrice: row.compare_at_price ?? undefined,
@@ -18,26 +19,26 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     stockStatus: row.stock_status,
     stockCount: row.stock_count,
     images: (row.images ?? []).map(mapSupabaseImage),
-    careInfo: mapSupabaseCareInfo(row.care_info),
+    careInfo: mapSupabaseCareInfo(row),
     variants: (row.variants ?? []).map(mapSupabaseVariant),
-    useCaseTags: row.use_cases ?? [],
+    useCaseTags: row.use_case_tags ?? [],
     isNewArrival: row.is_new_arrival,
     isPetSafe: row.is_pet_safe,
     difficulty: row.difficulty,
     lightRequirement: row.light_requirement,
     waterRequirement: row.water_requirement,
     size: row.size,
-    moodTags: row.moods ?? [],
+    moodTags: row.mood_tags ?? [],
     createdAt: row.created_at,
-    updatedAt: row.created_at, // ponytail: No updated_at in SupabaseProduct, using created_at
+    updatedAt: row.updated_at ?? row.created_at,
   }
 }
 
-function mapSupabaseCategory(category: { id: string; name: string; slug: string }, categoryId: string): Category {
+function mapSupabaseCategory(row: SupabaseProduct): Category {
   return {
-    id: category?.id ?? categoryId,
-    slug: category?.slug ?? '',
-    name: category?.name ?? '',
+    id: row.category_id,
+    slug: row.category_slug ?? '',
+    name: row.category_name ?? '',
     description: undefined,
     image: undefined,
     parentId: undefined,
@@ -66,14 +67,14 @@ function mapSupabaseVariant(variant: SupabaseProductVariant): ProductVariant {
   }
 }
 
-function mapSupabaseCareInfo(careInfo: SupabaseCareInfo | undefined): CareInfo {
+function mapSupabaseCareInfo(row: SupabaseProduct): CareInfo {
   return {
-    light: careInfo?.light ?? '',
-    water: careInfo?.water ?? '',
-    humidity: careInfo?.humidity ?? '',
-    temperature: careInfo?.temperature ?? '',
-    soil: careInfo?.soil ?? '',
-    fertilizer: careInfo?.fertilizer ?? '',
-    toxicity: careInfo?.toxicity ?? '',
+    light: row.light ?? '',
+    water: row.water ?? '',
+    humidity: row.humidity ?? '',
+    temperature: row.temperature ?? '',
+    soil: row.soil ?? '',
+    fertilizer: row.fertilizer ?? '',
+    toxicity: row.toxicity ?? '',
   }
 }
