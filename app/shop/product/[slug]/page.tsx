@@ -2,6 +2,8 @@ import { notFound } from "next/navigation"
 import { getProductBySlug } from "@/lib/data/products"
 import { ProductDetailClient } from "./product-detail-client"
 
+export const revalidate = 300
+
 interface ProductDetailPageProps {
   params: { slug: string }
 }

@@ -90,6 +90,7 @@ type FilterSidebarProps = {
   updateFilter: (key: keyof FilterState, value: string | [number, number]) => void
   clearFilters: () => void
   showClearButtonText?: string
+  hidePlantFilters?: boolean
 }
 
 export function FilterSidebar({
@@ -98,6 +99,7 @@ export function FilterSidebar({
   updateFilter,
   clearFilters,
   showClearButtonText = "Clear All Filters",
+  hidePlantFilters = false,
 }: FilterSidebarProps) {
   return (
     <aside className="w-full lg:w-64 lg:flex-shrink-0">
@@ -132,81 +134,85 @@ export function FilterSidebar({
           </div>
         </div>
 
-        <div>
-          <h3 className="font-mono text-xs tracking-widest text-forest-600 uppercase mb-3">Lighting</h3>
-          <div className="space-y-2">
-            {["low", "medium", "bright", "direct"].map((val) => (
-              <label key={val} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="lighting"
-                  value={val}
-                  checked={filters.lighting === val}
-                  onChange={(e) => updateFilter("lighting", e.target.value)}
-                  className="accent-[#E85A3C]"
-                />
-                <span className="text-sm text-forest-700">
-                  {val === "low" ? "Low Light" : val === "medium" ? "Medium Light" : val === "bright" ? "Bright Indirect" : "Full Sun"}
-                </span>
-              </label>
-            ))}
-            {filters.lighting && (
-              <button onClick={() => updateFilter("lighting", "")} className="text-xs text-forest-500 underline mt-1">
-                Clear selection
-              </button>
-            )}
-          </div>
-        </div>
+        {!hidePlantFilters && (
+          <>
+            <div>
+              <h3 className="font-mono text-xs tracking-widest text-forest-600 uppercase mb-3">Lighting</h3>
+              <div className="space-y-2">
+                {["low", "medium", "bright", "direct"].map((val) => (
+                  <label key={val} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="lighting"
+                      value={val}
+                      checked={filters.lighting === val}
+                      onChange={(e) => updateFilter("lighting", e.target.value)}
+                      className="accent-[#E85A3C]"
+                    />
+                    <span className="text-sm text-forest-700">
+                      {val === "low" ? "Low Light" : val === "medium" ? "Medium Light" : val === "bright" ? "Bright Indirect" : "Full Sun"}
+                    </span>
+                  </label>
+                ))}
+                {filters.lighting && (
+                  <button onClick={() => updateFilter("lighting", "")} className="text-xs text-forest-500 underline mt-1">
+                    Clear selection
+                  </button>
+                )}
+              </div>
+            </div>
 
-        <div>
-          <h3 className="font-mono text-xs tracking-widest text-forest-600 uppercase mb-3">Pet-Friendly</h3>
-          <div className="space-y-2">
-            {["yes", "no"].map((val) => (
-              <label key={val} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="petFriendly"
-                  value={val}
-                  checked={filters.petFriendly === val}
-                  onChange={(e) => updateFilter("petFriendly", e.target.value)}
-                  className="accent-[#E85A3C]"
-                />
-                <span className="text-sm text-forest-700">{val === "yes" ? "Yes" : "No"}</span>
-              </label>
-            ))}
-            {filters.petFriendly && (
-              <button onClick={() => updateFilter("petFriendly", "")} className="text-xs text-forest-500 underline mt-1">
-                Clear selection
-              </button>
-            )}
-          </div>
-        </div>
+            <div>
+              <h3 className="font-mono text-xs tracking-widest text-forest-600 uppercase mb-3">Pet-Friendly</h3>
+              <div className="space-y-2">
+                {["yes", "no"].map((val) => (
+                  <label key={val} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="petFriendly"
+                      value={val}
+                      checked={filters.petFriendly === val}
+                      onChange={(e) => updateFilter("petFriendly", e.target.value)}
+                      className="accent-[#E85A3C]"
+                    />
+                    <span className="text-sm text-forest-700">{val === "yes" ? "Yes" : "No"}</span>
+                  </label>
+                ))}
+                {filters.petFriendly && (
+                  <button onClick={() => updateFilter("petFriendly", "")} className="text-xs text-forest-500 underline mt-1">
+                    Clear selection
+                  </button>
+                )}
+              </div>
+            </div>
 
-        <div>
-          <h3 className="font-mono text-xs tracking-widest text-forest-600 uppercase mb-3">Watering</h3>
-          <div className="space-y-2">
-            {["low", "medium", "high"].map((val) => (
-              <label key={val} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="watering"
-                  value={val}
-                  checked={filters.watering === val}
-                  onChange={(e) => updateFilter("watering", e.target.value)}
-                  className="accent-[#E85A3C]"
-                />
-                <span className="text-sm text-forest-700">
-                  {val === "low" ? "Low (Drought Tolerant)" : val === "medium" ? "Medium (Weekly)" : "High (Frequently)"}
-                </span>
-              </label>
-            ))}
-            {filters.watering && (
-              <button onClick={() => updateFilter("watering", "")} className="text-xs text-forest-500 underline mt-1">
-                Clear selection
-              </button>
-            )}
-          </div>
-        </div>
+            <div>
+              <h3 className="font-mono text-xs tracking-widest text-forest-600 uppercase mb-3">Watering</h3>
+              <div className="space-y-2">
+                {["low", "medium", "high"].map((val) => (
+                  <label key={val} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="watering"
+                      value={val}
+                      checked={filters.watering === val}
+                      onChange={(e) => updateFilter("watering", e.target.value)}
+                      className="accent-[#E85A3C]"
+                    />
+                    <span className="text-sm text-forest-700">
+                      {val === "low" ? "Low (Drought Tolerant)" : val === "medium" ? "Medium (Weekly)" : "High (Frequently)"}
+                    </span>
+                  </label>
+                ))}
+                {filters.watering && (
+                  <button onClick={() => updateFilter("watering", "")} className="text-xs text-forest-500 underline mt-1">
+                    Clear selection
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         {hasActiveFilters && (
           <button
