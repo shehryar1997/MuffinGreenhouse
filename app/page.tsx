@@ -439,7 +439,7 @@ export default function HomePage() {
           </div>
           
           {/* Light Filter Teaser - positioned below the three-step row */}
-          <LightFilterTeaser />
+          <LightFilterTeaser products={mockProducts} />
         </div>
       </section>
 

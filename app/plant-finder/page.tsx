@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,21 +16,39 @@ const questions = [
   { id: "pets", question: "Pets or kids?", options: ["Yes", "No"], values: ["yes", "no"] },
 ]
 
-function findPlants(answers: Record<string, string>): Product[] {
-  return findMatchingPlants(answers).slice(0, 3)
-}
-
 export default function PlantFinderPage() {
   const [step, setStep] = useState(-1)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [matches, setMatches] = useState<Product[]>([])
+  const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  // Fetch products on mount
+  useEffect(() => {
+    async function loadProducts() {
+      const products = await getAllProducts()
+      setAllProducts(products)
+    }
+    loadProducts()
+  }, [])
+
+  function findPlants(answers: Record<string, string>): Product[] {
+    return findMatchingPlants(allProducts, answers).slice(0, 3)
+  }
 
   const start = () => { setStep(0); setAnswers({}); setMatches([]) }
-  const select = (val: string) => {
+  const select = async (val: string) => {
+    setIsLoading(true)
     const newAns = { ...answers, [questions[step].id]: val }
     setAnswers(newAns)
-    if (step < questions.length - 1) setStep(step + 1)
-    else { setMatches(findPlants(newAns).length > 0 ? findPlants(newAns) : getAllProducts().slice(0, 3)); setStep(questions.length) }
+    if (step < questions.length - 1) {
+      setStep(step + 1)
+    } else {
+      const matched = findPlants(newAns)
+      setMatches(matched.length > 0 ? matched : allProducts.slice(0, 3))
+      setStep(questions.length)
+    }
+    setIsLoading(false)
   }
 
   return (

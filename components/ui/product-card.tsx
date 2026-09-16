@@ -34,8 +34,6 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
     <Badge variant="outOfStock">Out of Stock</Badge>
   ) : product.stockStatus === "low_stock" ? (
     <Badge variant="lowStock">Only {product.stockCount} left</Badge>
-  ) : product.stockCount <= 5 ? (
-    <Badge variant="lowStock">Only {product.stockCount} left</Badge>
   ) : null
 
   return (

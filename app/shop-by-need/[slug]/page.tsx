@@ -1,14 +1,15 @@
-"use client"
-
-import { useMemo } from "react"
 import { notFound } from "next/navigation"
 import { motion } from "framer-motion"
-import { getAllProducts, useCases } from "@/lib/data/products"
+import { getProductsByUseCase, useCases } from "@/lib/data/products"
 import { ProductCard } from "@/components/ui/product-card"
 
-export default function ShopByNeedPage({ params }: { params: { slug: string } }) {
+interface ShopByNeedPageProps {
+  params: { slug: string }
+}
+
+export default async function ShopByNeedPage({ params }: ShopByNeedPageProps) {
   const useCase = useCases[params.slug]
-  const products = useMemo(() => getAllProducts().filter(p => p.useCaseTags.includes(params.slug)), [params.slug])
+  const products = await getProductsByUseCase(params.slug)
 
   if (!useCase) return notFound()
 

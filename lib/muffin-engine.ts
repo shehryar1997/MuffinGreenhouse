@@ -1,6 +1,4 @@
-// ponytail: Shared rule-based matching engine - prep for RAG backend swap
-export { getAllProducts as mockProducts } from "@/lib/data/products"
-import { getAllProducts } from "@/lib/data/products"
+// ponytail: Shared rule-based matching engine
 import type { Product } from "@/types"
 
 // Plant Finder Quiz Logic
@@ -15,9 +13,11 @@ interface PlantFinderAnswers {
 /**
  * Find plants matching quiz answers
  * ponytail: Basic rule-based scoring, can be replaced with RAG later
+ * @param products - Array of products to filter (pass products from async data fetch)
+ * @param answers - Quiz answers for filtering
  */
-export function findMatchingPlants(answers: PlantFinderAnswers): Product[] {
-  return getAllProducts().filter((p) => {
+export function findMatchingPlants(products: Product[], answers: PlantFinderAnswers): Product[] {
+  return products.filter((p) => {
     const lightMatch =
       !answers.light ||
       p.lightRequirement === answers.light ||

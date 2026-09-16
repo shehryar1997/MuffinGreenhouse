@@ -7,17 +7,21 @@ import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { LightLevel, lightLevelLabels, getLightPreviewProducts } from "@/lib/plant-utils"
 import { formatPrice } from "@/lib/utils"
-import { getAllProducts } from "@/lib/data/products"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
+import { Product } from "@/types"
 
-export function LightFilterTeaser() {
+interface LightFilterTeaserProps {
+  products: Product[]
+}
+
+export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
   const [selectedLight, setSelectedLight] = useState<LightLevel>("medium")
   const prefersReducedMotion = useReducedMotion()
   
   const lightOptions: LightLevel[] = ["low", "medium", "bright"]
   const previewProducts = useMemo(() => 
-    getLightPreviewProducts(getAllProducts(), selectedLight, 3), 
-    [selectedLight]
+    getLightPreviewProducts(products, selectedLight, 3), 
+    [products, selectedLight]
   )
 
   return (
