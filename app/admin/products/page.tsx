@@ -1,11 +1,25 @@
 import Link from "next/link"
+import { Search } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 
-export default async function AdminProductsPage() {
-  const { data: products, error } = await supabaseAdmin
+interface AdminProductsPageProps {
+  searchParams: { q?: string }
+}
+
+export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
+  const query = searchParams.q?.trim().toLowerCase() || ""
+
+  let productsQuery = supabaseAdmin
     .from("products")
     .select("id, sku, name, category_name, price, stock_count, stock_status, published_at")
     .order("name")
+
+  // Server-side filter if search query exists
+  if (query) {
+    productsQuery = productsQuery.or(`name.ilike.%${query}%,sku.ilike.%${query}%`)
+  }
+
+  const { data: products, error } = await productsQuery
 
   if (error) {
     return <p className="text-red-600">Error loading products: {error.message}</p>
@@ -22,6 +36,28 @@ export default async function AdminProductsPage() {
           + Add product
         </Link>
       </div>
+
+      {/* Search Bar */}
+      <form className="mb-6" action="/admin/products" method="GET">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+          <input
+            type="search"
+            name="q"
+            placeholder="Search by name or SKU..."
+            defaultValue={query}
+            className="w-full h-10 pl-10 pr-4 rounded-md border border-neutral-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D2C] focus:ring-offset-1"
+          />
+          {query && (
+            <Link
+              href="/admin/products"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 text-sm"
+            >
+              Clear
+            </Link>
+          )}
+        </div>
+      </form>
       <div className="bg-white rounded-lg border overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-neutral-50 text-left text-neutral-600">

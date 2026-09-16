@@ -47,6 +47,15 @@ Do not regenerate the full map unless explicitly asked to.
 `app/checkout/page.tsx` — Checkout flow — N/A — N/A
 `app/account/page.tsx` — Account dashboard — N/A — N/A
 `app/account/login/page.tsx` — Login page — N/A — N/A
+`app/admin/login/page.tsx` — Admin login — N/A — N/A
+`app/admin/products/page.tsx` — Products list with search — AdminProductsPage — @/supabase/admin-client
+`app/admin/products/layout.tsx` — Admin layout with nav + logout — AdminProductsLayout — @/lib/admin-session
+`app/admin/products/new/page.tsx` — New product form — N/A — N/A
+`app/admin/products/[id]/edit/page.tsx` — Edit product form — N/A — N/A
+`app/admin/email/page.tsx` — Email sender form [NEW] — AdminEmailPage — N/A
+`app/api/send-email/route.ts` — Resend email API [NEW] — POST handler — resend
+`app/api/debug-env/route.ts` — Debug env endpoint — GET handler — N/A
+`app/api/revalidate/route.ts` — ISR revalidation webhook — POST handler — N/A
 
 ### /components
 `components/light-filter-teaser.tsx` — Light level filter section — LightFilterTeaser — @/types, @/components/ui/*, @/data/* [LARGE]
