@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
 
-// Initialize Resend with API key
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 // From email address
 const FROM_EMAIL = "Muffin Plants <support@muffinplants.com>"
 const REPLY_TO = "support@muffinplants.com"
+
+// Lazy initialization - Resend is only created when the API is called
+// This avoids build-time errors when RESEND_API_KEY isn't available
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not set")
+  }
+  return new Resend(apiKey)
+}
 
 interface EmailRequest {
   password: string
@@ -60,10 +67,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Send email via Resend
+    const resend = getResend()
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [to],
-      reply_to: REPLY_TO,
+      replyTo: REPLY_TO,
       subject,
       text: message,
       headers,
