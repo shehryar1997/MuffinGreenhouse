@@ -6,6 +6,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'ik.imagekit.io' },
       { protocol: 'https', hostname: 'images.pexels.com' },
+      { protocol: 'https', hostname: 'pub-81f46d28c378411d9acc02aef58b2bee.r2.dev' },
     ],
     formats: ['image/webp', 'image/avif'], // ponytail: Optimized image formats
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
