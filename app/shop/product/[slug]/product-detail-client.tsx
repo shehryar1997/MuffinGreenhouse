@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { Heart, Share2 } from "lucide-react"
+import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatPrice } from "@/lib/utils"
@@ -102,15 +102,50 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <Button size="lg" variant="outline"><Share2 className="w-5 h-5" /></Button>
             </div>
 
+            {/* Care Requirements */}
             <div className="border-t border-forest-200 pt-6">
-              <h3 className="font-serif text-lg mb-4">Care Requirements</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {Object.entries(product.careInfo).slice(0, 4).map(([key, val]) => (
-                  <div key={key}>
-                    <p className="text-xs text-forest-500 uppercase">{key}</p>
-                    <p className="font-medium text-forest-800">{val}</p>
+              <h3 className="font-serif text-xl mb-4">Care Requirements</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Light */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <Sun className="w-5 h-5 text-amber-600" />
                   </div>
-                ))}
+                  <div className="min-w-0">
+                    <p className="text-xs text-amber-700/80 font-medium uppercase tracking-wide">Light</p>
+                    <p className="text-sm font-semibold text-amber-900 truncate">{product.careInfo.light}</p>
+                  </div>
+                </div>
+                {/* Water */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 border border-blue-100">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <Droplets className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-blue-700/80 font-medium uppercase tracking-wide">Water</p>
+                    <p className="text-sm font-semibold text-blue-900 truncate">{product.careInfo.water}</p>
+                  </div>
+                </div>
+                {/* Humidity */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-sky-50 border border-sky-100">
+                  <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center flex-shrink-0">
+                    <CloudRain className="w-5 h-5 text-sky-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-sky-700/80 font-medium uppercase tracking-wide">Humidity</p>
+                    <p className="text-sm font-semibold text-sky-900 truncate">{product.careInfo.humidity}</p>
+                  </div>
+                </div>
+                {/* Temperature */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-orange-50 border border-orange-100">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                    <Thermometer className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-orange-700/80 font-medium uppercase tracking-wide">Temperature</p>
+                    <p className="text-sm font-semibold text-orange-900 truncate">{product.careInfo.temperature}</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
