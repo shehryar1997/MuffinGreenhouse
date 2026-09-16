@@ -7,6 +7,7 @@ interface WebhookPayload {
   record?: {
     slug?: string;
     category_id?: string;
+    category_slug?: string;
   };
 }
 
@@ -30,9 +31,13 @@ export async function POST(request: NextRequest) {
       revalidatePath(`/shop/product/${body.record.slug}`);
     }
 
-    // Note: Category-specific paths are not revalidated here because
-    // resolving category_slug from category_id would require an extra
-    // database query. The /shop/all revalidation covers category listings.
+    // Revalidate the category listing page too -- category_slug is now a flat
+    // column on products (no extra DB lookup needed), so this closes the gap
+    // where deleting/editing a product left its category page stale until the
+    // next 300s ISR window.
+    if (body.record?.category_slug) {
+      revalidatePath(`/shop/${body.record.category_slug}`);
+    }
 
     return NextResponse.json({ revalidated: true, now: Date.now() });
   } catch (error) {
