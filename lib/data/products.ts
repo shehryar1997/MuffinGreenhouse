@@ -25,7 +25,7 @@ interface RawSupabaseRow {
   id: string
   product_use_cases?: Array<{ use_case_tags: { slug: string } }>
   product_moods?: Array<{ mood_tags: { slug: string } }>
-  care_info?: Array<Record<string, string>>
+  care_info?: Array<Record<string, string>> | Record<string, string>
   [key: string]: unknown
 }
 
@@ -36,7 +36,9 @@ function normalizeRow(row: RawSupabaseRow): SupabaseProduct {
   const moods = (row.product_moods ?? [])
     .map((pm) => pm.mood_tags?.slug)
     .filter(Boolean) as string[]
-  const careInfo = row.care_info?.[0] as Record<string, string> | undefined
+  const careInfo = (Array.isArray(row.care_info) ? row.care_info[0] : row.care_info) as
+    | Record<string, string>
+    | undefined
   return { ...row, use_cases, moods, care_info: careInfo } as SupabaseProduct
 }
 

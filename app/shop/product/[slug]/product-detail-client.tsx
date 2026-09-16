@@ -28,9 +28,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
   const isOutOfStock = product.stockStatus === "out_of_stock"
   const currentPrice = selectedVariant?.price || product.price
+  const currentCompareAt = selectedVariant?.compareAtPrice ?? product.compareAtPrice
+  const currentStockCount = selectedVariant?.stockCount ?? product.stockCount
 
   return (
-    <div className="bg-cream-100 min-h-screen py-8">
+    <div className="bg-cream-100 min-h-screen pt-28 pb-8">
       <div className="container mx-auto px-4">
         <nav className="flex items-center gap-2 text-sm text-forest-500 mb-6">
           <Link href="/">Home</Link><span>/</span><Link href="/shop/all">Shop</Link><span>/</span><span className="text-forest-900">{product.name}</span>
@@ -62,7 +64,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             
             <div className="flex items-center gap-4 mb-6">
               <span className="font-mono text-3xl font-medium">{formatPrice(currentPrice)}</span>
-              {isOutOfStock ? <Badge variant="outOfStock">Out of Stock</Badge> : <Badge variant="lowStock">In Stock ({product.stockCount} left)</Badge>}
+              {currentCompareAt && currentCompareAt > currentPrice && (
+                <span className="font-mono text-lg text-forest-400 line-through">{formatPrice(currentCompareAt)}</span>
+              )}
+              {isOutOfStock ? <Badge variant="outOfStock">Out of Stock</Badge> : <Badge variant="lowStock">In Stock ({currentStockCount} left)</Badge>}
             </div>
 
             {product.variants.length > 1 && (
