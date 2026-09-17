@@ -10,6 +10,63 @@ interface AdminCustomersPageProps {
   searchParams: { q?: string }
 }
 
+// ============================================================================
+// TEMPORARY DIAGNOSTIC — remove this whole function and its call below once
+// the stale/missing-customer-data bug is confirmed fixed. Decodes the JWT
+// payload of whatever key admin-client.ts is actually using (WITHOUT
+// verifying its signature — this is read-only introspection, never trust
+// this for auth) so we can see, right on the page, whether production is
+// really using the service_role key or something else, and whether it's
+// even pointed at the project we think it is.
+// ============================================================================
+function decodeJwtPayload(token: string | undefined): Record<string, unknown> | null {
+  if (!token) return null
+  try {
+    const parts = token.split(".")
+    if (parts.length !== 3) return null
+    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/")
+    const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4)
+    const json = Buffer.from(padded, "base64").toString("utf8")
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
+
+async function DiagnosticPanel() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "(unset)"
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const claims = decodeJwtPayload(key)
+
+  const { count, error: countError } = await supabaseAdmin
+    .from("customers")
+    .select("*", { count: "exact", head: true })
+
+  const { data: rawRows, error: rawError } = await supabaseAdmin
+    .from("customers")
+    .select("id, email, name, phone")
+    .order("created_at", { ascending: false })
+
+  return (
+    <div className="mb-6 p-4 rounded-lg border-2 border-red-400 bg-red-50 text-xs font-mono space-y-1 whitespace-pre-wrap break-all">
+      <p className="font-bold text-red-700 mb-2">TEMPORARY DIAGNOSTIC — remove after debugging</p>
+      <p>NEXT_PUBLIC_SUPABASE_URL: {url}</p>
+      <p>SUPABASE_SERVICE_ROLE_KEY present: {key ? `yes (length ${key.length})` : "NO — missing env var"}</p>
+      <p>Decoded key role claim: {claims ? String(claims.role ?? "(no role claim)") : "(could not decode — check key format)"}</p>
+      <p>Decoded key project ref (iss/ref): {claims ? String((claims as any).ref ?? (claims as any).iss ?? "(none)") : "(n/a)"}</p>
+      <p>Server time (UTC): {new Date().toISOString()}</p>
+      <p>Exact count() query: {countError ? `ERROR: ${countError.message}` : `${count} row(s)`}</p>
+      <p>
+        Raw select (no joins) rows returned: {rawError ? `ERROR: ${rawError.message}` : rawRows?.length ?? 0}
+      </p>
+      <p>Raw rows: {JSON.stringify(rawRows ?? rawError ?? null)}</p>
+    </div>
+  )
+}
+// ============================================================================
+// END TEMPORARY DIAGNOSTIC
+// ============================================================================
+
 export default async function AdminCustomersPage({ searchParams }: AdminCustomersPageProps) {
   const query = searchParams.q?.trim().toLowerCase() || ""
 
@@ -38,6 +95,10 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
 
   return (
     <div>
+      {/* TEMPORARY — see DiagnosticPanel above */}
+      {/* @ts-expect-error Async Server Component */}
+      <DiagnosticPanel />
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-serif">Customers ({customerData.length ?? 0})</h1>
       </div>
