@@ -96,7 +96,6 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
   return (
     <div>
       {/* TEMPORARY — see DiagnosticPanel above */}
-      {/* @ts-expect-error Async Server Component */}
       <DiagnosticPanel />
 
       <div className="flex items-center justify-between mb-6">
