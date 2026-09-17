@@ -106,7 +106,7 @@ function CheckoutPayContent() {
           <div className='bg-white rounded-2xl border border-forest-200 p-8 text-center'>
             <CheckCircle className='w-10 h-10 text-sprout-600 mx-auto mb-4' />
             <h1 className='text-2xl font-serif text-forest-900 mb-2'>Booking Confirmed!</h1>
-            <p className='text-forest-600 mb-6'>Your order is held for 2 hours.</p>
+            <p className='text-forest-600 mb-6'>Your order is held for 24 hours.</p>
             <div className='bg-sprout-50 border border-sprout-200 rounded-xl p-6 mb-6'>
               <p className='text-sm font-medium text-forest-900'>Order #{paymentDetails.orderNumber}</p>
               <p className='text-sm text-forest-600'>Total: {formatPrice(paymentDetails.total)}</p>
@@ -138,8 +138,8 @@ function CheckoutPayContent() {
           <div className='flex items-start gap-3'>
             <Clock className='w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5' />
             <div>
-              <h3 className='font-medium text-amber-900 mb-1'>2-Hour Payment Window</h3>
-              <p className='text-sm text-amber-800'>Pay the total amount to any of the accounts below and share your payment receipt on WhatsApp within 2 hours. Your order is held for 2 hours — if payment is not confirmed within that window, it will be automatically cancelled.</p>
+              <h3 className='font-medium text-amber-900 mb-1'>24-Hour Payment Window</h3>
+              <p className='text-sm text-amber-800'>Pay the total amount to any of the accounts below and share your payment receipt on WhatsApp within 24 hours. Your order is held for 24 hours — if payment is not confirmed within that window, it will be automatically cancelled.</p>
             </div>
           </div>
         </div>
@@ -180,7 +180,7 @@ function CheckoutPayContent() {
           </a>
         </div>
         <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
-          <p className='text-sm text-forest-600 mb-4'>By clicking Confirm Booking, you agree to complete payment within 2 hours.</p>
+          <p className='text-sm text-forest-600 mb-4'>By clicking Confirm Booking, you agree to complete payment within 24 hours.</p>
           <Button onClick={handleConfirmBooking} disabled={confirming} className='w-full h-12 text-base bg-sprout-600 hover:bg-sprout-700'>
             {confirming ? <><Loader2 className='w-5 h-5 mr-2 animate-spin' />Confirming...</> : <>Confirm Booking — {formatPrice(paymentDetails.total)}</>}
           </Button>

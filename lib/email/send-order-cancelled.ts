@@ -26,7 +26,7 @@ export async function sendOrderCancelledEmail(data: OrderCancelledData): Promise
     text: greeting + '\n\n' +
       'Your order #' + data.orderNumber + ' has been cancelled.\n\n' +
       'Reason: Payment window expired.\n\n' +
-      'The 2-hour payment window has passed, and we did not receive confirmation of your payment.\n\n' +
+      'The 24-hour payment window has passed, and we did not receive confirmation of your payment.\n\n' +
       'You can re-book anytime subject to availability.\n\n' +
       '— The Muffin Greenhouse Team',
   })

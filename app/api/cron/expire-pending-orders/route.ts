@@ -19,15 +19,15 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Find pending orders older than 2 hours
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    
+    // Find pending orders older than 24 hours
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
     const { data: expiredOrders, error: fetchError } = await supabaseAdmin
       .from('orders')
       .select('id, order_number, customer_email, customer_name, status, payment_status, created_at')
       .eq('status', 'pending')
       .eq('payment_status', 'pending')
-      .lt('created_at', twoHoursAgo)
+      .lt('created_at', twentyFourHoursAgo)
 
     if (fetchError) {
       console.error('Error fetching expired orders:', fetchError)

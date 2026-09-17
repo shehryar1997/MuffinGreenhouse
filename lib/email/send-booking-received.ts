@@ -49,13 +49,13 @@ export async function sendBookingReceivedEmail(data: BookingReceivedData): Promi
       '---\\n' +
       'PAYMENT INSTRUCTIONS\\n' +
       '---\\n' +
-      'Please complete your payment within 2 hours (by ' + deadlineStr + ').\\n\\n' +
+      'Please complete your payment within 24 hours (by ' + deadlineStr + ').\\n\\n' +
       'Pay to any of these accounts:\\n' +
       '- HBL Bank: Account 03239533242\\n' +
       '- JazzCash: 03202065474\\n' +
       '- Easypaisa: 03202065474\\n\\n' +
       'After payment, share your receipt on WhatsApp: ' + data.whatsappNumber + '\\n\\n' +
-      'If payment is not confirmed within 2 hours, your order will be automatically cancelled.\\n\\n' +
+      'If payment is not confirmed within 24 hours, your order will be automatically cancelled.\\n\\n' +
       '---\\n\\n' +
       '— The Muffin Greenhouse Team',
   })

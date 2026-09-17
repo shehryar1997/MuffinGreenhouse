@@ -1,1 +1,1 @@
-﻿{"crons":[{"path":"/api/cron/expire-pending-orders","schedule":"*/15 * * * *"}]}
+﻿{"crons":[{"path":"/api/cron/expire-pending-orders","schedule":"0 3 * * *"}]}

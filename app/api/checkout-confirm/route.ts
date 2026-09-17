@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         total,
         items,
         deliveryType,
-        paymentDeadline: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
+        paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
         whatsappNumber: '+923095360009',
       })
     } catch (emailError) {
