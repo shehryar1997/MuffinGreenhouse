@@ -2,6 +2,10 @@ import Link from "next/link"
 import { Search } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 
+// Force fresh data on every load — same class of stale-admin-data bug
+// found on the customers/orders pages, fixed here too for consistency.
+export const dynamic = "force-dynamic"
+
 interface AdminProductsPageProps {
   searchParams: { q?: string }
 }

@@ -2,6 +2,9 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
 
+// Force fresh data on every load — same reasoning as the orders list page.
+export const dynamic = "force-dynamic"
+
 interface OrderDetailPageProps {
   params: { id: string }
 }

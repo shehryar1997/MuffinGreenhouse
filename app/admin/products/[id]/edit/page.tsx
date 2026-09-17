@@ -4,6 +4,10 @@ import { DeleteProductButton } from "../../delete-product-button"
 import { getFormLookups, updateProduct, deleteProduct } from "../../actions"
 import { supabaseAdmin } from "@/supabase/admin-client"
 
+// Force fresh data on every load — an edit form must always prefill with
+// the product's current values, never a stale cached version.
+export const dynamic = "force-dynamic"
+
 export default async function EditProductPage({ params }: { params: { id: string } }) {
   const [lookups, { data: product }] = await Promise.all([
     getFormLookups(),

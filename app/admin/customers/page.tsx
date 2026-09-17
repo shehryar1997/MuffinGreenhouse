@@ -1,5 +1,9 @@
 import Link from "next/link"
 import { Search } from "lucide-react"
+
+// Force fresh data on every load — admin pages should never show a
+// customer's stale phone/address/etc. after they've just updated it.
+export const dynamic = "force-dynamic"
 import { supabaseAdmin } from "@/supabase/admin-client"
 
 interface AdminCustomersPageProps {

@@ -1,6 +1,10 @@
 import Link from "next/link"
 import { supabaseAdmin } from "@/supabase/admin-client"
 
+// Force fresh data on every load — orders and payment status change often
+// and admin should never see a stale list.
+export const dynamic = "force-dynamic"
+
 function statusBadgeClass(status: string): string {
   const colors: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800",

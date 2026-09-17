@@ -2,6 +2,11 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
 
+// Force fresh data on every load — a dynamic route param alone doesn't
+// reliably opt this page out of caching, and this page needs to reflect
+// the customer's latest profile/address/order data every time.
+export const dynamic = "force-dynamic"
+
 interface CustomerDetailPageProps {
   params: { id: string }
 }
