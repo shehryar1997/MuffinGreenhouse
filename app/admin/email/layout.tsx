@@ -1,5 +1,5 @@
 import { AdminShell } from "@/app/admin/_components/admin-shell"
 
-export default function AdminProductsLayout({ children }: { children: React.ReactNode }) {
+export default function AdminEmailLayout({ children }: { children: React.ReactNode }) {
   return <AdminShell>{children}</AdminShell>
 }

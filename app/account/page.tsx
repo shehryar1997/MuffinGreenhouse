@@ -48,6 +48,18 @@ interface Order {
   order_items: OrderItem[]
 }
 
+interface WishlistItem {
+  id: string
+  product_id: string
+  product: {
+    id: string
+    name: string
+    slug: string
+    price: number
+    images: { url: string; alt: string }[]
+  } | null
+}
+
 // Signed-out state component - kept exactly as original
 function SignedOutState() {
   return (
@@ -135,11 +147,38 @@ export default async function AccountPage() {
     .eq("customer_id", customer.id)
     .order("created_at", { ascending: false })
 
+  // Fetch wishlist items with their product (name, slug, price, first image)
+  const { data: wishlistRaw = [] } = await supabase
+    .from("wishlist_items")
+    .select(`
+      id, product_id,
+      product:products(id, name, slug, price, images:product_images(url, alt_text, sort_order))
+    `)
+    .eq("customer_id", customer.id)
+    .order("created_at", { ascending: false })
+
+  const wishlistItems: WishlistItem[] = (wishlistRaw ?? []).map((item: any) => ({
+    id: item.id,
+    product_id: item.product_id,
+    product: item.product
+      ? {
+          id: item.product.id,
+          name: item.product.name,
+          slug: item.product.slug,
+          price: item.product.price,
+          images: (item.product.images ?? [])
+            .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .map((img: any) => ({ url: img.url, alt: img.alt_text || item.product.name })),
+        }
+      : null,
+  }))
+
   return (
     <AccountDashboard
       customer={customer}
       addresses={addresses as Address[]}
       orders={orders as Order[]}
+      wishlistItems={wishlistItems}
     />
   )
 }

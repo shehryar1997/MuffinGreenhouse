@@ -3,6 +3,7 @@ import { Playfair_Display, Inter, JetBrains_Mono } from "next/font/google"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { CartProvider } from "@/components/providers/cart-provider"
 import { SearchProvider } from "@/components/providers/search-provider"
+import { WishlistProvider } from "@/components/providers/wishlist-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { SiteChrome } from "@/components/layout/site-chrome"
 import "./globals.css"
@@ -56,8 +57,10 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
           <SearchProvider>
             <CartProvider>
-              <SiteChrome>{children}</SiteChrome>
-              <Toaster position="bottom-right" />
+              <WishlistProvider>
+                <SiteChrome>{children}</SiteChrome>
+                <Toaster position="bottom-right" />
+              </WishlistProvider>
             </CartProvider>
           </SearchProvider>
         </ThemeProvider>

@@ -10,6 +10,26 @@ export interface LoginResult {
   error?: string
 }
 
+// Resolves an email-or-phone input to the account's email, with no sign-in
+// or redirect side effects. Used by any client component (e.g. checkout's
+// inline sign-in) that needs to call supabase.auth.signInWithPassword
+// itself from the browser client rather than the server-redirecting flow
+// below. Looking up a customer by phone requires the service-role client,
+// which is why this has to be a server action rather than done client-side.
+export async function resolveEmailOrPhone(emailOrPhone: string): Promise<string | null> {
+  if (!emailOrPhone.trim()) return null
+  if (emailOrPhone.includes("@")) return emailOrPhone.trim().toLowerCase()
+
+  const { data: customer, error } = await supabaseAdmin
+    .from("customers")
+    .select("email")
+    .eq("phone", emailOrPhone.trim())
+    .single()
+
+  if (error || !customer) return null
+  return customer.email
+}
+
 export async function loginWithPassword(
   emailOrPhone: string,
   password: string

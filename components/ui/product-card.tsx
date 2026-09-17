@@ -11,7 +11,9 @@ import { cn } from "@/lib/utils"
 import { Badge } from "./badge"
 import { Button } from "./button"
 import { useCart } from "@/components/providers/cart-provider"
+import { useWishlist } from "@/components/providers/wishlist-provider"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 interface ProductCardProps {
   product: Product
@@ -21,13 +23,38 @@ interface ProductCardProps {
 
 export function ProductCard({ product, index = 0, className }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false)
   const { addItem, toggleCart } = useCart()
+  const { isWishlisted, toggleWishlist } = useWishlist()
+  const router = useRouter()
+  const wishlisted = isWishlisted(product.id)
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     addItem(product, undefined, 1)
     toast(`${product.name} added to cart`, { action: { label: "View Cart", onClick: () => toggleCart(true) } })
+  }
+
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isTogglingWishlist) return
+    setIsTogglingWishlist(true)
+    const result = await toggleWishlist(product.id)
+    setIsTogglingWishlist(false)
+
+    if (!result.signedIn) {
+      toast("Sign in to save plants to your wishlist", {
+        action: { label: "Sign in", onClick: () => router.push("/account/login") },
+      })
+      return
+    }
+    if (!result.ok) {
+      toast.error("Couldn't update your wishlist — try again")
+      return
+    }
+    toast(wishlisted ? `Removed ${product.name} from wishlist` : `${product.name} added to wishlist`)
   }
 
   const stockBadge = product.stockStatus === "out_of_stock" ? (
@@ -65,8 +92,15 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
             <Button size="icon" variant="secondary" className="relative z-10 rounded-full bg-cream-100 hover:bg-white" onClick={handleAddToCart}>
               <ShoppingBag className="w-4 h-4" />
             </Button>
-            <Button size="icon" variant="secondary" className="relative z-10 rounded-full bg-cream-100 hover:bg-white">
-              <Heart className="w-4 h-4" />
+            <Button
+              size="icon"
+              variant="secondary"
+              className="relative z-10 rounded-full bg-cream-100 hover:bg-white"
+              onClick={handleToggleWishlist}
+              disabled={isTogglingWishlist}
+              aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            >
+              <Heart className={cn("w-4 h-4", wishlisted && "fill-clay-500 text-clay-500")} />
             </Button>
             <Button size="icon" variant="secondary" className="relative z-10 rounded-full bg-cream-100 hover:bg-white">
               <Eye className="w-4 h-4" />

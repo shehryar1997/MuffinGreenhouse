@@ -4,11 +4,14 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { User, Heart, ShoppingBag, MapPin, LogOut, Edit2, Check, X } from "lucide-react"
+import { User, Heart, ShoppingBag, MapPin, LogOut, Edit2, Check, X, Plus, Trash2, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { CitySelect } from "@/components/ui/city-select"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
+import { pakistanCities } from "@/data/pakistan-cities"
 import { formatPrice } from "@/lib/utils"
+import { toast } from "sonner"
 
 // Types
 interface Customer {
@@ -27,6 +30,18 @@ interface Address {
   city: string
   province: string
   is_default: boolean
+}
+
+interface WishlistItem {
+  id: string
+  product_id: string
+  product: {
+    id: string
+    name: string
+    slug: string
+    price: number
+    images: { url: string; alt: string }[]
+  } | null
 }
 
 interface OrderItem {
@@ -56,6 +71,7 @@ interface AccountDashboardProps {
   customer: Customer
   addresses: Address[]
   orders: Order[]
+  wishlistItems: WishlistItem[]
 }
 
 function formatDate(dateString: string): string {
@@ -78,15 +94,35 @@ function getStatusColor(status: string): string {
   return colors[status] || "bg-gray-100 text-gray-800"
 }
 
+function getProvinceForCity(cityName: string): string {
+  return pakistanCities.find((c) => c.name === cityName)?.province || ""
+}
 
-export function AccountDashboard({ customer, addresses, orders }: AccountDashboardProps) {
+interface AddressFormState {
+  label: string
+  street: string
+  city: string
+}
+
+const EMPTY_ADDRESS_FORM: AddressFormState = { label: "Home", street: "", city: "" }
+
+export function AccountDashboard({ customer, addresses, orders, wishlistItems }: AccountDashboardProps) {
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const defaultAddress = addresses.find(a => a.is_default) || addresses[0]
+
+  // Profile (name/phone) editing
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editedName, setEditedName] = useState(customer.name || "")
   const [editedPhone, setEditedPhone] = useState(customer.phone || "")
   const [isSaving, setIsSaving] = useState(false)
+
+  // Address editing: null = none open, "new" = add form, or an address id being edited
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+  const [addressForm, setAddressForm] = useState<AddressFormState>(EMPTY_ADDRESS_FORM)
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
+  const [deletingAddressId, setDeletingAddressId] = useState<string | null>(null)
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null)
+  const [removingWishlistId, setRemovingWishlistId] = useState<string | null>(null)
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -99,21 +135,189 @@ export function AccountDashboard({ customer, addresses, orders }: AccountDashboa
   const handleSaveProfile = async () => {
     setIsSaving(true)
     const supabase = createBrowserClient()
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("customers")
       .update({ name: editedName, phone: editedPhone })
       .eq("id", customer.id)
-    if (!error) {
-      setIsEditingProfile(false)
-      router.refresh()
+      .select()
+      .single()
+
+    if (error || !data) {
+      toast.error("Couldn't save your profile — please try again.")
+      setIsSaving(false)
+      return
     }
+
+    toast.success("Profile updated")
+    setIsEditingProfile(false)
     setIsSaving(false)
+    router.refresh()
   }
 
   const handleCancelEdit = () => {
     setEditedName(customer.name || "")
     setEditedPhone(customer.phone || "")
     setIsEditingProfile(false)
+  }
+
+  // ---- Address management ----
+
+  const startAddAddress = () => {
+    setAddressForm(EMPTY_ADDRESS_FORM)
+    setEditingAddressId("new")
+  }
+
+  const startEditAddress = (address: Address) => {
+    setAddressForm({ label: address.label, street: address.street, city: address.city })
+    setEditingAddressId(address.id)
+  }
+
+  const cancelAddressEdit = () => {
+    setEditingAddressId(null)
+    setAddressForm(EMPTY_ADDRESS_FORM)
+  }
+
+  const handleSaveAddress = async () => {
+    if (!addressForm.street.trim() || !addressForm.city) {
+      toast.error("Street and city are required")
+      return
+    }
+
+    setIsSavingAddress(true)
+    const supabase = createBrowserClient()
+    const province = getProvinceForCity(addressForm.city)
+
+    if (editingAddressId === "new") {
+      const { data, error } = await supabase
+        .from("addresses")
+        .insert({
+          customer_id: customer.id,
+          label: addressForm.label.trim() || "Home",
+          street: addressForm.street.trim(),
+          city: addressForm.city,
+          province,
+          is_default: addresses.length === 0,
+          is_active: true,
+        })
+        .select()
+        .single()
+
+      if (error || !data) {
+        toast.error("Couldn't save that address — please try again.")
+        setIsSavingAddress(false)
+        return
+      }
+      toast.success("Address added")
+    } else if (editingAddressId) {
+      const { data, error } = await supabase
+        .from("addresses")
+        .update({
+          label: addressForm.label.trim() || "Home",
+          street: addressForm.street.trim(),
+          city: addressForm.city,
+          province,
+        })
+        .eq("id", editingAddressId)
+        .select()
+        .single()
+
+      if (error || !data) {
+        toast.error("Couldn't save that address — please try again.")
+        setIsSavingAddress(false)
+        return
+      }
+      toast.success("Address updated")
+    }
+
+    setIsSavingAddress(false)
+    setEditingAddressId(null)
+    setAddressForm(EMPTY_ADDRESS_FORM)
+    router.refresh()
+  }
+
+  const handleDeleteAddress = async (address: Address) => {
+    setDeletingAddressId(address.id)
+    const supabase = createBrowserClient()
+
+    // Soft delete — addresses can be referenced by past orders, so we never
+    // hard-delete them, just hide them from this list.
+    const { error } = await supabase
+      .from("addresses")
+      .update({ is_active: false })
+      .eq("id", address.id)
+
+    if (error) {
+      toast.error("Couldn't remove that address — please try again.")
+      setDeletingAddressId(null)
+      return
+    }
+
+    // If the deleted address was the default and others remain, promote the
+    // next one so there's always a default when addresses exist.
+    if (address.is_default) {
+      const nextDefault = addresses.find((a) => a.id !== address.id)
+      if (nextDefault) {
+        await supabase.from("addresses").update({ is_default: true }).eq("id", nextDefault.id)
+      }
+    }
+
+    toast.success("Address removed")
+    setDeletingAddressId(null)
+    router.refresh()
+  }
+
+  const handleSetDefaultAddress = async (address: Address) => {
+    if (address.is_default) return
+    setSettingDefaultId(address.id)
+    const supabase = createBrowserClient()
+
+    // Unset the current default(s), then set this one. Two calls kept
+    // simple and sequential rather than a single compound update.
+    const { error: unsetError } = await supabase
+      .from("addresses")
+      .update({ is_default: false })
+      .eq("customer_id", customer.id)
+      .eq("is_default", true)
+
+    if (unsetError) {
+      toast.error("Couldn't update your default address — please try again.")
+      setSettingDefaultId(null)
+      return
+    }
+
+    const { error: setError } = await supabase
+      .from("addresses")
+      .update({ is_default: true })
+      .eq("id", address.id)
+
+    if (setError) {
+      toast.error("Couldn't update your default address — please try again.")
+      setSettingDefaultId(null)
+      return
+    }
+
+    toast.success("Default address updated")
+    setSettingDefaultId(null)
+    router.refresh()
+  }
+
+  const handleRemoveWishlistItem = async (productId: string) => {
+    setRemovingWishlistId(productId)
+    const supabase = createBrowserClient()
+    const { error } = await supabase
+      .from("wishlist_items")
+      .delete()
+      .eq("customer_id", customer.id)
+      .eq("product_id", productId)
+
+    if (error) {
+      toast.error("Couldn't update your wishlist — please try again.")
+      setRemovingWishlistId(null)
+      return
+    }
+
+    setRemovingWishlistId(null)
+    router.refresh()
   }
 
   return (
@@ -144,8 +348,6 @@ export function AccountDashboard({ customer, addresses, orders }: AccountDashboa
               {isSigningOut ? "Signing out..." : "Sign Out"}
             </Button>
           </div>
-
-
 
           {/* Dashboard Cards */}
           <div className="grid md:grid-cols-2 gap-6">
@@ -222,13 +424,6 @@ export function AccountDashboard({ customer, addresses, orders }: AccountDashboa
                     <p className="text-forest-900">{customer.phone || "Not set"}</p>
                   )}
                 </div>
-
-                {defaultAddress && (
-                  <div>
-                    <label className="block text-sm font-medium text-forest-700 mb-1">Default Address</label>
-                    <p className="text-forest-900">{defaultAddress.street}, {defaultAddress.city}</p>
-                  </div>
-                )}
               </div>
             </motion.div>
 
@@ -277,18 +472,58 @@ export function AccountDashboard({ customer, addresses, orders }: AccountDashboa
               )}
             </motion.div>
 
-            {/* Wishlist Card - Disabled/Coming Soon */}
+            {/* Wishlist Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="p-6 border border-forest-200/50 bg-white/50 opacity-50"
+              className="p-6 border border-forest-200/50 bg-white"
             >
               <div className="flex items-center gap-3 mb-4">
                 <Heart className="w-6 h-6 text-forest-600" />
                 <h2 className="font-serif text-xl">Wishlist</h2>
               </div>
-              <p className="text-forest-500 text-sm">Coming soon — save your favorite plants for later.</p>
+              {wishlistItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-forest-500 mb-4">No plants saved yet</p>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/shop/all">Browse Plants</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {wishlistItems.map((item) =>
+                    item.product ? (
+                      <div key={item.id} className="flex items-center gap-3 p-2 border border-forest-100 rounded-lg">
+                        <Link href={`/shop/product/${item.product.slug}`} className="shrink-0">
+                          <div className="relative w-12 h-12 rounded-md overflow-hidden bg-forest-50">
+                            {item.product.images[0]?.url && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={item.product.images[0].url}
+                                alt={item.product.images[0].alt || item.product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                        </Link>
+                        <Link href={`/shop/product/${item.product.slug}`} className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.product.name}</p>
+                          <p className="text-xs text-forest-500">{formatPrice(item.product.price)}</p>
+                        </Link>
+                        <button
+                          onClick={() => handleRemoveWishlistItem(item.product_id)}
+                          disabled={removingWishlistId === item.product_id}
+                          className="p-1.5 text-forest-400 hover:text-red-600 transition-colors"
+                          aria-label="Remove from wishlist"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              )}
             </motion.div>
 
             {/* Addresses Card */}
@@ -298,18 +533,40 @@ export function AccountDashboard({ customer, addresses, orders }: AccountDashboa
               transition={{ duration: 0.6, delay: 0.4 }}
               className="p-6 border border-forest-200/50 bg-white"
             >
-              <div className="flex items-center gap-3 mb-4">
-                <MapPin className="w-6 h-6 text-forest-600" />
-                <h2 className="font-serif text-xl">Addresses</h2>
-              </div>
-              {addresses.length === 0 ? (
-                <div className="text-center py-4">
-                  <p className="text-forest-500 text-sm mb-3">No addresses saved</p>
-                  <p className="text-forest-400 text-xs">Add an address during checkout</p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-6 h-6 text-forest-600" />
+                  <h2 className="font-serif text-xl">Addresses</h2>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {addresses.slice(0, 2).map((address) => (
+                {editingAddressId === null && (
+                  <button
+                    onClick={startAddAddress}
+                    className="flex items-center gap-1 text-sm text-forest-600 hover:text-forest-800 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </button>
+                )}
+              </div>
+
+              {addresses.length === 0 && editingAddressId !== "new" && (
+                <div className="text-center py-4 mb-2">
+                  <p className="text-forest-500 text-sm mb-1">No addresses saved</p>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {addresses.map((address) =>
+                  editingAddressId === address.id ? (
+                    <AddressForm
+                      key={address.id}
+                      form={addressForm}
+                      setForm={setAddressForm}
+                      isSaving={isSavingAddress}
+                      onSave={handleSaveAddress}
+                      onCancel={cancelAddressEdit}
+                    />
+                  ) : (
                     <div key={address.id} className="p-3 border border-forest-100 rounded-lg">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-sm">{address.label}</span>
@@ -318,14 +575,45 @@ export function AccountDashboard({ customer, addresses, orders }: AccountDashboa
                         )}
                       </div>
                       <p className="text-forest-600 text-sm">{address.street}</p>
-                      <p className="text-forest-500 text-xs">{address.city}, {address.province}</p>
+                      <p className="text-forest-500 text-xs mb-2">{address.city}, {address.province}</p>
+                      <div className="flex items-center gap-3 text-xs">
+                        <button
+                          onClick={() => startEditAddress(address)}
+                          className="text-forest-600 hover:text-forest-900 flex items-center gap-1"
+                        >
+                          <Edit2 className="w-3 h-3" /> Edit
+                        </button>
+                        {!address.is_default && (
+                          <button
+                            onClick={() => handleSetDefaultAddress(address)}
+                            disabled={settingDefaultId === address.id}
+                            className="text-forest-600 hover:text-forest-900 flex items-center gap-1"
+                          >
+                            <Star className="w-3 h-3" /> Set as default
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteAddress(address)}
+                          disabled={deletingAddressId === address.id}
+                          className="text-forest-600 hover:text-red-600 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Remove
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                  {addresses.length > 2 && (
-                    <p className="text-center text-sm text-forest-500">+{addresses.length - 2} more address(es)</p>
-                  )}
-                </div>
-              )}
+                  )
+                )}
+
+                {editingAddressId === "new" && (
+                  <AddressForm
+                    form={addressForm}
+                    setForm={setAddressForm}
+                    isSaving={isSavingAddress}
+                    onSave={handleSaveAddress}
+                    onCancel={cancelAddressEdit}
+                  />
+                )}
+              </div>
             </motion.div>
           </div>
 
@@ -341,3 +629,53 @@ export function AccountDashboard({ customer, addresses, orders }: AccountDashboa
   )
 }
 
+// Small inline add/edit address form, used both for "Add Address" and
+// editing an existing one.
+function AddressForm({
+  form,
+  setForm,
+  isSaving,
+  onSave,
+  onCancel,
+}: {
+  form: AddressFormState
+  setForm: (form: AddressFormState) => void
+  isSaving: boolean
+  onSave: () => void
+  onCancel: () => void
+}) {
+  return (
+    <div className="p-3 border-2 border-clay-500 rounded-lg space-y-3">
+      <div>
+        <label className="block text-xs font-medium text-forest-700 mb-1">Label</label>
+        <Input
+          value={form.label}
+          onChange={(e) => setForm({ ...form, label: e.target.value })}
+          placeholder="Home, Office, etc."
+          disabled={isSaving}
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-forest-700 mb-1">Street</label>
+        <Input
+          value={form.street}
+          onChange={(e) => setForm({ ...form, street: e.target.value })}
+          placeholder="House/building, street, area"
+          disabled={isSaving}
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-forest-700 mb-1">City</label>
+        <CitySelect value={form.city} onChange={(city) => setForm({ ...form, city })} />
+      </div>
+      <div className="flex items-center gap-2">
+        <Button size="sm" onClick={onSave} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+        <Button size="sm" variant="outline" onClick={onCancel} disabled={isSaving}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
+}

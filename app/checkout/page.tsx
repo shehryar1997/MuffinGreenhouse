@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,17 @@ import { formatPrice } from "@/lib/utils"
 import { toast } from "sonner"
 import { redirect } from "next/navigation"
 import { ChevronDown, ChevronUp, Check, Package, Truck } from "lucide-react"
+import { createBrowserClient } from "@/lib/supabase/browser-client"
+import { resolveEmailOrPhone } from "@/app/account/login/actions"
+
+interface SavedAddress {
+  id: string
+  label: string
+  street: string
+  city: string
+  province: string
+  is_default: boolean
+}
 
 // Form state interface - ready for Supabase
 interface CheckoutFormData {
@@ -38,16 +49,6 @@ interface TouchedFields {
   city: boolean
 }
 
-// TODO: replace with real Supabase Auth session + saved address once backend is wired.
-const DEMO_USER = {
-  id: "demo-user-123",
-  fullName: "Ahmed Khan",
-  email: "ahmed.khan@example.com",
-  contactNumber: "03001234567",
-  fullAddress: "House 142, Street 45, F-8/3, Islamabad",
-  city: "Islamabad",
-}
-
 export default function CheckoutPage() {
   const { cart, itemCount } = useCart()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -58,6 +59,13 @@ export default function CheckoutPage() {
   const [authMode, setAuthMode] = useState<"guest" | "signin">("guest")
   const [isSigningIn, setIsSigningIn] = useState(false)
   const [signInEmail, setSignInEmail] = useState("")
+  const [signInPassword, setSignInPassword] = useState("")
+
+  // Real signed-in session + saved addresses
+  const [checkingSession, setCheckingSession] = useState(true)
+  const [signedInCustomer, setSignedInCustomer] = useState<{ id: string; name: string | null; email: string; phone: string | null } | null>(null)
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
+  const [selectedAddressId, setSelectedAddressId] = useState<string | "manual">("manual")
 
   // Form state
   const [formData, setFormData] = useState<CheckoutFormData>({
@@ -148,36 +156,122 @@ export default function CheckoutPage() {
     setErrors(prev => ({ ...prev, city: validationErrors.city }))
   }
 
-  // Handle sign-in (demo only - no real auth)
+  // Load saved addresses for a signed-in customer and pre-fill the form
+  const loadCustomerIntoForm = useCallback((
+    customer: { id: string; name: string | null; email: string; phone: string | null },
+    addresses: SavedAddress[]
+  ) => {
+    setSignedInCustomer(customer)
+    setSavedAddresses(addresses)
+    const defaultAddress = addresses.find((a) => a.is_default) || addresses[0]
+    setFormData({
+      fullName: customer.name || "",
+      email: customer.email,
+      contactNumber: customer.phone || "",
+      fullAddress: defaultAddress?.street || "",
+      city: defaultAddress?.city || "",
+    })
+    setSelectedAddressId(defaultAddress ? defaultAddress.id : "manual")
+    setTouched({ fullName: true, email: true, contactNumber: true, fullAddress: true, city: true })
+  }, [])
+
+  // On mount, check for a real, already-active Supabase Auth session
+  // (e.g. the person signed in earlier via the header/account page).
+  useEffect(() => {
+    let cancelled = false
+    async function checkSession() {
+      const supabase = createBrowserClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session || cancelled) {
+        if (!cancelled) setCheckingSession(false)
+        return
+      }
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("id, name, email, phone")
+        .eq("auth_id", session.user.id)
+        .single()
+      if (!customer || cancelled) {
+        if (!cancelled) setCheckingSession(false)
+        return
+      }
+      const { data: addresses } = await supabase
+        .from("addresses")
+        .select("id, label, street, city, province, is_default")
+        .eq("customer_id", customer.id)
+        .eq("is_active", true)
+        .order("is_default", { ascending: false })
+      if (!cancelled) {
+        loadCustomerIntoForm(customer, addresses || [])
+        setCheckingSession(false)
+      }
+    }
+    checkSession()
+    return () => { cancelled = true }
+  }, [loadCustomerIntoForm])
+
+  // Real sign-in, used from the checkout page's own sign-in tab
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!signInEmail) {
-      toast.error("Please enter your email")
+    if (!signInEmail || !signInPassword) {
+      toast.error("Please enter your email and password")
       return
     }
     setIsSigningIn(true)
-    // Simulate API delay
-    await new Promise(r => setTimeout(r, 1000))
-    // Auto-populate with demo user data
-    setFormData({
-      fullName: DEMO_USER.fullName,
-      email: DEMO_USER.email,
-      contactNumber: DEMO_USER.contactNumber,
-      fullAddress: DEMO_USER.fullAddress,
-      city: DEMO_USER.city,
+    const email = await resolveEmailOrPhone(signInEmail)
+    if (!email) {
+      toast.error("Incorrect email/phone or password")
+      setIsSigningIn(false)
+      return
+    }
+
+    const supabase = createBrowserClient()
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: signInPassword,
     })
-    setTouched({
-      fullName: true,
-      email: true,
-      contactNumber: true,
-      fullAddress: true,
-      city: true,
-    })
-    // Clear errors since demo data is valid
-    setErrors(computeErrors())
+
+    if (error || !data.session) {
+      toast.error("Incorrect email/phone or password")
+      setIsSigningIn(false)
+      return
+    }
+
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("id, name, email, phone")
+      .eq("auth_id", data.session.user.id)
+      .single()
+
+    if (!customer) {
+      toast.error("Couldn't load your account — try again")
+      setIsSigningIn(false)
+      return
+    }
+
+    const { data: addresses } = await supabase
+      .from("addresses")
+      .select("id, label, street, city, province, is_default")
+      .eq("customer_id", customer.id)
+      .eq("is_active", true)
+      .order("is_default", { ascending: false })
+
+    loadCustomerIntoForm(customer, addresses || [])
     setIsSigningIn(false)
-    setAuthMode("guest") // Stay in guest mode visually, but with populated data
-    toast.success(`Welcome back, ${DEMO_USER.fullName}!`)
+    toast.success(`Welcome back, ${customer.name || customer.email}!`)
+  }
+
+  const handleSelectSavedAddress = (id: string) => {
+    setSelectedAddressId(id)
+    if (id === "manual") {
+      setFormData((prev) => ({ ...prev, fullAddress: "", city: "" }))
+      return
+    }
+    const address = savedAddresses.find((a) => a.id === id)
+    if (address) {
+      setFormData((prev) => ({ ...prev, fullAddress: address.street, city: address.city }))
+      setTouched((prev) => ({ ...prev, fullAddress: true, city: true }))
+    }
   }
 
   // Section collapse states
@@ -250,64 +344,96 @@ export default function CheckoutPage() {
           {/* Main Form - 3 columns */}
           <div className="lg:col-span-3 space-y-4">
             {/* Guest / Sign-in Toggle */}
-            <div className="bg-white border border-forest-200 rounded-xl overflow-hidden">
-              <div className="flex border-b border-forest-200">
+            {signedInCustomer ? (
+              <div className="bg-white border border-forest-200 rounded-xl p-4 flex items-center justify-between">
+                <p className="text-sm text-forest-700">
+                  Signed in as <span className="font-medium">{signedInCustomer.name || signedInCustomer.email}</span>
+                </p>
                 <button
                   type="button"
-                  onClick={() => setAuthMode("guest")}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-                    authMode === "guest"
-                      ? "bg-forest-50 text-forest-900 border-b-2 border-clay-500"
-                      : "text-forest-600 hover:bg-forest-50/50"
-                  }`}
+                  onClick={async () => {
+                    const supabase = createBrowserClient()
+                    await supabase.auth.signOut()
+                    setSignedInCustomer(null)
+                    setSavedAddresses([])
+                    setSelectedAddressId("manual")
+                    setFormData({ fullName: "", email: "", contactNumber: "", fullAddress: "", city: "" })
+                    setTouched({ fullName: false, email: false, contactNumber: false, fullAddress: false, city: false })
+                  }}
+                  className="text-sm text-forest-500 hover:text-forest-800 underline"
                 >
-                  Continue as Guest
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthMode("signin")}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-                    authMode === "signin"
-                      ? "bg-forest-50 text-forest-900 border-b-2 border-clay-500"
-                      : "text-forest-600 hover:bg-forest-50/50"
-                  }`}
-                >
-                  Already have an account? Sign in
+                  Not you?
                 </button>
               </div>
-              {authMode === "signin" && (
-                <div className="p-6">
-                  <form onSubmit={handleSignIn} className="space-y-4">
-                    <p className="text-sm text-forest-600">
-                      Sign in to auto-fill your saved details
-                    </p>
-                    <div className="space-y-1.5">
-                      <label htmlFor="signInEmail" className="text-sm font-medium text-forest-700">
-                        Email
-                      </label>
-                      <Input
-                        id="signInEmail"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={signInEmail}
-                        onChange={(e) => setSignInEmail(e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      disabled={isSigningIn}
-                    >
-                      {isSigningIn ? "Signing in..." : "Sign in (Demo)"}
-                    </Button>
-                    <p className="text-xs text-forest-400 text-center">
-                      Any email will work for demo. This uses hardcoded data.
-                    </p>
-                  </form>
+            ) : !checkingSession ? (
+              <div className="bg-white border border-forest-200 rounded-xl overflow-hidden">
+                <div className="flex border-b border-forest-200">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("guest")}
+                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                      authMode === "guest"
+                        ? "bg-forest-50 text-forest-900 border-b-2 border-clay-500"
+                        : "text-forest-600 hover:bg-forest-50/50"
+                    }`}
+                  >
+                    Continue as Guest
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("signin")}
+                    className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                      authMode === "signin"
+                        ? "bg-forest-50 text-forest-900 border-b-2 border-clay-500"
+                        : "text-forest-600 hover:bg-forest-50/50"
+                    }`}
+                  >
+                    Already have an account? Sign in
+                  </button>
                 </div>
-              )}
-            </div>
+                {authMode === "signin" && (
+                  <div className="p-6">
+                    <form onSubmit={handleSignIn} className="space-y-4">
+                      <p className="text-sm text-forest-600">
+                        Sign in to auto-fill your saved details
+                      </p>
+                      <div className="space-y-1.5">
+                        <label htmlFor="signInEmail" className="text-sm font-medium text-forest-700">
+                          Email or phone
+                        </label>
+                        <Input
+                          id="signInEmail"
+                          type="text"
+                          placeholder="you@example.com"
+                          value={signInEmail}
+                          onChange={(e) => setSignInEmail(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label htmlFor="signInPassword" className="text-sm font-medium text-forest-700">
+                          Password
+                        </label>
+                        <Input
+                          id="signInPassword"
+                          type="password"
+                          value={signInPassword}
+                          onChange={(e) => setSignInPassword(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={isSigningIn}
+                      >
+                        {isSigningIn ? "Signing in..." : "Enter your Green World 🌱"}
+                      </Button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            ) : null}
 
             <SectionCard
               title="Contact Information"
@@ -363,21 +489,64 @@ export default function CheckoutPage() {
               stepNumber={2}
             >
               <div className="space-y-4">
-                {/* City - shown first, required for all */}
-                <div className="space-y-1.5">
-                  <label htmlFor="city" className="text-sm font-medium text-forest-700">
-                    City <span className="text-clay-500">*</span>
-                  </label>
-                  <CitySelect
-                    value={formData.city}
-                    onChange={handleCityChange}
-                    placeholder="Select your city"
-                    error={touched.city && !!errors.city}
-                  />
-                  {touched.city && errors.city && (
-                    <p className="text-sm text-destructive">{errors.city}</p>
-                  )}
-                </div>
+                {/* Saved address picker - only for signed-in customers with saved addresses */}
+                {signedInCustomer && savedAddresses.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-forest-700">Delivery address</label>
+                    <div className="space-y-2">
+                      {savedAddresses.map((address) => (
+                        <button
+                          key={address.id}
+                          type="button"
+                          onClick={() => handleSelectSavedAddress(address.id)}
+                          className={`w-full p-3 border-2 rounded-lg text-left transition-all ${
+                            selectedAddressId === address.id
+                              ? "border-clay-500 bg-clay-50"
+                              : "border-forest-200 hover:border-forest-300"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm">{address.label}</span>
+                            {address.is_default && (
+                              <span className="text-xs bg-forest-100 text-forest-700 px-2 py-0.5 rounded">Default</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-forest-600">{address.street}</p>
+                          <p className="text-xs text-forest-500">{address.city}, {address.province}</p>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectSavedAddress("manual")}
+                        className={`w-full p-3 border-2 rounded-lg text-left text-sm transition-all ${
+                          selectedAddressId === "manual"
+                            ? "border-clay-500 bg-clay-50"
+                            : "border-forest-200 hover:border-forest-300"
+                        }`}
+                      >
+                        + Enter a different address
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* City - manual entry, shown when not using a saved address */}
+                {(!signedInCustomer || savedAddresses.length === 0 || selectedAddressId === "manual") && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="city" className="text-sm font-medium text-forest-700">
+                      City <span className="text-clay-500">*</span>
+                    </label>
+                    <CitySelect
+                      value={formData.city}
+                      onChange={handleCityChange}
+                      placeholder="Select your city"
+                      error={touched.city && !!errors.city}
+                    />
+                    {touched.city && errors.city && (
+                      <p className="text-sm text-destructive">{errors.city}</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Contact Number - always shown */}
                 <div className="space-y-1.5">
@@ -399,8 +568,8 @@ export default function CheckoutPage() {
                   <p className="text-xs text-forest-400">Enter your Pakistani mobile number (e.g., 03001234567)</p>
                 </div>
 
-                {/* Full Address - only for delivery */}
-                {deliveryType === "delivery" && (
+                {/* Full Address - only for delivery, and only when not using a saved address */}
+                {deliveryType === "delivery" && (!signedInCustomer || savedAddresses.length === 0 || selectedAddressId === "manual") && (
                   <div className="space-y-1.5">
                     <label htmlFor="fullAddress" className="text-sm font-medium text-forest-700">
                       Full Address <span className="text-clay-500">*</span>
