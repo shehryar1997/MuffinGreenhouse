@@ -1,0 +1,46 @@
+From b24630c927b3d8430c4df4fac35ba020367d2666 Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.com>
+Date: Thu, 17 Sep 2026 03:41:19 +0000
+Subject: [PATCH] Fix: deleted address kept is_default=true, causing two rows
+ both flagged default
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+handleDeleteAddress only ever SET is_default on a promoted replacement,
+never cleared it on the row being deleted. If no replacement existed at
+delete time, the inactive row stayed flagged is_default=true forever.
+When a new address was later added, it also got is_default=true (since
+the active-address count was correctly 0), leaving two rows -- one
+inactive, one active -- both marked default. This corrupted the
+customer's own data, not a caching/display bug; the same live production
+customer's data was corrected directly via one-off SQL as part of this fix.
+
+🤖 Generated with Claude
+---
+ app/account/account-dashboard.tsx | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/app/account/account-dashboard.tsx b/app/account/account-dashboard.tsx
+index 8c9cc47..9fe51ce 100644
+--- a/app/account/account-dashboard.tsx
++++ b/app/account/account-dashboard.tsx
+@@ -240,10 +240,13 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
+     const supabase = createBrowserClient()
+ 
+     // Soft delete — addresses can be referenced by past orders, so we never
+-    // hard-delete them, just hide them from this list.
++    // hard-delete them, just hide them from this list. Always clear
++    // is_default on the row being deleted itself, regardless of whether a
++    // replacement gets promoted below — otherwise an inactive row can be
++    // left permanently flagged as default alongside a newly-promoted one.
+     const { error } = await supabase
+       .from("addresses")
+-      .update({ is_active: false })
++      .update({ is_active: false, is_default: false })
+       .eq("id", address.id)
+ 
+     if (error) {
+-- 
+2.43.0
+

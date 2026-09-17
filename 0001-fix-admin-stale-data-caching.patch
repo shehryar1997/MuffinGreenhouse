@@ -1,0 +1,123 @@
+From be283cd43551914733c517ff273e1ff3de6c8836 Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.com>
+Date: Thu, 17 Sep 2026 03:33:47 +0000
+Subject: [PATCH] Fix admin panel showing stale customer/order/product data
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Root cause: none of the admin data pages had an explicit dynamic-
+rendering directive. A dynamic route param ([id]) alone doesn't
+reliably opt a page out of Next.js's caching, so pages like the
+customer detail view could keep showing data from whenever they were
+first rendered/cached, even after a customer updated their own phone
+number or address (which I confirmed IS writing correctly to Supabase
+-- this was a stale-read bug, not a broken write).
+
+Added export const dynamic = "force-dynamic" to every admin page that
+reads live data: customers list + detail, orders list + detail, and
+products list + edit (same underlying risk, fixed proactively even
+though only customers/orders were reported).
+
+🤖 Generated with Claude
+---
+ app/admin/customers/[id]/page.tsx     | 5 +++++
+ app/admin/customers/page.tsx          | 4 ++++
+ app/admin/orders/[id]/page.tsx        | 3 +++
+ app/admin/orders/page.tsx             | 4 ++++
+ app/admin/products/[id]/edit/page.tsx | 4 ++++
+ app/admin/products/page.tsx           | 4 ++++
+ 6 files changed, 24 insertions(+)
+
+diff --git a/app/admin/customers/[id]/page.tsx b/app/admin/customers/[id]/page.tsx
+index e3f7076..b25543f 100644
+--- a/app/admin/customers/[id]/page.tsx
++++ b/app/admin/customers/[id]/page.tsx
+@@ -2,6 +2,11 @@ import Link from "next/link"
+ import { notFound, redirect } from "next/navigation"
+ import { supabaseAdmin } from "@/supabase/admin-client"
+ 
++// Force fresh data on every load — a dynamic route param alone doesn't
++// reliably opt this page out of caching, and this page needs to reflect
++// the customer's latest profile/address/order data every time.
++export const dynamic = "force-dynamic"
++
+ interface CustomerDetailPageProps {
+   params: { id: string }
+ }
+diff --git a/app/admin/customers/page.tsx b/app/admin/customers/page.tsx
+index a41f0d4..0c5bd14 100644
+--- a/app/admin/customers/page.tsx
++++ b/app/admin/customers/page.tsx
+@@ -1,5 +1,9 @@
+ import Link from "next/link"
+ import { Search } from "lucide-react"
++
++// Force fresh data on every load — admin pages should never show a
++// customer's stale phone/address/etc. after they've just updated it.
++export const dynamic = "force-dynamic"
+ import { supabaseAdmin } from "@/supabase/admin-client"
+ 
+ interface AdminCustomersPageProps {
+diff --git a/app/admin/orders/[id]/page.tsx b/app/admin/orders/[id]/page.tsx
+index 2165965..fd251a1 100644
+--- a/app/admin/orders/[id]/page.tsx
++++ b/app/admin/orders/[id]/page.tsx
+@@ -2,6 +2,9 @@ import Link from "next/link"
+ import { notFound, redirect } from "next/navigation"
+ import { supabaseAdmin } from "@/supabase/admin-client"
+ 
++// Force fresh data on every load — same reasoning as the orders list page.
++export const dynamic = "force-dynamic"
++
+ interface OrderDetailPageProps {
+   params: { id: string }
+ }
+diff --git a/app/admin/orders/page.tsx b/app/admin/orders/page.tsx
+index 071033f..7acc357 100644
+--- a/app/admin/orders/page.tsx
++++ b/app/admin/orders/page.tsx
+@@ -1,6 +1,10 @@
+ import Link from "next/link"
+ import { supabaseAdmin } from "@/supabase/admin-client"
+ 
++// Force fresh data on every load — orders and payment status change often
++// and admin should never see a stale list.
++export const dynamic = "force-dynamic"
++
+ function statusBadgeClass(status: string): string {
+   const colors: Record<string, string> = {
+     pending: "bg-yellow-100 text-yellow-800",
+diff --git a/app/admin/products/[id]/edit/page.tsx b/app/admin/products/[id]/edit/page.tsx
+index 6eff936..e9b012e 100644
+--- a/app/admin/products/[id]/edit/page.tsx
++++ b/app/admin/products/[id]/edit/page.tsx
+@@ -4,6 +4,10 @@ import { DeleteProductButton } from "../../delete-product-button"
+ import { getFormLookups, updateProduct, deleteProduct } from "../../actions"
+ import { supabaseAdmin } from "@/supabase/admin-client"
+ 
++// Force fresh data on every load — an edit form must always prefill with
++// the product's current values, never a stale cached version.
++export const dynamic = "force-dynamic"
++
+ export default async function EditProductPage({ params }: { params: { id: string } }) {
+   const [lookups, { data: product }] = await Promise.all([
+     getFormLookups(),
+diff --git a/app/admin/products/page.tsx b/app/admin/products/page.tsx
+index 164b98f..494564d 100644
+--- a/app/admin/products/page.tsx
++++ b/app/admin/products/page.tsx
+@@ -2,6 +2,10 @@ import Link from "next/link"
+ import { Search } from "lucide-react"
+ import { supabaseAdmin } from "@/supabase/admin-client"
+ 
++// Force fresh data on every load — same class of stale-admin-data bug
++// found on the customers/orders pages, fixed here too for consistency.
++export const dynamic = "force-dynamic"
++
+ interface AdminProductsPageProps {
+   searchParams: { q?: string }
+ }
+-- 
+2.43.0
+
