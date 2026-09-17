@@ -1,20 +1,59 @@
-"use client"
-
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 import Link from "next/link"
-import { motion } from "framer-motion"
-import { User, Heart, ShoppingBag, MapPin, LogOut } from "lucide-react"
+import { User, Heart, ShoppingBag, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { createServerClient } from "@/lib/supabase/server-client"
+import { AccountDashboard } from "./account-dashboard"
 
-// Placeholder account page - user not logged in variant
-export default function AccountPage() {
+// Types for Supabase data
+interface Customer {
+  id: string
+  auth_id: string
+  email: string
+  phone: string | null
+  name: string | null
+}
+
+interface Address {
+  id: string
+  customer_id: string
+  label: string
+  street: string
+  city: string
+  province: string
+  is_default: boolean
+}
+
+interface OrderItem {
+  id: string
+  order_id: string
+  product_id: string
+  quantity: number
+  unit_price: number
+  total_price: number
+  product_name: string
+  product_sku: string
+  variant_name: string | null
+}
+
+interface Order {
+  id: string
+  order_number: string
+  customer_id: string
+  status: string
+  payment_status: string
+  total: number
+  created_at: string
+  order_items: OrderItem[]
+}
+
+// Signed-out state component - kept exactly as original
+function SignedOutState() {
   return (
     <div className="min-h-screen bg-[#FAF7F2] pt-20">
       <div className="container mx-auto px-6 lg:px-12 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
+        <div>
           <h1 className="font-serif text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A] leading-[0.95] tracking-tight mb-4">
             Your Account
           </h1>
@@ -48,8 +87,59 @@ export default function AccountPage() {
               <Link href="/shop/all">Continue Shopping</Link>
             </Button>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
+  )
+}
+
+export default async function AccountPage() {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(cookieStore)
+
+  // Check for active session
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (!session) {
+    return <SignedOutState />
+  }
+
+  // Fetch customer data
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("id, auth_id, email, phone, name")
+    .eq("auth_id", session.user.id)
+    .single()
+
+  if (!customer) {
+    // Auth exists but no customer record - sign them out
+    await supabase.auth.signOut()
+    redirect("/account/login")
+  }
+
+  // Fetch addresses
+  const { data: addresses = [] } = await supabase
+    .from("addresses")
+    .select("id, customer_id, label, street, city, province, is_default")
+    .eq("customer_id", customer.id)
+    .eq("is_active", true)
+    .order("is_default", { ascending: false })
+
+  // Fetch orders with order_items
+  const { data: orders = [] } = await supabase
+    .from("orders")
+    .select(`
+      id, order_number, customer_id, status, payment_status, total, created_at,
+      order_items:order_items(id, order_id, product_id, quantity, unit_price, total_price, product_name, product_sku, variant_name)
+    `)
+    .eq("customer_id", customer.id)
+    .order("created_at", { ascending: false })
+
+  return (
+    <AccountDashboard
+      customer={customer}
+      addresses={addresses as Address[]}
+      orders={orders as Order[]}
+    />
   )
 }

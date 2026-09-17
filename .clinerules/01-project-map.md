@@ -45,7 +45,8 @@ Do not regenerate the full map unless explicitly asked to.
 `app/our-guarantee/page.tsx` — Guarantee page — Server Component — N/A
 `app/contact/page.tsx` — Contact page — Server Component — N/A
 `app/checkout/page.tsx` — Checkout flow — N/A — N/A
-`app/account/page.tsx` — Account dashboard — N/A — N/A
+`app/account/page.tsx` — Account dashboard (server auth check + signed-out/signed-in states) — SignedOutState — @/components/ui/*, @/lib/supabase/server-client, ./account-dashboard
+`app/account/account-dashboard.tsx` — Client dashboard for signed-in users — AccountDashboard — @/components/ui/*, @/lib/supabase/browser-client, framer-motion
 `app/account/login/page.tsx` — Login page — N/A — N/A
 `app/admin/login/page.tsx` — Admin login — N/A — N/A
 `app/admin/products/page.tsx` — Products list with search — AdminProductsPage — @/supabase/admin-client

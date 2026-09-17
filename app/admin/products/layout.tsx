@@ -25,6 +25,12 @@ export default function AdminProductsLayout({ children }: { children: React.Reac
               Products
             </Link>
             <Link
+              href="/admin/customers"
+              className="text-neutral-600 hover:text-neutral-900 px-2 py-1 rounded hover:bg-neutral-100"
+            >
+              Customers
+            </Link>
+            <Link
               href="/admin/email"
               className="text-neutral-600 hover:text-neutral-900 px-2 py-1 rounded hover:bg-neutral-100"
             >
