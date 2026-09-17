@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const currentPrice = selectedVariant?.price || product.price
   const currentCompareAt = product.compareAtPrice
   const currentStockCount = selectedVariant?.stockCount ?? product.stockCount
+
+  // Re-clamp quantity when switching variants, so a quantity chosen for a
+  // higher-stock variant can't silently carry over past a lower-stock one.
+  useEffect(() => {
+    setQuantity((q) => Math.min(Math.max(1, q), Math.max(1, currentStockCount)))
+  }, [currentStockCount])
 
   return (
     <div className="bg-cream-100 min-h-screen pt-28 pb-8">
@@ -90,7 +96,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <div className="flex items-center border border-forest-200 rounded-lg">
                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-2 hover:bg-forest-50">-</button>
                 <span className="px-4 py-2 font-mono min-w-[3rem] text-center">{quantity}</span>
-                <button onClick={() => setQuantity(quantity + 1)} className="px-4 py-2 hover:bg-forest-50">+</button>
+                <button onClick={() => setQuantity(Math.min(currentStockCount, quantity + 1))} disabled={quantity >= currentStockCount} className="px-4 py-2 hover:bg-forest-50 disabled:opacity-40 disabled:cursor-not-allowed">+</button>
               </div>
             </div>
 

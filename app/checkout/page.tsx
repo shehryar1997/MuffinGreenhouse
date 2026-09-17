@@ -8,8 +8,8 @@ import { CitySelect } from "@/components/ui/city-select"
 import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
 import { toast } from "sonner"
-import { redirect } from "next/navigation"
-import { Package, Truck, Check, AlertCircle } from "lucide-react"
+import { redirect, useRouter } from "next/navigation"
+import { Package, Truck, Check, AlertCircle, Loader2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
 import Link from "next/link"
 import type { CartItem } from "@/types"
@@ -63,8 +63,11 @@ interface ProductDimensions {
 type CheckoutStep = 1 | 2
 
 export default function CheckoutPage() {
-  const { cart, itemCount } = useCart()
+  const { cart, itemCount, clearCart } = useCart()
+  const router = useRouter()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>(1)
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const [orderPlaced, setOrderPlaced] = useState(false)
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery")
   const [isCheckingEmail, setIsCheckingEmail] = useState(false)
   const [emailCheckResult, setEmailCheckResult] = useState<EmailCheckResult | null>(null)
@@ -195,7 +198,7 @@ export default function CheckoutPage() {
       case "fullName": return value.trim().length < 2 ? "Full name is required" : undefined
       case "email": return !validateEmail(value) ? "Valid email required" : undefined
       case "contactNumber": return !validatePhone(value) ? "Valid phone required" : undefined
-      case "fullAddress": return value.trim().length < 10 ? "Address required" : undefined
+      case "fullAddress": return deliveryType === "pickup" ? undefined : (value.trim().length < 10 ? "Address required" : undefined)
       case "city": return !value ? "Please select a city" : undefined
       default: return undefined
     }
@@ -244,6 +247,50 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
+  const handlePlaceOrder = async () => {
+    setIsPlacingOrder(true)
+    try {
+      const payload = {
+        customerId: signedInCustomer?.id || null,
+        customerEmail: formData.email,
+        customerName: formData.fullName,
+        customerPhone: formData.contactNumber,
+        items: cart.items.map((item) => ({
+          productId: item.product.id,
+          variantId: item.variant?.id || null,
+          quantity: item.quantity,
+        })),
+        deliveryType,
+        addressId: deliveryType === "delivery" && selectedAddressId !== "manual" ? selectedAddressId : null,
+        newAddress: deliveryType === "delivery" && selectedAddressId === "manual"
+          ? { fullAddress: formData.fullAddress, city: formData.city }
+          : null,
+        paymentMethod: "bank_transfer" as const,
+        deliveryFee,
+        cartSubtotal: subtotal,
+      }
+
+      const response = await fetch("/api/checkout-submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to place order")
+      }
+
+      setOrderPlaced(true)
+      clearCart()
+      router.push(result.redirectTo)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to place order")
+    } finally {
+      setIsPlacingOrder(false)
+    }
+  }
+
   useEffect(() => {
     const checkSession = async () => {
       const supabase = createBrowserClient()
@@ -270,7 +317,7 @@ export default function CheckoutPage() {
   }, [])
 
   if (checkingSession) return <div className="min-h-screen flex items-center justify-center bg-forest-50"><div className="text-center"><div className="w-8 h-8 border-4 border-sprout-500 border-t-transparent rounded-full animate-spin mx-auto"></div><p className="mt-4 text-forest-700">Loading...</p></div></div>
-  if (itemCount === 0) redirect('/shop/all')
+  if (itemCount === 0 && !orderPlaced) redirect('/shop/all')
   return (
     <div className="min-h-screen bg-forest-50">
       <div className="pt-32 pb-16">
@@ -401,17 +448,19 @@ export default function CheckoutPage() {
                     Back to Delivery Details
                   </button>
 
-                  {/* Payment Placeholder */}
+                  {/* Review & Place Order */}
                   <div className="p-8 bg-white border border-forest-200 rounded-xl text-center">
                     <div className="w-16 h-16 bg-forest-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Package className="w-8 h-8 text-forest-500" />
                     </div>
-                    <h2 className="font-serif text-2xl text-forest-900 mb-2">Payment</h2>
-                    <p className="text-forest-500 mb-6">Payment step -- coming in next update</p>
-                    <div className="p-4 bg-sprout-50 rounded-lg border border-sprout-200">
-                      <p className="text-sm text-sprout-700">Your order details have been saved.</p>
-                      <p className="text-sm text-sprout-600 mt-1">Total amount: <span className="font-mono font-medium">{formatPrice(total)}</span></p>
+                    <h2 className="font-serif text-2xl text-forest-900 mb-2">Review &amp; Place Order</h2>
+                    <p className="text-forest-500 mb-6">Confirm your details below, then place your order. You&apos;ll get payment instructions on the next screen.</p>
+                    <div className="p-4 bg-sprout-50 rounded-lg border border-sprout-200 mb-6">
+                      <p className="text-sm text-sprout-600">Total amount: <span className="font-mono font-medium text-sprout-700">{formatPrice(total)}</span></p>
                     </div>
+                    <Button onClick={handlePlaceOrder} disabled={isPlacingOrder} className="w-full h-12 text-base">
+                      {isPlacingOrder ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Placing Order...</> : `Place Order -- ${formatPrice(total)}`}
+                    </Button>
                   </div>
 
                   {/* Delivery Summary */}
@@ -557,7 +606,7 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCal
         </div>
         {currentStep === 2 && (
           <div className="mt-4 p-3 bg-sprout-50 border border-sprout-200 rounded-lg">
-            <p className="text-sm text-sprout-700 text-center">Payment options will appear here in the next update</p>
+            <p className="text-sm text-sprout-700 text-center">You&apos;ll choose a payment method after placing your order</p>
           </div>
         )}
       </div>

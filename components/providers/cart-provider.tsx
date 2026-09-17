@@ -35,18 +35,20 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD_ITEM": {
       const { product, variant, quantity } = action.payload
+      const stockCount = variant?.stockCount ?? product.stockCount
       const existingItemIndex = state.items.findIndex(
         (item) => item.product.id === product.id && item.variant?.id === variant?.id
       )
-      
+
       let newItems: CartItem[]
       if (existingItemIndex >= 0) {
         newItems = [...state.items]
-        newItems[existingItemIndex].quantity += quantity
+        const nextQuantity = Math.min(newItems[existingItemIndex].quantity + quantity, stockCount)
+        newItems[existingItemIndex] = { ...newItems[existingItemIndex], quantity: nextQuantity }
       } else {
-        newItems = [...state.items, { product, variant, quantity }]
+        newItems = [...state.items, { product, variant, quantity: Math.min(quantity, stockCount) }]
       }
-      
+
       const { subtotal, total } = calculateTotals(newItems, state.deliveryFee)
       return { ...state, items: newItems, subtotal, total, isOpen: true }
     }
@@ -61,11 +63,11 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     
     case "UPDATE_QUANTITY": {
       const { productId, variantId, quantity } = action.payload
-      const newItems = state.items.map((item) =>
-        item.product.id === productId && item.variant?.id === variantId
-          ? { ...item, quantity: Math.max(0, quantity) }
-          : item
-      ).filter((item) => item.quantity > 0)
+      const newItems = state.items.map((item) => {
+        if (item.product.id !== productId || item.variant?.id !== variantId) return item
+        const stockCount = item.variant?.stockCount ?? item.product.stockCount
+        return { ...item, quantity: Math.min(Math.max(0, quantity), stockCount) }
+      }).filter((item) => item.quantity > 0)
       
       const { subtotal, total } = calculateTotals(newItems, state.deliveryFee)
       return { ...state, items: newItems, subtotal, total }

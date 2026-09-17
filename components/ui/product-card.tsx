@@ -29,9 +29,12 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
   const router = useRouter()
   const wishlisted = isWishlisted(product.id)
 
+  const isOutOfStock = product.stockStatus === "out_of_stock"
+
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    if (isOutOfStock) return
     addItem(product, undefined, 1)
     toast(`${product.name} added to cart`, { action: { label: "View Cart", onClick: () => toggleCart(true) } })
   }
@@ -89,7 +92,7 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
             transition={{ duration: 0.2 }}
           >
             <div className="absolute inset-0 bg-forest-900/20" />
-            <Button size="icon" variant="secondary" className="relative z-10 rounded-full bg-cream-100 hover:bg-white" onClick={handleAddToCart}>
+            <Button size="icon" variant="secondary" className="relative z-10 rounded-full bg-cream-100 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleAddToCart} disabled={isOutOfStock} aria-label={isOutOfStock ? "Out of stock" : "Add to cart"}>
               <ShoppingBag className="w-4 h-4" />
             </Button>
             <Button
