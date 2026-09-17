@@ -14,14 +14,14 @@ export function formatPrice(price: number, currency: string = "PKR"): string {
   }).format(price)
 }
 
-export function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  wait: number
+export function debounce<T extends (...args: any[]) => void>(
+  fn: T,
+  delay: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout
+  let timeout: ReturnType<typeof setTimeout>
   return (...args: Parameters<T>) => {
     clearTimeout(timeout)
-    timeout = setTimeout(() => func(...args), wait)
+    timeout = setTimeout(() => fn(...args), delay)
   }
 }
 
