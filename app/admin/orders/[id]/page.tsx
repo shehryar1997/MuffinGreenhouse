@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { sendOrderConfirmedEmail } from "@/lib/email/send-order-confirmed"
 
 // Force fresh data on every load — same reasoning as the orders list page.
 export const dynamic = "force-dynamic"
@@ -32,11 +33,41 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   async function markPaid() {
     "use server"
+    // Update order status
     const { error } = await supabaseAdmin
       .from("orders")
       .update({ payment_status: "paid", status: "confirmed", confirmed_at: new Date().toISOString() })
       .eq("id", params.id)
     if (error) throw new Error(error.message)
+
+    // Send order confirmed email
+    try {
+      const orderData = await supabaseAdmin
+        .from("orders")
+        .select("order_number, total, delivery_type, customer_email, customer_name, order_items(product_name, quantity, unit_price)")
+        .eq("id", params.id)
+        .single()
+
+      if (orderData.data && orderData.data.customer_email) {
+        const items = (orderData.data.order_items as unknown as Array<{ product_name: string; quantity: number; unit_price: number }>) || []
+        await sendOrderConfirmedEmail({
+          toEmail: orderData.data.customer_email,
+          customerName: orderData.data.customer_name,
+          orderNumber: orderData.data.order_number,
+          total: orderData.data.total,
+          items: items.map(item => ({
+            productName: item.product_name,
+            quantity: item.quantity,
+            price: item.unit_price,
+          })),
+          deliveryType: orderData.data.delivery_type as "delivery" | "pickup",
+        })
+      }
+    } catch (emailError) {
+      // Log error but don't fail the mark-as-paid action
+      console.error("Failed to send order confirmed email:", emailError)
+    }
+
     redirect(`/admin/orders/${params.id}`)
   }
 

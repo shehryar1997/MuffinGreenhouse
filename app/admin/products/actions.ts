@@ -57,6 +57,11 @@ function parseProductFields(formData: FormData) {
     // so this should always pass, but the DB guard stays as a backstop.
     use_case_tags: formData.getAll("use_case_tags") as string[],
     mood_tags: formData.getAll("mood_tags") as string[],
+    // Shipping dimensions (optional, used for shipping cost calculation)
+    box_height_cm: formData.get("box_height_cm") ? Number(formData.get("box_height_cm")) : null,
+    box_width_cm: formData.get("box_width_cm") ? Number(formData.get("box_width_cm")) : null,
+    box_breadth_cm: formData.get("box_breadth_cm") ? Number(formData.get("box_breadth_cm")) : null,
+    weight_kg: formData.get("weight_kg") ? Number(formData.get("weight_kg")) : null,
   }
 }
 

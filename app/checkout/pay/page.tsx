@@ -1,33 +1,45 @@
-"use client"
+﻿'use client'
 
-import { Suspense, useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { formatPrice } from "@/lib/utils"
-import { toast } from "sonner"
-import { Upload, CheckCircle, AlertCircle, Loader2, MessageCircle } from "lucide-react"
-import { siteConfig } from "@/config/nav.config"
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { formatPrice } from '@/lib/utils'
+import { toast } from 'sonner'
+import { CheckCircle, Loader2, MessageCircle, Clock, AlertCircle, Copy, Check } from 'lucide-react'
+import { siteConfig } from '@/config/nav.config'
 
 interface PaymentDetails {
   orderId: string
   orderNumber: string
   total: number
-  paymentMethod: string
+  customerEmail: string
+  customerName: string
+  items: Array<{ productId: string; productName: string; quantity: number; price: number }>
+  deliveryType: 'delivery' | 'pickup'
+  deliveryFee: number
+  subtotal: number
+}
+
+const PAYMENT_ACCOUNTS = {
+  hbl: { title: 'HBL Bank Transfer', icon: '🏦', details: [
+    { label: 'Bank', value: 'Habib Bank Limited (HBL)' },
+    { label: 'Account Title', value: 'Muffin Greenhouse' },
+    { label: 'Account Number', value: '03239533242' },
+    { label: 'IBAN', value: 'PK93HABB0028807901590001' },
+  ]},
+  jazzcash: { title: 'JazzCash', icon: '📱', details: [
+    { label: 'Account Title', value: 'Muhammad Shehryar' },
+    { label: 'Mobile Number', value: '03202065474' },
+  ]},
+  easypaisa: { title: 'Easypaisa', icon: '💳', details: [
+    { label: 'Account Title', value: 'Muhammad Shehryar' },
+    { label: 'Mobile Number', value: '03202065474' },
+  ]},
 }
 
 export default function CheckoutPayPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-forest-50">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-sprout-500" />
-            <p className="mt-4 text-forest-700">Loading payment details...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<div className='min-h-screen flex items-center justify-center bg-forest-50'><div className='text-center'><Loader2 className='w-8 h-8 animate-spin mx-auto text-sprout-500' /><p className='mt-4 text-forest-700'>Loading...</p></div></div>}>
       <CheckoutPayContent />
     </Suspense>
   )
@@ -35,359 +47,164 @@ export default function CheckoutPayPage() {
 
 function CheckoutPayContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const [verifying, setVerifying] = useState(false)
-  const [verifyComplete, setVerifyComplete] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [confirmed, setConfirmed] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
 
-  // Get order details from URL parameters
   useEffect(() => {
-    const orderId = searchParams.get("orderId")
-    const orderNumber = searchParams.get("orderNumber")
-    const total = searchParams.get("total")
-    const paymentMethod = searchParams.get("paymentMethod")
+    const orderId = searchParams.get('orderId')
+    const orderNumber = searchParams.get('orderNumber')
+    const total = searchParams.get('total')
+    const customerEmail = searchParams.get('customerEmail')
+    const customerName = searchParams.get('customerName')
+    const itemsJson = searchParams.get('items')
+    const deliveryType = searchParams.get('deliveryType')
+    const deliveryFee = searchParams.get('deliveryFee')
+    const subtotal = searchParams.get('subtotal')
 
-    if (orderId && orderNumber && total && paymentMethod) {
-      setPaymentDetails({
-        orderId,
-        orderNumber,
-        total: parseFloat(total),
-        paymentMethod
-      })
+    if (orderId && orderNumber && total && customerEmail) {
+      let items: PaymentDetails['items'] = []
+      try { if (itemsJson) items = JSON.parse(decodeURIComponent(itemsJson)) } catch {}
+      setPaymentDetails({ orderId, orderNumber, total: parseFloat(total), customerEmail: decodeURIComponent(customerEmail), customerName: customerName ? decodeURIComponent(customerName) : '', items, deliveryType: (deliveryType as 'delivery' | 'pickup') || 'delivery', deliveryFee: deliveryFee ? parseFloat(deliveryFee) : 0, subtotal: subtotal ? parseFloat(subtotal) : parseFloat(total) })
     } else {
-      toast.error("Missing order information")
-      setTimeout(() => {
-        window.location.href = "/checkout"
-      }, 2000)
+      toast.error('Missing order information')
+      setTimeout(() => window.location.href = '/checkout', 2000)
     }
     setLoading(false)
   }, [searchParams])
 
-  // Handle file selection
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file")
-      return
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB")
-      return
-    }
-
-    setSelectedFile(file)
+  const handleCopy = async (value: string, fieldId: string) => {
+    try { await navigator.clipboard.writeText(value); setCopiedField(fieldId); setTimeout(() => setCopiedField(null), 2000); toast.success('Copied') } catch { toast.error('Failed to copy') }
   }
 
-  // Upload file and update order
-  const handleUploadAndVerify = async () => {
-    if (!selectedFile || !paymentDetails) {
-      toast.error("Please select a file first")
-      return
-    }
-
-    setUploading(true)
-
+  const handleConfirmBooking = async () => {
+    if (!paymentDetails) return
+    setConfirming(true)
     try {
-      // First, get signed upload URL
-      const uploadResponse = await fetch("/api/generate-upload-url", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ orderNumber: paymentDetails.orderNumber }),
-      })
-
-      if (!uploadResponse.ok) {
-        throw new Error("Failed to generate upload URL")
-      }
-
-      const uploadData = await uploadResponse.json()
-
-      // Upload file to signed URL
-      const xhr = new XMLHttpRequest()
-      xhr.open("POST", uploadData.signedUrl)
-      xhr.setRequestHeader("Authorization", `Bearer ${uploadData.token}`)
-      xhr.setRequestHeader("Content-Type", selectedFile.type)
-
-      const uploadPromise = new Promise<void>((resolve, reject) => {
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve()
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`))
-          }
-        }
-        xhr.onerror = () => reject(new Error("Upload failed"))
-        xhr.send(selectedFile)
-      })
-
-      await uploadPromise
-      setUploading(false)
-      
-      // Now update the order with receipt URL
-      setVerifying(true)
-      
-      const updateResponse = await fetch("/api/update-order-receipt", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderId: paymentDetails.orderId,
-          receiptUrl: uploadData.path,
-        }),
-      })
-
-      if (!updateResponse.ok) {
-        throw new Error("Failed to update order")
-      }
-
-      setVerifying(false)
-      setVerifyComplete(true)
-      toast.success("Payment under review!")
-
-    } catch (error) {
-      console.error("Error:", error)
-      toast.error("Failed to upload receipt")
-      setUploading(false)
-      setVerifying(false)
-    }
+      const res = await fetch('/api/checkout-confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...paymentDetails }) })
+      if (!res.ok) { const err = await res.json().catch(() => ({ error: 'Unknown' })); throw new Error(err.error || 'Failed') }
+      setConfirmed(true); toast.success('Booking confirmed!')
+    } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') } finally { setConfirming(false) }
   }
 
-  // Get payment method details
-  const getPaymentDetails = () => {
-    if (!paymentDetails) return { title: "", details: [] }
-
-    const { paymentMethod, total } = paymentDetails
-
-    switch (paymentMethod) {
-      case "bank_transfer":
-        return {
-          title: "Bank Transfer - Habib Bank Ltd (HBL)",
-          details: [
-            "Account No. 09107902577803",
-            "IBAN: PK66HABB00009107902577803",
-            "Account Title: Shehryar Ahmad"
-          ]
-        }
-      case "jazzcash":
-        return {
-          title: "JazzCash",
-          details: [
-            "03202065474",
-            "Account Title: Shehryar Ahmad"
-          ]
-        }
-      case "easypaisa":
-        return {
-          title: "Easypaisa",
-          details: [
-            "03202065474",
-            "Account Title: Shehryar Ahmad"
-          ]
-        }
-      case "nayapay":
-      case "zindigi":
-      case "raast":
-        return {
-          title: `Payment via ${paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)}`,
-          details: [
-            `Pay ${formatPrice(total)} using ${paymentMethod}`,
-            "Payment instructions will follow via WhatsApp"
-          ]
-        }
-      default:
-        return {
-          title: "Payment",
-          details: [`Please pay ${formatPrice(total)}`]
-        }
-    }
+  const getWhatsAppUrl = () => {
+    if (!paymentDetails) return '#'
+    const msg = encodeURIComponent('Hi! I would like to pay for my order:\n\nOrder Number: ' + paymentDetails.orderNumber + '\nTotal Amount: ' + formatPrice(paymentDetails.total) + '\n\nPlease confirm my payment.')
+    return 'https://wa.me/' + siteConfig.whatsappNumber.replace(/\D/g, '') + '?text=' + msg
   }
 
-  if (loading) {
+  if (loading) return <div className='min-h-screen flex items-center justify-center bg-forest-50'><Loader2 className='w-8 h-8 animate-spin' /></div>
+  if (!paymentDetails) return <div className='min-h-screen flex items-center justify-center bg-forest-50'><AlertCircle className='w-12 h-12 text-amber-500' /><p>Invalid order</p></div>
+
+  if (confirmed) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-forest-50">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-sprout-500" />
-          <p className="mt-4 text-forest-700">Loading payment details...</p>
+      <div className='min-h-screen bg-forest-50 py-12'>
+        <div className='max-w-2xl mx-auto px-4'>
+          <div className='bg-white rounded-2xl border border-forest-200 p-8 text-center'>
+            <CheckCircle className='w-10 h-10 text-sprout-600 mx-auto mb-4' />
+            <h1 className='text-2xl font-serif text-forest-900 mb-2'>Booking Confirmed!</h1>
+            <p className='text-forest-600 mb-6'>Your order is held for 2 hours.</p>
+            <div className='bg-sprout-50 border border-sprout-200 rounded-xl p-6 mb-6'>
+              <p className='text-sm font-medium text-forest-900'>Order #{paymentDetails.orderNumber}</p>
+              <p className='text-sm text-forest-600'>Total: {formatPrice(paymentDetails.total)}</p>
+            </div>
+            <a href={getWhatsAppUrl()} target='_blank' rel='noopener noreferrer' className='inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium rounded-lg transition-colors'>
+              <MessageCircle className='w-5 h-5' /> Share Receipt on WhatsApp
+            </a>
+            <Button variant='outline' onClick={() => router.push('/')} className='w-full mt-3'>Continue Shopping</Button>
+          </div>
         </div>
       </div>
     )
   }
-
-  if (!paymentDetails) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-forest-50">
-        <div className="text-center">
-          <AlertCircle className="w-8 h-8 mx-auto text-destructive mb-3" />
-          <p className="text-forest-700">No payment details found</p>
-          <p className="text-sm text-forest-500 mt-2">Redirecting to checkout...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const paymentInfo = getPaymentDetails()
 
   return (
-    <div className="min-h-screen bg-forest-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="font-serif text-3xl md:text-4xl text-forest-900 mb-3">
-            Complete Your Payment
-          </h1>
-          <p className="text-forest-600">
-            Order #{paymentDetails.orderNumber}
-          </p>
+    <div className='min-h-screen bg-forest-50 py-12'>
+      <div className='max-w-3xl mx-auto px-4 sm:px-6 lg:px-8'>
+        <div className='text-center mb-8'>
+          <h1 className='text-3xl font-serif text-forest-900 mb-2'>Complete Your Payment</h1>
+          <p className='text-forest-600'>Order #{paymentDetails.orderNumber}</p>
         </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-forest-200 overflow-hidden">
-          {/* Payment Amount */}
-          <div className="p-8 border-b border-forest-100">
-            <div className="text-center">
-              <p className="text-sm text-forest-500 mb-2">Total Amount</p>
-              <p className="font-mono text-4xl font-bold text-forest-900">
-                {formatPrice(paymentDetails.total)}
-              </p>
-              <p className="text-sm text-forest-400 mt-1">PKR</p>
+        <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
+          <div className='flex items-center justify-between'>
+            <span className='text-forest-600'>Total Amount to Pay</span>
+            <span className='text-3xl font-mono font-medium text-forest-900'>{formatPrice(paymentDetails.total)}</span>
+          </div>
+        </div>
+        <div className='bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6'>
+          <div className='flex items-start gap-3'>
+            <Clock className='w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5' />
+            <div>
+              <h3 className='font-medium text-amber-900 mb-1'>2-Hour Payment Window</h3>
+              <p className='text-sm text-amber-800'>Pay the total amount to any of the accounts below and share your payment receipt on WhatsApp within 2 hours. Your order is held for 2 hours — if payment is not confirmed within that window, it will be automatically cancelled.</p>
             </div>
           </div>
-
-          {/* Payment Instructions */}
-          <div className="p-8 border-b border-forest-100">
-            <div className="flex items-start gap-3 mb-4">
-              <AlertCircle className="w-5 h-5 text-clay-500 mt-0.5 flex-shrink-0" />
-              <div>
-                <h3 className="font-medium text-lg text-forest-900 mb-2">
-                  {paymentInfo.title}
-                </h3>
-                <ul className="space-y-2">
-                  {paymentInfo.details.map((detail, index) => (
-                    <li key={index} className="text-forest-700">
-                      {detail}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-6 p-4 bg-sprout-50 border border-sprout-200 rounded-lg">
-              <p className="text-sm text-forest-700">
-                <strong>Important:</strong> Please make the payment using the account details above.
-                We&apos;ll confirm your payment within a few hours after you upload the receipt.
-              </p>
-            </div>
+        </div>
+        <div className='bg-white rounded-xl border border-forest-200 overflow-hidden mb-6'>
+          <div className='px-6 py-4 border-b border-forest-200 bg-forest-50'>
+            <h2 className='font-medium text-forest-900'>Payment Options</h2>
+            <p className='text-sm text-forest-500'>Pay to any of the following accounts</p>
           </div>
-
-          {/* Receipt Upload */}
-          <div className="p-8">
-            <h3 className="font-medium text-lg text-forest-900 mb-4">
-              Upload Payment Receipt
-            </h3>
-            
-            <div className="space-y-4">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                disabled={uploading || verifying || verifyComplete}
-                className="cursor-pointer"
-              />
-              
-              {selectedFile && (
-                <p className="text-sm text-forest-600">
-                  Selected: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
-                </p>
-              )}
-
-              <Button
-                onClick={handleUploadAndVerify}
-                disabled={!selectedFile || uploading || verifying || verifyComplete}
-                className="w-full bg-clay-500 hover:bg-clay-600"
-                size="lg"
-              >
-                {uploading || verifying ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {uploading ? "Uploading..." : "Verifying..."}
-                  </>
-                ) : verifyComplete ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Verified
-                  </>
-                ) : (
-                  "Upload & Verify"
-                )}
-              </Button>
-
-              <p className="text-xs text-forest-400">
-                Accepts image files (JPEG, PNG, WebP, GIF) - Max 5MB
-              </p>
-
-              {/* WhatsApp Payment Option */}
-              <div className="pt-4 border-t border-forest-100">
-                <p className="text-sm text-forest-500 mb-3">Prefer to pay via WhatsApp?</p>
-                <a
-                  href={(() => {
-                    if (!paymentDetails) return "#"
-                    const message = encodeURIComponent(
-                      `Hi! I would like to pay for my order:\n\n` +
-                      `Order Number: ${paymentDetails.orderNumber}\n` +
-                      `Order ID: ${paymentDetails.orderId}\n` +
-                      `Total Amount: ${formatPrice(paymentDetails.total)}\n` +
-                      `Payment Method: ${paymentDetails.paymentMethod}\n\n` +
-                      `Please confirm my payment.`
-                    )
-                    return `https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, "")}?text=${message}`
-                  })()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium rounded-lg transition-colors"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  Pay via WhatsApp instead
-                </a>
-              </div>
-            </div>
-
-            {/* Completion Message */}
-            {verifyComplete && (
-              <div className="mt-8 p-6 bg-sprout-50 border border-sprout-200 rounded-xl">
-                <div className="flex items-start gap-4">
-                  <CheckCircle className="w-6 h-6 text-sprout-600 flex-shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-medium text-lg text-forest-900 mb-2">
-                      Payment Under Review
-                    </h4>
-                    <p className="text-forest-700 mb-3">
-                      Thank you! Your payment receipt has been submitted for verification.
-                      We&apos;ll review it and confirm your order within a few hours.
-                    </p>
-                    <div className="bg-white p-4 rounded-lg border border-sprout-100">
-                      <p className="text-sm font-medium text-forest-900 mb-1">
-                        Order #{paymentDetails.orderNumber}
-                      </p>
-                      <p className="text-sm text-forest-600">
-                        You&apos;ll receive a confirmation email/SMS once verified.
-                      </p>
+          <div className='divide-y divide-forest-100'>
+            {Object.entries(PAYMENT_ACCOUNTS).map(([key, account]) => (
+              <div key={key} className='p-6'>
+                <div className='flex items-center gap-3 mb-4'>
+                  <span className='text-2xl'>{account.icon}</span>
+                  <h3 className='font-medium text-forest-900'>{account.title}</h3>
+                </div>
+                <div className='space-y-2'>
+                  {account.details.map((detail) => (
+                    <div key={detail.label} className='flex items-center justify-between py-2 px-3 bg-forest-50 rounded-lg'>
+                      <span className='text-sm text-forest-500'>{detail.label}</span>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-sm font-mono text-forest-900'>{detail.value}</span>
+                        <button onClick={() => handleCopy(detail.value, key + '-' + detail.label)} className='p-1 hover:bg-forest-200 rounded' title='Copy'>
+                          {copiedField === key + '-' + detail.label ? <Check className='w-4 h-4 text-sprout-600' /> : <Copy className='w-4 h-4 text-forest-400' />}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
-            )}
+            ))}
           </div>
         </div>
-
-        <div className="mt-8 text-center">
-          <p className="text-sm text-forest-500">
-            Need help? Contact us on WhatsApp or call 03202065474
-          </p>
+        <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
+          <h3 className='font-medium text-forest-900 mb-2'>Prefer to pay via WhatsApp?</h3>
+          <p className='text-sm text-forest-600 mb-4'>You can also complete your payment directly through WhatsApp.</p>
+          <a href={getWhatsAppUrl()} target='_blank' rel='noopener noreferrer' className='inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium rounded-lg transition-colors'>
+            <MessageCircle className='w-5 h-5' /> Pay via WhatsApp instead
+          </a>
+        </div>
+        <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
+          <p className='text-sm text-forest-600 mb-4'>By clicking Confirm Booking, you agree to complete payment within 2 hours.</p>
+          <Button onClick={handleConfirmBooking} disabled={confirming} className='w-full h-12 text-base bg-sprout-600 hover:bg-sprout-700'>
+            {confirming ? <><Loader2 className='w-5 h-5 mr-2 animate-spin' />Confirming...</> : <>Confirm Booking — {formatPrice(paymentDetails.total)}</>}
+          </Button>
+        </div>
+        <div className='bg-white rounded-xl border border-forest-200 p-6'>
+          <h3 className='font-medium text-forest-900 mb-4'>Order Summary</h3>
+          {paymentDetails.items.length > 0 && (
+            <div className='space-y-2 mb-4'>
+              {paymentDetails.items.map((item, index) => (
+                <div key={index} className='flex justify-between text-sm'>
+                  <span className='text-forest-600'>{item.productName} x {item.quantity}</span>
+                  <span className='font-mono'>{formatPrice(item.price * item.quantity)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className='border-t border-forest-100 pt-4 space-y-2'>
+            <div className='flex justify-between text-sm'><span className='text-forest-500'>Subtotal</span><span className='font-mono'>{formatPrice(paymentDetails.subtotal)}</span></div>
+            <div className='flex justify-between text-sm'><span className='text-forest-500'>Delivery</span><span className='font-mono'>{paymentDetails.deliveryType === 'pickup' ? 'Free' : formatPrice(paymentDetails.deliveryFee)}</span></div>
+            <div className='flex justify-between text-base font-medium pt-2 border-t border-forest-100'><span className='text-forest-900'>Total</span><span className='font-mono'>{formatPrice(paymentDetails.total)}</span></div>
+          </div>
+        </div>
+        <div className='mt-8 text-center'>
+          <p className='text-sm text-forest-500'>Need help? Contact us on WhatsApp at {siteConfig.whatsappNumber}</p>
         </div>
       </div>
     </div>

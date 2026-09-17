@@ -3,6 +3,7 @@
 import { useState } from "react"
 
 const inputClass = "w-full border rounded px-3 py-2 text-sm"
+const highlightInputClass = "w-full border-2 border-[#E85D2C] rounded px-3 py-2 text-sm bg-orange-50"
 
 type Lookups = {
   categories: string[]
@@ -44,6 +45,7 @@ type ExistingProduct = {
   box_height_cm: number | null
   box_width_cm: number | null
   box_breadth_cm: number | null
+  weight_kg: number | null
   use_case_tags: string[]
   mood_tags: string[]
   images?: { url: string; alt_text: string }[]
@@ -61,6 +63,8 @@ export function ProductForm({
 }) {
   const [images, setImages] = useState(product?.images?.length ? product.images : [{ url: "", alt_text: "" }])
   const [variants, setVariants] = useState(product?.variants ?? [])
+  const [categoryName, setCategoryName] = useState(product?.category_name ?? "")
+  const isOtherEquipment = categoryName === "Other Equipment"
 
   return (
     <form action={action} className="space-y-8 bg-white rounded-lg border p-6">
@@ -77,7 +81,13 @@ export function ProductForm({
             <input name="slug" defaultValue={product?.slug} required className={inputClass} />
           </Field>
           <Field label="Category">
-            <select name="category_name" defaultValue={product?.category_name ?? ""} required className={inputClass}>
+            <select
+              name="category_name"
+              defaultValue={product?.category_name ?? ""}
+              required
+              className={inputClass}
+              onChange={(e) => setCategoryName(e.target.value)}
+            >
               <option value="">Select...</option>
               {lookups.categories.map((c) => (
                 <option key={c} value={c}>
@@ -118,7 +128,7 @@ export function ProductForm({
           </Field>
         </div>
         <p className="text-xs text-neutral-500">Stock status (In Stock / Low Stock / Out of Stock) is derived automatically.</p>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <Field label="Box Height (cm)">
             <input type="number" name="box_height_cm" defaultValue={product?.box_height_cm ?? ""} className={inputClass} />
           </Field>
@@ -127,6 +137,9 @@ export function ProductForm({
           </Field>
           <Field label="Box Breadth (cm)">
             <input type="number" name="box_breadth_cm" defaultValue={product?.box_breadth_cm ?? ""} className={inputClass} />
+          </Field>
+          <Field label={isOtherEquipment ? "Weight (kg) *" : "Weight (kg)"}>
+            <input type="number" name="weight_kg" defaultValue={product?.weight_kg ?? ""} step="0.01" min="0" className={isOtherEquipment ? highlightInputClass : inputClass} />
           </Field>
         </div>
       </section>

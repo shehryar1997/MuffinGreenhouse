@@ -14,6 +14,7 @@ Do not regenerate the full map unless explicitly asked to.
 `postcss.config.mjs` — PostCSS config — N/A — N/A
 `components.json` — shadcn/ui configuration — N/A — N/A
 `.eslintrc.json` — ESLint config — N/A — N/A
+`vercel.json` — Vercel deployment config with cron jobs — N/A — N/A
 
 ### /app (Next.js App Router)
 `app/layout.tsx` — Root layout with providers — RootLayout, metadata — providers/*, layouts/*, @/lib/utils
@@ -45,7 +46,7 @@ Do not regenerate the full map unless explicitly asked to.
 `app/our-guarantee/page.tsx` — Guarantee page — Server Component — N/A
 `app/contact/page.tsx` — Contact page — Server Component — N/A
 `app/checkout/page.tsx` — Checkout flow — N/A — N/A
-`app/checkout/pay/page.tsx` — Payment page with receipt upload — CheckoutPayPage — @/components/ui/*, @/lib/utils
+`app/checkout/pay/page.tsx` — Payment page with static account details and Confirm Booking — CheckoutPayPage — @/components/ui/*, @/lib/utils, @/config/nav.config
 `app/account/page.tsx` — Account dashboard (server auth check + signed-out/signed-in states) — SignedOutState — @/components/ui/*, @/lib/supabase/server-client, ./account-dashboard
 `app/account/account-dashboard.tsx` — Client dashboard for signed-in users — AccountDashboard — @/components/ui/*, @/lib/supabase/browser-client, framer-motion
 `app/account/login/page.tsx` — Login page — N/A — N/A
@@ -58,8 +59,8 @@ Do not regenerate the full map unless explicitly asked to.
 `app/api/send-email/route.ts` — Resend email API [NEW] — POST handler — resend, @/lib/rate-limit
 `app/api/revalidate/route.ts` — ISR revalidation webhook — POST handler — N/A
 `app/api/checkout-submit/route.ts` — Checkout order submission using Supabase create_order RPC — POST handler — @/lib/rate-limit, @/supabase/admin-client, @/lib/email/send-order-confirmation
-`app/api/generate-upload-url/route.ts` — Generate signed upload URL for payment receipts — POST handler — @/supabase/admin-client
-`app/api/update-order-receipt/route.ts` — Update order with receipt URL — POST handler — @/supabase/admin-client
+`app/api/checkout-confirm/route.ts` — Booking confirmation endpoint (sends booking received email) — POST handler — @/lib/rate-limit, @/supabase/admin-client, @/lib/email/send-booking-received
+`app/api/cron/expire-pending-orders/route.ts` — Cron job to auto-cancel pending orders after 2 hours — GET handler — @/supabase/admin-client, @/lib/email/send-order-cancelled
 `app/api/product-dimensions/route.ts` — Fetch product box dimensions for shipping calculation — POST handler — @/lib/supabase/server-client
 
 ### /components
@@ -102,7 +103,10 @@ Do not regenerate the full map unless explicitly asked to.
 `lib/rate-limit.test.ts` — Test suite for rate limiting — N/A — N/A
 `lib/UPGRADE-RATE-LIMIT.md` — Upgrade guide for distributed rate limiting — N/A — N/A
 `lib/email/send-otp-email.ts` — OTP email sender using Resend — sendOtpEmail — resend
-`lib/email/send-order-confirmation.ts` — [NEW] Order confirmation email sender — sendOrderConfirmationEmail — resend
+`lib/email/send-order-confirmation.ts` — Order confirmation email sender — sendOrderConfirmationEmail — resend
+`lib/email/send-booking-received.ts` — Booking received email sender — sendBookingReceivedEmail — resend
+`lib/email/send-order-confirmed.ts` — Payment received / order confirmed email sender — sendOrderConfirmedEmail — resend
+`lib/email/send-order-cancelled.ts` — Order cancelled email sender — sendOrderCancelledEmail — resend
 
 ### /types
 `types/index.ts` — Core TypeScript types — Category, Product, ProductImage, CareInfo, ProductVariant, Review, CartItem, Cart, User, Address, Order, MyPlant, Event, JournalPost, NavItem, etc. — Includes shipping box dimensions (boxHeightCm, boxWidthCm, boxBreadthCm) — N/A

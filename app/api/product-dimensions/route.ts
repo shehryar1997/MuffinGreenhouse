@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('products')
-      .select('id, box_height_cm, box_width_cm, box_breadth_cm')
+      .select('id, box_height_cm, box_width_cm, box_breadth_cm, category_slug, weight_kg')
       .in('id', productIds)
 
     if (error) {
@@ -29,11 +29,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create a map of productId to dimensions
+    // Create a map of productId to dimensions and category/weight
     const dimensionsMap: Record<string, {
       boxHeightCm: number | null
       boxWidthCm: number | null
       boxBreadthCm: number | null
+      categorySlug: string | null
+      weightKg: number | null
     }> = {}
 
     data.forEach(product => {
@@ -41,6 +43,8 @@ export async function POST(request: NextRequest) {
         boxHeightCm: product.box_height_cm,
         boxWidthCm: product.box_width_cm,
         boxBreadthCm: product.box_breadth_cm,
+        categorySlug: product.category_slug,
+        weightKg: product.weight_kg,
       }
     })
 
