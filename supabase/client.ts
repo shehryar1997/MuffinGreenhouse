@@ -40,6 +40,11 @@ export interface SupabaseProduct {
   created_at: string
   updated_at: string
 
+  // Shipping box dimensions for volumetric weight calculation (in centimeters)
+  box_height_cm: number | null
+  box_width_cm: number | null
+  box_breadth_cm: number | null
+
   // Care info -- flat, was previously a joined care_info object
   light: string | null
   water: string | null

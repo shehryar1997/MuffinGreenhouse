@@ -41,6 +41,9 @@ type ExistingProduct = {
   light_summary: string | null
   water_summary: string | null
   pet_safe_note: string | null
+  box_height_cm: number | null
+  box_width_cm: number | null
+  box_breadth_cm: number | null
   use_case_tags: string[]
   mood_tags: string[]
   images?: { url: string; alt_text: string }[]
@@ -115,6 +118,17 @@ export function ProductForm({
           </Field>
         </div>
         <p className="text-xs text-neutral-500">Stock status (In Stock / Low Stock / Out of Stock) is derived automatically.</p>
+        <div className="grid grid-cols-3 gap-4">
+          <Field label="Box Height (cm)">
+            <input type="number" name="box_height_cm" defaultValue={product?.box_height_cm ?? ""} className={inputClass} />
+          </Field>
+          <Field label="Box Width (cm)">
+            <input type="number" name="box_width_cm" defaultValue={product?.box_width_cm ?? ""} className={inputClass} />
+          </Field>
+          <Field label="Box Breadth (cm)">
+            <input type="number" name="box_breadth_cm" defaultValue={product?.box_breadth_cm ?? ""} className={inputClass} />
+          </Field>
+        </div>
       </section>
 
       <section className="space-y-4">

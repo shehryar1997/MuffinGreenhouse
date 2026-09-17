@@ -20,5 +20,5 @@ CREATE TYPE plant_size AS ENUM ('small', 'medium', 'large');
 CREATE TYPE event_type AS ENUM ('workshop', 'tour', 'market');
 CREATE TYPE order_status AS ENUM ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled');
 CREATE TYPE payment_status AS ENUM ('pending', 'paid', 'failed', 'refunded');
-CREATE TYPE payment_method AS ENUM ('card', 'bank_transfer', 'jazzcash', 'easypaisa');
+CREATE TYPE payment_method AS ENUM ('card', 'bank_transfer', 'jazzcash', 'easypaisa', 'nayapay', 'zindigi', 'raast');
 CREATE TYPE delivery_type AS ENUM ('delivery', 'pickup');

@@ -35,6 +35,10 @@ export interface Product {
   moodTags: string[]
   createdAt: string
   updatedAt: string
+  // Shipping box dimensions for volumetric weight calculation (in centimeters)
+  boxHeightCm?: number
+  boxWidthCm?: number
+  boxBreadthCm?: number
 }
 
 export interface ProductImage {
@@ -115,7 +119,7 @@ export interface Order {
   orderNumber: string
   status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"
   paymentStatus: "pending" | "paid" | "failed" | "refunded"
-  paymentMethod: "card" | "bank_transfer" | "jazzcash" | "easypaisa"
+  paymentMethod: "card" | "bank_transfer" | "jazzcash" | "easypaisa" | "nayapay" | "zindigi" | "raast"
   items: OrderItem[]
   subtotal: number
   deliveryFee: number
@@ -124,6 +128,8 @@ export interface Order {
   address?: Address
   createdAt: string
   updatedAt: string
+  receiptUrl?: string
+  receiptUploadedAt?: string
 }
 
 export interface OrderItem {

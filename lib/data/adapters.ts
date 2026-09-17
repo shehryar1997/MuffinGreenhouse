@@ -31,6 +31,10 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     moodTags: row.mood_tags ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? row.created_at,
+    // Shipping box dimensions
+    boxHeightCm: row.box_height_cm ?? undefined,
+    boxWidthCm: row.box_width_cm ?? undefined,
+    boxBreadthCm: row.box_breadth_cm ?? undefined,
   }
 }
 

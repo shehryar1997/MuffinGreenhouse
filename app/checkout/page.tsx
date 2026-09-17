@@ -53,7 +53,7 @@ export default function CheckoutPage() {
   const { cart, itemCount } = useCart()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery")
-  const [paymentMethod, setPaymentMethod] = useState<"bank" | "wallet" | null>("bank")
+  const [paymentMethod, setPaymentMethod] = useState<"bank_transfer" | "jazzcash" | "easypaisa" | "nayapay" | "zindigi" | "raast" | null>("bank_transfer")
 
   // Guest / Sign-in toggle state
   const [authMode, setAuthMode] = useState<"guest" | "signin">("guest")
@@ -66,6 +66,16 @@ export default function CheckoutPage() {
   const [signedInCustomer, setSignedInCustomer] = useState<{ id: string; name: string | null; email: string; phone: string | null } | null>(null)
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<string | "manual">("manual")
+
+  // Delivery fee calculation state
+  const [deliveryFee, setDeliveryFee] = useState(0)
+  const [isCalculatingDeliveryFee, setIsCalculatingDeliveryFee] = useState(false)
+  const [deliveryFeeError, setDeliveryFeeError] = useState<string | null>(null)
+  const [productDimensions, setProductDimensions] = useState<Record<string, {
+    boxHeightCm: number | null
+    boxWidthCm: number | null
+    boxBreadthCm: number | null
+  }>>({})
 
   // Form state
   const [formData, setFormData] = useState<CheckoutFormData>({
@@ -306,34 +316,260 @@ export default function CheckoutPage() {
       return
     }
 
+    // Validate payment method
+    if (!paymentMethod) {
+      toast.error("Please select a payment method")
+      return
+    }
+
+    // For out-of-city deliveries, check if all product dimensions are available
+    if (deliveryType === "delivery" && formData.city !== "Karachi" && formData.city.trim() !== "") {
+      if (deliveryFeeError) {
+        toast.error("Please wait while we calculate your delivery cost")
+        return
+      }
+      
+      if (isCalculatingDeliveryFee) {
+        toast.error("Delivery cost calculation in progress. Please wait.")
+        return
+      }
+
+      // Check if any products are missing dimensions
+      const missingDimensions: string[] = []
+      cart.items.forEach(item => {
+        const dimensions = productDimensions[item.product.id]
+        if (!dimensions || 
+            dimensions.boxHeightCm === null || 
+            dimensions.boxWidthCm === null || 
+            dimensions.boxBreadthCm === null) {
+          missingDimensions.push(item.product.name)
+        }
+      })
+      
+      if (missingDimensions.length > 0) {
+        toast.error(
+          `Cannot proceed: ${missingDimensions.length} product(s) missing shipping dimensions. ` +
+          `We'll contact you via WhatsApp to confirm delivery cost.`
+        )
+        return
+      }
+    }
+
     setIsSubmitting(true)
     
-    // TODO: Replace this mock submission with actual API call
-    // FUTURE: This will call /api/checkout-submit which has rate limiting (5 req/min per IP)
-    // The rate limiter is in-memory; for production, use @upstash/ratelimit + Redis
-    // await fetch('/api/checkout-submit', { method: 'POST', body: JSON.stringify({...}) })
-    
-    await new Promise(r => setTimeout(r, 1500))
-    toast.success("Order placed!")
-    setIsSubmitting(false)
+    try {
+      // Prepare cart items for API
+      const itemsForApi = cart.items.map(item => ({
+        productId: item.product.id,
+        variantId: item.variant?.id || null,
+        quantity: item.quantity
+      }))
+      
+      // Prepare customer information
+      const customerEmail = signedInCustomer?.email || formData.email
+      const customerName = signedInCustomer?.name || formData.fullName
+      const customerPhone = signedInCustomer?.phone || formData.contactNumber
+      
+      // Determine address ID (if using saved address)
+      const addressId = selectedAddressId !== "manual" && selectedAddressId !== null 
+        ? selectedAddressId 
+        : null
+      
+      // Call the checkout API
+      const response = await fetch('/api/checkout-submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          // Customer information
+          customerId: signedInCustomer?.id || null,
+          customerEmail,
+          customerName,
+          customerPhone,
+          
+          // Order items
+          items: itemsForApi,
+          
+          // Delivery information
+          deliveryType,
+          addressId,
+          
+          // Payment and pricing
+          paymentMethod,
+          deliveryFee,
+          discountAmount: 0, // No discounts for now
+          customerNotes: null, // TODO: Add notes field if needed
+          
+          // Cart validation
+          cartSubtotal: cart.subtotal
+        })
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        // Show specific error message from API
+        throw new Error(result.error || `HTTP error! status: ${response.status}`)
+      }
+      
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create order")
+      }
+      
+      // Order created successfully
+      toast.success("Order placed successfully!")
+      
+      // Redirect to confirmation page
+      if (result.redirectTo) {
+        window.location.href = result.redirectTo
+      } else {
+        // Fallback redirect
+        window.location.href = `/checkout/confirmation/${result.order?.order_id || result.order?.order_number || 'success'}`
+      }
+      
+    } catch (error) {
+      console.error("Checkout submission error:", error)
+      
+      // Show user-friendly error message
+      if (error instanceof Error) {
+        // Check for stock-related errors
+        if (error.message.includes("stock") || error.message.includes("available")) {
+          toast.error(error.message)
+        } else {
+          toast.error(`Failed to place order: ${error.message}`)
+        }
+      } else {
+        toast.error("An unexpected error occurred. Please try again.")
+      }
+      
+      setIsSubmitting(false)
+    }
+    // Note: We don't set setIsSubmitting(false) on success because we're redirecting
   }
 
   // Calculate delivery fee based on city and delivery type
-  const deliveryFee = useMemo(() => {
-    if (deliveryType === "pickup") {
-      // Self pickup is always free
-      return 0
-    }
-    if (deliveryType === "delivery") {
-      if (formData.city === "Karachi") {
-        // Bykea charges for Karachi delivery
-        return 400
+  useEffect(() => {
+    const calculateDeliveryFee = async () => {
+      if (deliveryType === "pickup") {
+        // Self pickup is always free
+        setDeliveryFee(0)
+        setDeliveryFeeError(null)
+        return
       }
-      // TODO: out-of-city shipping rate not yet decided, don't invent a number
-      return 0
+      
+      if (deliveryType === "delivery") {
+        if (formData.city === "Karachi") {
+          // Bykea charges for Karachi delivery
+          setDeliveryFee(400)
+          setDeliveryFeeError(null)
+          return
+        }
+        
+        // Out-of-city shipping calculation
+        if (!formData.city || formData.city.trim() === "") {
+          // No city selected yet
+          setDeliveryFee(0)
+          setDeliveryFeeError(null)
+          return
+        }
+
+        // For out-of-city delivery, we need to calculate based on product dimensions
+        setIsCalculatingDeliveryFee(true)
+        setDeliveryFeeError(null)
+        
+        try {
+          // First, check if we have all product dimensions
+          const missingDimensions: string[] = []
+          const productIdsWithMissingDims: string[] = []
+          
+          cart.items.forEach(item => {
+            const dimensions = productDimensions[item.product.id]
+            if (!dimensions || 
+                dimensions.boxHeightCm === null || 
+                dimensions.boxWidthCm === null || 
+                dimensions.boxBreadthCm === null) {
+              missingDimensions.push(item.product.name)
+              productIdsWithMissingDims.push(item.product.id)
+            }
+          })
+          
+          if (missingDimensions.length > 0) {
+            // We need to fetch dimensions for products that are missing them
+            if (Object.keys(productDimensions).length === 0) {
+              // First time calculation, fetch all dimensions
+              await fetchProductDimensions(cart.items.map(item => item.product.id))
+              // Re-run calculation after fetching dimensions
+              await calculateDeliveryFee()
+              return
+            } else {
+              // Some products are missing dimensions even after fetching
+              setDeliveryFeeError(`We'll confirm your delivery cost by WhatsApp`)
+              setDeliveryFee(0)
+              // Log the problematic products for debugging
+              console.error('Products missing shipping dimensions:', {
+                productIds: productIdsWithMissingDims,
+                productNames: missingDimensions
+              })
+              return
+            }
+          }
+          
+          // Calculate volumetric weight delivery fee
+          let totalVolumetricFee = 0
+          cart.items.forEach(item => {
+            const dimensions = productDimensions[item.product.id]
+            if (dimensions && 
+                dimensions.boxHeightCm !== null && 
+                dimensions.boxWidthCm !== null && 
+                dimensions.boxBreadthCm !== null) {
+              
+              // Formula: ((H × W × B) / 5000) × 480 × quantity
+              const volumetricWeight = (dimensions.boxHeightCm * dimensions.boxWidthCm * dimensions.boxBreadthCm) / 5000
+              const itemFee = volumetricWeight * 480 * item.quantity
+              totalVolumetricFee += itemFee
+            }
+          })
+          
+          setDeliveryFee(Math.round(totalVolumetricFee))
+          setDeliveryFeeError(null)
+        } catch (error) {
+          console.error('Error calculating delivery fee:', error)
+          setDeliveryFeeError(`We'll confirm your delivery cost by WhatsApp`)
+          setDeliveryFee(0)
+        } finally {
+          setIsCalculatingDeliveryFee(false)
+        }
+      }
     }
-    return 0
-  }, [deliveryType, formData.city])
+    
+    calculateDeliveryFee()
+  }, [deliveryType, formData.city, cart.items, productDimensions])
+
+  // Helper function to fetch product dimensions
+  const fetchProductDimensions = async (productIds: string[]) => {
+    if (productIds.length === 0) return
+    
+    try {
+      const response = await fetch('/api/product-dimensions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productIds }),
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch dimensions: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      setProductDimensions(data.dimensions || {})
+    } catch (error) {
+      console.error('Error fetching product dimensions:', error)
+      throw error
+    }
+  }
 
   const total = cart.subtotal + deliveryFee
 
@@ -616,15 +852,15 @@ export default function CheckoutPage() {
               <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("bank")}
+                  onClick={() => setPaymentMethod("bank_transfer")}
                   className={`w-full p-4 border-2 rounded-xl text-left transition-all flex items-center gap-3 ${
-                    paymentMethod === "bank" ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300"
+                    paymentMethod === "bank_transfer" ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300"
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === "bank" ? "bg-clay-500 border-clay-500" : "border-forest-300"
+                    paymentMethod === "bank_transfer" ? "bg-clay-500 border-clay-500" : "border-forest-300"
                   }`}>
-                    {paymentMethod === "bank" && <Check className="w-3 h-3 text-white" />}
+                    {paymentMethod === "bank_transfer" && <Check className="w-3 h-3 text-white" />}
                   </div>
                   <div>
                     <div className="font-medium">Bank Transfer + WhatsApp</div>
@@ -633,21 +869,42 @@ export default function CheckoutPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("wallet")}
+                  onClick={() => setPaymentMethod("jazzcash")}
                   className={`w-full p-4 border-2 rounded-xl text-left transition-all flex items-center gap-3 ${
-                    paymentMethod === "wallet" ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300"
+                    paymentMethod === "jazzcash" ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300"
                   }`}
                 >
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === "wallet" ? "bg-clay-500 border-clay-500" : "border-forest-300"
+                    paymentMethod === "jazzcash" ? "bg-clay-500 border-clay-500" : "border-forest-300"
                   }`}>
-                    {paymentMethod === "wallet" && <Check className="w-3 h-3 text-white" />}
+                    {paymentMethod === "jazzcash" && <Check className="w-3 h-3 text-white" />}
                   </div>
                   <div>
-                    <div className="font-medium">JazzCash / Easypaisa</div>
-                    <div className="text-sm text-forest-500">Pay via mobile wallet</div>
+                    <div className="font-medium">JazzCash</div>
+                    <div className="text-sm text-forest-500">Pay via JazzCash mobile wallet</div>
                   </div>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("easypaisa")}
+                  className={`w-full p-4 border-2 rounded-xl text-left transition-all flex items-center gap-3 ${
+                    paymentMethod === "easypaisa" ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300"
+                  }`}
+                >
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    paymentMethod === "easypaisa" ? "bg-clay-500 border-clay-500" : "border-forest-300"
+                  }`}>
+                    {paymentMethod === "easypaisa" && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <div>
+                    <div className="font-medium">Easypaisa</div>
+                    <div className="text-sm text-forest-500">Pay via Easypaisa mobile wallet</div>
+                  </div>
+                </button>
+                {/* Note for other payment methods */}
+                <div className="text-xs text-forest-400 pt-2 border-t border-forest-100 mt-3">
+                  For Nayapay, Zindigi, or Raast payments, please select Bank Transfer and mention your preferred method in the order notes.
+                </div>
               </div>
               <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full mt-6 h-12 text-base">
                 {isSubmitting ? "Processing..." : `Complete Order • ${formatPrice(total)}`}
@@ -663,6 +920,8 @@ export default function CheckoutPage() {
                 deliveryFee={deliveryFee}
                 deliveryType={deliveryType}
                 total={total}
+                isCalculatingDeliveryFee={isCalculatingDeliveryFee}
+                deliveryFeeError={deliveryFeeError}
               />
             </div>
           </div>
@@ -786,7 +1045,7 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect }: DeliveryOption
                 <div className="text-sm text-forest-500">
                   Order will be shipped out in 1-2 business days
                 </div>
-                {/* TODO: out-of-city shipping rate not yet decided, don&apos;t invent a number */}
+                {/* Out-of-city delivery fee is calculated based on product box dimensions */}
                 <div className="text-sm font-mono mt-1 text-sprout-500">Free</div>
               </div>
             </div>
@@ -849,9 +1108,19 @@ interface OrderSummaryProps {
   deliveryFee: number
   deliveryType: "delivery" | "pickup"
   total: number
+  isCalculatingDeliveryFee?: boolean
+  deliveryFeeError?: string | null
 }
 
-function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total }: OrderSummaryProps) {
+function OrderSummary({ 
+  items, 
+  subtotal, 
+  deliveryFee, 
+  deliveryType, 
+  total,
+  isCalculatingDeliveryFee = false,
+  deliveryFeeError = null
+}: OrderSummaryProps) {
   return (
     <div className="p-6 bg-white border border-forest-200 rounded-xl">
       <h2 className="font-serif text-xl mb-6">Order Summary</h2>
@@ -884,9 +1153,22 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total }: Ord
             <span className="text-forest-500">Subtotal</span>
             <span className="font-mono">{formatPrice(subtotal)}</span>
           </div>
-          <div className="flex justify-between text-sm">
+          <div className="flex justify-between text-sm items-center">
             <span className="text-forest-500">Delivery</span>
-            <span className="font-mono">{deliveryType === "delivery" ? formatPrice(deliveryFee) : "Free"}</span>
+            <div className="flex flex-col items-end">
+              {isCalculatingDeliveryFee ? (
+                <span className="text-sm text-forest-400 animate-pulse">Calculating...</span>
+              ) : deliveryFeeError ? (
+                <span className="text-sm text-amber-600 font-medium">{deliveryFeeError}</span>
+              ) : (
+                <span className="font-mono">
+                  {deliveryType === "delivery" ? formatPrice(deliveryFee) : "Free"}
+                </span>
+              )}
+              {deliveryType === "delivery" && deliveryFee > 0 && !deliveryFeeError && (
+                <span className="text-xs text-forest-400 mt-0.5">Volumetric weight calculation</span>
+              )}
+            </div>
           </div>
         </div>
         <div className="border-t border-forest-200 pt-4">
@@ -895,6 +1177,14 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total }: Ord
             <span className="font-mono text-2xl font-medium">{formatPrice(total)}</span>
           </div>
           <p className="text-xs text-forest-400 mt-2 text-right">Including all taxes</p>
+          {deliveryFeeError && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <span className="font-medium">Note:</span> Some products are missing shipping dimensions. 
+                We'll contact you via WhatsApp to confirm the exact delivery cost before shipping.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -45,6 +45,7 @@ Do not regenerate the full map unless explicitly asked to.
 `app/our-guarantee/page.tsx` — Guarantee page — Server Component — N/A
 `app/contact/page.tsx` — Contact page — Server Component — N/A
 `app/checkout/page.tsx` — Checkout flow — N/A — N/A
+`app/checkout/pay/page.tsx` — Payment page with receipt upload — CheckoutPayPage — @/components/ui/*, @/lib/utils
 `app/account/page.tsx` — Account dashboard (server auth check + signed-out/signed-in states) — SignedOutState — @/components/ui/*, @/lib/supabase/server-client, ./account-dashboard
 `app/account/account-dashboard.tsx` — Client dashboard for signed-in users — AccountDashboard — @/components/ui/*, @/lib/supabase/browser-client, framer-motion
 `app/account/login/page.tsx` — Login page — N/A — N/A
@@ -56,7 +57,10 @@ Do not regenerate the full map unless explicitly asked to.
 `app/admin/email/page.tsx` — Email sender form [NEW] — AdminEmailPage — N/A
 `app/api/send-email/route.ts` — Resend email API [NEW] — POST handler — resend, @/lib/rate-limit
 `app/api/revalidate/route.ts` — ISR revalidation webhook — POST handler — N/A
-`app/api/checkout-submit/route.ts` — Checkout order submission (future) — POST handler — @/lib/rate-limit
+`app/api/checkout-submit/route.ts` — Checkout order submission using Supabase create_order RPC — POST handler — @/lib/rate-limit, @/supabase/admin-client, @/lib/email/send-order-confirmation
+`app/api/generate-upload-url/route.ts` — Generate signed upload URL for payment receipts — POST handler — @/supabase/admin-client
+`app/api/update-order-receipt/route.ts` — Update order with receipt URL — POST handler — @/supabase/admin-client
+`app/api/product-dimensions/route.ts` — Fetch product box dimensions for shipping calculation — POST handler — @/lib/supabase/server-client
 
 ### /components
 `components/light-filter-teaser.tsx` — Light level filter section — LightFilterTeaser — @/types, @/components/ui/*, @/data/* [LARGE]
@@ -97,9 +101,11 @@ Do not regenerate the full map unless explicitly asked to.
 `lib/rate-limit.ts` — In-memory rate limiting — RateLimiter, defaultLimiter, getClientIP, checkRateLimit — N/A
 `lib/rate-limit.test.ts` — Test suite for rate limiting — N/A — N/A
 `lib/UPGRADE-RATE-LIMIT.md` — Upgrade guide for distributed rate limiting — N/A — N/A
+`lib/email/send-otp-email.ts` — OTP email sender using Resend — sendOtpEmail — resend
+`lib/email/send-order-confirmation.ts` — [NEW] Order confirmation email sender — sendOrderConfirmationEmail — resend
 
 ### /types
-`types/index.ts` — Core TypeScript types — Category, Product, ProductImage, CareInfo, ProductVariant, Review, CartItem, Cart, User, Address, Order, MyPlant, Event, JournalPost, NavItem, etc. — N/A
+`types/index.ts` — Core TypeScript types — Category, Product, ProductImage, CareInfo, ProductVariant, Review, CartItem, Cart, User, Address, Order, MyPlant, Event, JournalPost, NavItem, etc. — Includes shipping box dimensions (boxHeightCm, boxWidthCm, boxBreadthCm) — N/A
 
 ## Shared dependencies
 - `@/types` — Imported by: data/mock-products.ts, lib/mood-utils.ts, lib/plant-utils.ts, components/providers/cart-provider.tsx, components/providers/search-provider.tsx, components/ui/product-card.tsx, components/shop/product-filters.tsx
