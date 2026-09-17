@@ -33,8 +33,7 @@ export default async function EditProductPage({ params }: { params: { id: string
         <h1 className="text-2xl font-serif">Edit {product.name}</h1>
         <DeleteProductButton productName={product.name} action={deleteWithId} />
       </div>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <ProductForm lookups={lookups} product={product as any} action={updateWithId} />
+      <ProductForm lookups={lookups} product={product} action={updateWithId} />
     </div>
   )
 }

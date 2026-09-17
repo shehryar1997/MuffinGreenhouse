@@ -53,7 +53,7 @@ export default function VisitUsPage() {
                 </li>
                 <li className="flex items-center gap-3">
                   <Coffee className="w-5 h-5 text-sprout-300" />
-                  <span>Sometimes there's chai in the mornings</span>
+                  <span>Sometimes there&apos;s chai in the mornings</span>
                 </li>
               </ul>
             </div>

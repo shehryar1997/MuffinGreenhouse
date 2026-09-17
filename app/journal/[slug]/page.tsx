@@ -50,7 +50,7 @@ export default function JournalPostPage({ params }: { params: { slug: string } }
             {post.excerpt}
           </p>
           <div className="text-forest-800 leading-relaxed space-y-4">
-            <p>This is where the full article content would be displayed. For now, here's a placeholder for the complete article about {post.title.toLowerCase()}.</p>
+            <p>This is where the full article content would be displayed. For now, here&apos;s a placeholder for the complete article about {post.title.toLowerCase()}.</p>
             <p>Our goal with every article is to give you practical, honest advice that actually works in Karachi conditions. We test everything ourselves first.</p>
             <p>Have questions? Ask Muffin or WhatsApp us directly.</p>
           </div>

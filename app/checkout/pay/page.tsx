@@ -262,7 +262,7 @@ export default function CheckoutPayPage() {
             <div className="mt-6 p-4 bg-sprout-50 border border-sprout-200 rounded-lg">
               <p className="text-sm text-forest-700">
                 <strong>Important:</strong> Please make the payment using the account details above.
-                We'll confirm your payment within a few hours after you upload the receipt.
+                We&apos;ll confirm your payment within a few hours after you upload the receipt.
               </p>
             </div>
           </div>
@@ -350,14 +350,14 @@ export default function CheckoutPayPage() {
                     </h4>
                     <p className="text-forest-700 mb-3">
                       Thank you! Your payment receipt has been submitted for verification.
-                      We'll review it and confirm your order within a few hours.
+                      We&apos;ll review it and confirm your order within a few hours.
                     </p>
                     <div className="bg-white p-4 rounded-lg border border-sprout-100">
                       <p className="text-sm font-medium text-forest-900 mb-1">
                         Order #{paymentDetails.orderNumber}
                       </p>
                       <p className="text-sm text-forest-600">
-                        You'll receive a confirmation email/SMS once verified.
+                        You&apos;ll receive a confirmation email/SMS once verified.
                       </p>
                     </div>
                   </div>

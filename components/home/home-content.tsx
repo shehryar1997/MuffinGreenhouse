@@ -410,7 +410,7 @@ export default function HomeContent({ products }: { products: Product[] }) {
             </KineticHeading>
             <FadeIn delay={0.2}>
               <div className="lg:pt-4">
-                <p className="text-forest-600 text-lg mb-8 max-w-sm">Tell us about your light, your space, your habits, and we'll match you with a plant built to thrive there.</p>
+                <p className="text-forest-600 text-lg mb-8 max-w-sm">Tell us about your light, your space, your habits, and we&apos;ll match you with a plant built to thrive there.</p>
                 <Link href="/plant-finder" className="inline-flex items-center gap-3 font-mono text-xs tracking-widest uppercase border-b border-forest-300 pb-2 hover:text-[#E85A3C] hover:border-[#E85A3C] transition-colors group">
                   Find Your Match
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />

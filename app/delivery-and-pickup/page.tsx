@@ -20,7 +20,7 @@ export default function DeliveryPickupPage() {
               </div>
               <div>
                 <h2 className="font-serif text-xl text-forest-900">Karachi Delivery</h2>
-                <p className="text-forest-500">Same-day for orders before 2 PM — because your plant babies shouldn't wait</p>
+                <p className="text-forest-500">Same-day for orders before 2 PM — because your plant babies shouldn&apos;t wait</p>
               </div>
             </div>
             <ul className="space-y-2 text-forest-700">
@@ -40,12 +40,12 @@ export default function DeliveryPickupPage() {
               </div>
               <div>
                 <h2 className="font-serif text-xl text-forest-900">Self Pickup</h2>
-                <p className="text-forest-500">DHA Phase 6, Karachi — the green gate you can't miss</p>
+                <p className="text-forest-500">DHA Phase 6, Karachi — the green gate you can&apos;t miss</p>
               </div>
             </div>
             <ul className="space-y-2 text-forest-700">
               <li>Your pre-booked plants ready for pickup at the gate — quick and hassle-free</li>
-              <li>Personal care advice from the Muffinman himself (yes, he's real)</li>
+              <li>Personal care advice from the Muffinman himself (yes, he&apos;s real)</li>
               <li>Open daily 12 PM — 9 PM for your botanical convenience</li>
             </ul>
           </div>

@@ -1181,7 +1181,7 @@ function OrderSummary({
             <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm text-amber-800">
                 <span className="font-medium">Note:</span> Some products are missing shipping dimensions. 
-                We'll contact you via WhatsApp to confirm the exact delivery cost before shipping.
+                We&apos;ll contact you via WhatsApp to confirm the exact delivery cost before shipping.
               </p>
             </div>
           )}

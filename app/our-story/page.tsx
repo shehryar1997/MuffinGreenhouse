@@ -13,8 +13,8 @@ export default function OurStoryPage() {
           <div className="space-y-16">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <h2 className="font-serif text-heading-2 text-forest-900 mb-4">We killed a lot of plants so you do not have to</h2>
-                <p className="text-forest-700 text-body-lg">Muffin started with one dead fiddle leaf fig and a lot of googling. We learned that Karachi's heat and humidity require different care than generic advice online.</p>
+                <h2 className="font-serif text-heading-2 text-forest-900 mb-4">We killed a lot of plants so you don&apos;t have to</h2>
+                <p className="text-forest-700 text-body-lg">Muffin started with one dead fiddle leaf fig and a lot of googling. We learned that Karachi&apos;s heat and humidity require different care than generic advice online.</p>
               </div>
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-forest-50">
                 <Image src="https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800&q=80" alt="Plant nursery" fill className="object-cover" />
