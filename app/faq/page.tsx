@@ -1,4 +1,5 @@
 import FAQAccordion from "./faq-accordion"
+import { siteConfig } from "@/config/nav.config"
 
 export default function FAQPage() {
   return (
@@ -13,7 +14,7 @@ export default function FAQPage() {
 
         <div className="mt-12 text-center">
           <p className="text-forest-600">Still have questions?</p>
-          <a href="https://wa.me/923001234567" className="text-clay-500 hover:underline font-medium">WhatsApp us</a>
+          <a href={`https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, "")}`} className="text-clay-500 hover:underline font-medium">WhatsApp us</a>
         </div>
       </div>
     </div>

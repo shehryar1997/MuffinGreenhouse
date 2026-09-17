@@ -31,7 +31,7 @@ export function Footer() {
             <ul className="space-y-2">
               <li><Link href="/delivery-and-pickup" className="text-[#1A1A1A] text-sm hover:opacity-60 transition-opacity">Delivery & pickup</Link></li>
               <li><Link href="/our-guarantee" className="text-[#1A1A1A] text-sm hover:opacity-60 transition-opacity">Our guarantee</Link></li>
-              <li><Link href="/contact" className="text-[#1A1A1A] text-sm hover:opacity-60 transition-opacity">FAQ</Link></li>
+              <li><Link href="/faq" className="text-[#1A1A1A] text-sm hover:opacity-60 transition-opacity">FAQ</Link></li>
             </ul>
           </div>
 
@@ -46,8 +46,8 @@ export function Footer() {
         <div className="border-t border-[#1A1A1A]/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="font-mono text-xs text-[#1A1A1A]/60">© 2024 Muffin / greenhouse</p>
           <div className="flex gap-6">
-            <Link href="/contact" className="font-mono text-xs text-[#1A1A1A]/60 hover:text-[#1A1A1A]">Instagram</Link>
-            <Link href="/contact" className="font-mono text-xs text-[#1A1A1A]/60 hover:text-[#1A1A1A]">WhatsApp</Link>
+            <a href="https://www.instagram.com/muffinsgreenhouse/" target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-[#1A1A1A]/60 hover:text-[#1A1A1A]">Instagram</a>
+            <a href={`https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-[#1A1A1A]/60 hover:text-[#1A1A1A]">WhatsApp</a>
           </div>
         </div>
       </div>

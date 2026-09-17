@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 // From email address
 const FROM_EMAIL = "Muffin Plants <support@muffinplants.com>"
@@ -24,6 +25,12 @@ interface EmailRequest {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting check (5 requests per minute per IP)
+  const rateLimitResponse = checkRateLimit(request)
+  if (rateLimitResponse) {
+    return rateLimitResponse
+  }
+
   try {
     const body = (await request.json()) as EmailRequest
     const { password, to, subject, inReplyTo, message } = body

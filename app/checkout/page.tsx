@@ -307,6 +307,12 @@ export default function CheckoutPage() {
     }
 
     setIsSubmitting(true)
+    
+    // TODO: Replace this mock submission with actual API call
+    // FUTURE: This will call /api/checkout-submit which has rate limiting (5 req/min per IP)
+    // The rate limiter is in-memory; for production, use @upstash/ratelimit + Redis
+    // await fetch('/api/checkout-submit', { method: 'POST', body: JSON.stringify({...}) })
+    
     await new Promise(r => setTimeout(r, 1500))
     toast.success("Order placed!")
     setIsSubmitting(false)

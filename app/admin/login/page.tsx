@@ -18,7 +18,7 @@ async function login(formData: FormData) {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24, // 24 hours, matches session token expiry
     path: "/",
   })
   redirect("/admin/products")

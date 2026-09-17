@@ -54,9 +54,9 @@ Do not regenerate the full map unless explicitly asked to.
 `app/admin/products/new/page.tsx` — New product form — N/A — N/A
 `app/admin/products/[id]/edit/page.tsx` — Edit product form — N/A — N/A
 `app/admin/email/page.tsx` — Email sender form [NEW] — AdminEmailPage — N/A
-`app/api/send-email/route.ts` — Resend email API [NEW] — POST handler — resend
-
+`app/api/send-email/route.ts` — Resend email API [NEW] — POST handler — resend, @/lib/rate-limit
 `app/api/revalidate/route.ts` — ISR revalidation webhook — POST handler — N/A
+`app/api/checkout-submit/route.ts` — Checkout order submission (future) — POST handler — @/lib/rate-limit
 
 ### /components
 `components/light-filter-teaser.tsx` — Light level filter section — LightFilterTeaser — @/types, @/components/ui/*, @/data/* [LARGE]
@@ -93,6 +93,10 @@ Do not regenerate the full map unless explicitly asked to.
 `lib/utils.ts` — Utility functions — cn, formatPrice, debounce, throttle, formatDate, generateId, slugify, getInitials, scrollToElement — clsx, tailwind-merge
 `lib/mood-utils.ts` — Mood theme utilities — Mood, MoodTheme, moodThemes, filterProductsByMood, getMoodTheme — @/types
 `lib/plant-utils.ts` — Light filter logic — LightLevel, lightLevelLabels, filterProductsByLight, getLightPreviewProducts — @/types
+`lib/admin-session.ts` — Admin session utilities (HMAC‑signed expiring tokens) — verifyPassword, getSessionCookieValue, isValidSessionCookie, COOKIE_NAME — crypto (Web Crypto), env:SESSION_SECRET
+`lib/rate-limit.ts` — In-memory rate limiting — RateLimiter, defaultLimiter, getClientIP, checkRateLimit — N/A
+`lib/rate-limit.test.ts` — Test suite for rate limiting — N/A — N/A
+`lib/UPGRADE-RATE-LIMIT.md` — Upgrade guide for distributed rate limiting — N/A — N/A
 
 ### /types
 `types/index.ts` — Core TypeScript types — Category, Product, ProductImage, CareInfo, ProductVariant, Review, CartItem, Cart, User, Address, Order, MyPlant, Event, JournalPost, NavItem, etc. — N/A

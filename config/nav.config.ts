@@ -8,7 +8,7 @@ export const siteConfig = {
   tagline: "Good plants. Good energy.",
   description: "A plant nursery for Karachi, Pakistan. Locally grown plants for real homes, with honest care advice.",
   url: "https://muffin.pk",
-  whatsappNumber: "+923001234567",
+  whatsappNumber: "+923095360009",
   email: "hello@muffin.pk",
   address: {
     street: "Plot 12-C, Lane 5, Block 7",

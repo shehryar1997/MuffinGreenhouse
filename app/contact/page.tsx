@@ -1,4 +1,5 @@
 import { MessageCircle, Mail, MapPin } from "lucide-react"
+import { siteConfig } from "@/config/nav.config"
 
 export default function ContactPage() {
   return (
@@ -12,7 +13,7 @@ export default function ContactPage() {
 
         <div className="grid md:grid-cols-2 gap-6">
           <a
-            href="https://wa.me/923001234567"
+            href={`https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, "")}`}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-green-500 text-white rounded-2xl p-8 hover:bg-green-600 transition-colors"
@@ -20,7 +21,7 @@ export default function ContactPage() {
             <MessageCircle className="w-10 h-10 mb-4" />
             <h2 className="font-serif text-xl mb-2">WhatsApp</h2>
             <p className="opacity-80 text-sm">Fastest way to reach us</p>
-            <p className="font-mono mt-4">+92 300 1234567</p>
+            <p className="font-mono mt-4">{siteConfig.whatsappNumber}</p>
           </a>
 
           <div

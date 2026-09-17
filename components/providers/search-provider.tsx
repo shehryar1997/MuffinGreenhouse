@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react"
 import { Product } from "@/types"
 import { getAllProducts } from "@/lib/data/products"
+import { debounce } from "@/lib/utils"
 
 interface SearchState {
   isOpen: boolean
@@ -52,6 +53,16 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, isOpen: false }))
   }, [])
 
+  // Debounced filter function that persists across renders
+  const debouncedFilter = useMemo(() => 
+    debounce((trimmedQuery: string) => {
+      const results = products.filter((product) =>
+        product.name.toLowerCase().includes(trimmedQuery)
+      )
+      setState((prev) => ({ ...prev, results }))
+    }, 300),
+  [products])
+
   const setQuery = useCallback((query: string) => {
     const trimmedQuery = query.trim().toLowerCase()
 
@@ -60,13 +71,12 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Search products by name (case-insensitive) from cached products
-    const results = products.filter((product) =>
-      product.name.toLowerCase().includes(trimmedQuery)
-    )
+    // Update query immediately for UI responsiveness
+    setState((prev) => ({ ...prev, query }))
 
-    setState((prev) => ({ ...prev, query, results }))
-  }, [products])
+    // Trigger debounced filtering
+    debouncedFilter(trimmedQuery)
+  }, [products, debouncedFilter])
 
   const clearSearch = useCallback(() => {
     setState({

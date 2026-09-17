@@ -1,4 +1,5 @@
 import { Check, X, MessageCircle, Shield, AlertCircle } from "lucide-react"
+import { siteConfig } from "@/config/nav.config"
 
 export default function GuaranteePage() {
   return (
@@ -38,7 +39,7 @@ export default function GuaranteePage() {
             </li>
           </ul>
           <a
-            href="https://wa.me/923001234567"
+            href={`https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, "")}`}
             target="_blank"
             className="inline-flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded-xl hover:bg-green-600 transition-colors"
           >
