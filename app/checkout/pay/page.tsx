@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,23 @@ interface PaymentDetails {
 }
 
 export default function CheckoutPayPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-forest-50">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-sprout-500" />
+            <p className="mt-4 text-forest-700">Loading payment details...</p>
+          </div>
+        </div>
+      }
+    >
+      <CheckoutPayContent />
+    </Suspense>
+  )
+}
+
+function CheckoutPayContent() {
   const searchParams = useSearchParams()
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null)
   const [loading, setLoading] = useState(true)
