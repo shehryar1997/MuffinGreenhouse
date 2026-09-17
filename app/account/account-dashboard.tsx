@@ -240,10 +240,13 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
     const supabase = createBrowserClient()
 
     // Soft delete — addresses can be referenced by past orders, so we never
-    // hard-delete them, just hide them from this list.
+    // hard-delete them, just hide them from this list. Always clear
+    // is_default on the row being deleted itself, regardless of whether a
+    // replacement gets promoted below — otherwise an inactive row can be
+    // left permanently flagged as default alongside a newly-promoted one.
     const { error } = await supabase
       .from("addresses")
-      .update({ is_active: false })
+      .update({ is_active: false, is_default: false })
       .eq("id", address.id)
 
     if (error) {
