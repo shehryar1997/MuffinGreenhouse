@@ -4,8 +4,8 @@ import { supabase } from "@/supabase/client"
 import { mapSupabaseProductToProduct } from "./adapters"
 import { SupabaseProduct } from "@/supabase/client"
 
-// Re-export static data and mock reviews (not product data)
-export { mockProducts, shopByNeedIcons, useCases, categoryMeta, mockReviews } from "@/data/mock-products"
+// Re-export static category/use-case display config (not product data)
+export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
 
 // ============================================================================
 // Supabase Query Configuration
