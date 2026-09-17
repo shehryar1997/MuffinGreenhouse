@@ -55,7 +55,7 @@ Do not regenerate the full map unless explicitly asked to.
 `app/admin/products/[id]/edit/page.tsx` — Edit product form — N/A — N/A
 `app/admin/email/page.tsx` — Email sender form [NEW] — AdminEmailPage — N/A
 `app/api/send-email/route.ts` — Resend email API [NEW] — POST handler — resend
-`app/api/debug-env/route.ts` — Debug env endpoint — GET handler — N/A
+
 `app/api/revalidate/route.ts` — ISR revalidation webhook — POST handler — N/A
 
 ### /components
