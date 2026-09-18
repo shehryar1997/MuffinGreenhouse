@@ -63,6 +63,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
+      # The shop/product/cart/checkout smoke tests read the live catalog, so
+      # placeholder Supabase values can't pass them. Fail here with a clear
+      # message instead of minutes later with an empty-catalog timeout.
+      - name: Check Supabase secrets are configured
+        env:
+          SUPABASE_URL_SECRET: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_SECRET: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL_SECRET" ] || [ -z "$SUPABASE_ANON_SECRET" ]; then
+            echo "::error title=Missing secrets::Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY under Settings > Secrets and variables > Actions. The smoke tests need real catalog data."
+            exit 1
+          fi
+
       - name: Install Playwright browsers
         run: npx playwright install chromium webkit --with-deps
         
@@ -73,7 +86,7 @@ jobs:
         env:
           CI: true
         run: npm run test:smoke
-        timeout-minutes: 3
+        timeout-minutes: 10
         
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

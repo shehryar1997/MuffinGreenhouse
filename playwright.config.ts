@@ -14,7 +14,11 @@ export default defineConfig({
   /* Optimize for CI - use fewer workers to keep under time limit */
   workers: process.env.CI ? 2 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: process.env.CI ? 'list' : 'html',
+  // In CI: `github` turns each failure into a workflow annotation (readable
+  // without downloading logs), `html` produces the report the workflow uploads.
+  reporter: process.env.CI
+    ? [['list'], ['github'], ['html', { open: 'never' }]]
+    : 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -55,7 +59,9 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
+    // CI has already run `npm run build`, so serve that: `next dev` compiles
+    // every route on first hit, which is far too slow for a cold CI runner.
+    command: process.env.CI ? 'npm run start' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
@@ -63,8 +69,9 @@ export default defineConfig({
     stderr: process.env.CI ? 'pipe' : 'ignore',
   },
   
-  /* Global timeout for the entire test suite */
-  globalTimeout: process.env.CI ? 120000 : 300000, // 2 minutes for CI
+  /* Global timeout for the entire test suite. Kept below the workflow step's
+     timeout-minutes so Playwright aborts cleanly and still writes its report. */
+  globalTimeout: process.env.CI ? 8 * 60 * 1000 : 300000,
   
   /* Test timeout */
   timeout: process.env.CI ? 30000 : 60000, // 30s per test for CI
