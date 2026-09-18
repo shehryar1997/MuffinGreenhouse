@@ -1,4 +1,5 @@
 import analyze from '@next/bundle-analyzer';
+import { withSentryConfig } from '@sentry/nextjs/config';
 
 const withBundleAnalyzer = analyze({
   enabled: process.env.ANALYZE === 'true',
@@ -39,14 +40,23 @@ const nextConfig = {
     // 'self'` alone blocks every one of those calls with a CSP violation, so
     // the Supabase project URL must be explicitly allow-listed here.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const connectSrc = supabaseUrl ? `connect-src 'self' ${supabaseUrl};` : "connect-src 'self';"
+    // Sentry's browser SDK posts events/replays to the DSN's ingest host, which
+    // is also cross-origin, so it needs the same explicit allow-listing.
+    const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN
+    let sentryOrigin = ''
+    try {
+      if (sentryDsn) sentryOrigin = new URL(sentryDsn).origin
+    } catch {
+      // Malformed DSN: Sentry won't initialise either, so nothing to allow.
+    }
+    const connectSrc = `connect-src 'self'${supabaseUrl ? ` ${supabaseUrl}` : ''}${sentryOrigin ? ` ${sentryOrigin}` : ''};`
     return [
       {
         source: '/:path*',
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; img-src 'self' data: https://images.unsplash.com https://res.cloudinary.com https://ik.imagekit.io https://images.pexels.com https://pub-81f46d28c378411d9acc02aef58b2bee.r2.dev; ${scriptSrc} style-src 'self' 'unsafe-inline'; font-src 'self'; ${connectSrc} frame-ancestors 'none'; base-uri 'self'; form-action 'self';`,
+            value: `default-src 'self'; img-src 'self' data: https://images.unsplash.com https://res.cloudinary.com https://ik.imagekit.io https://images.pexels.com https://pub-81f46d28c378411d9acc02aef58b2bee.r2.dev; ${scriptSrc} style-src 'self' 'unsafe-inline'; font-src 'self'; ${connectSrc} frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;`,
           },
           {
             key: 'X-Frame-Options',
@@ -66,4 +76,10 @@ const nextConfig = {
   },
 }
 
-export default withBundleAnalyzer(nextConfig)
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
+  // Source-map upload only runs when SENTRY_AUTH_TOKEN (plus SENTRY_ORG /
+  // SENTRY_PROJECT) is set; without them the build just skips the upload.
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+})
