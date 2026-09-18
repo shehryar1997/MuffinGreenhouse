@@ -38,7 +38,18 @@ jobs:
     runs-on: ubuntu-latest
     # Only run if quality checks pass
     needs: quality-checks
-    
+
+    # Supabase clients are created at module load, so `next build` (which
+    # imports every route) throws "supabaseUrl is required" without these.
+    # Real values come from repo secrets (needed for the product/cart smoke
+    # tests to see data); the placeholders keep the build itself green when a
+    # secret isn't set, e.g. on PRs from forks. Deliberately no real
+    # service-role key here: the smoke tests don't need it.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ci-placeholder' }}
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
