@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Search, ShoppingBag, Menu, X, User, Star, Sparkles } from "lucide-react"
@@ -41,14 +42,16 @@ export function Header() {
       <div className="container mx-auto px-6 lg:px-12">
         <div className="flex items-center justify-between h-20 border-b border-forest-200/50">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full border border-[#1A1A1A] flex items-center justify-center">
-              <span className="text-xs">&#10022;</span>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="font-serif text-xl text-[#1A1A1A]">Muffin</span>
-              <span className="font-mono text-xs text-forest-500">/greenhouse</span>
-            </div>
+          <Link href="/" className="flex flex-col items-center gap-0.5">
+            <Image
+              src="/logo-nav.png"
+              alt="Muffin Plants"
+              width={37}
+              height={40}
+              className="h-10 w-auto object-contain"
+              priority
+            />
+            <span className="font-serif text-sm text-[#1A1A1A] leading-none">Muffin Plants</span>
           </Link>
 
           {/* Navigation */}

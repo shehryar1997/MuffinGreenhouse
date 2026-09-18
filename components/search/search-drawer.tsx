@@ -129,7 +129,7 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
           >
             <div className="relative w-20 h-20 bg-forest-100 shrink-0 rounded-md overflow-hidden">
               <Image
-                src={product.images[0]?.url || "/placeholder-plant.jpg"}
+                src={product.images[0]?.url || "/placeholder-plant.png"}
                 alt={product.images[0]?.alt || product.name}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform"

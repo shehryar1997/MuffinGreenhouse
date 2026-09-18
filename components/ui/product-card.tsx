@@ -78,7 +78,7 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
       <Link href={`/shop/product/${product.slug}`} className="block">
         <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-forest-50 mb-4">
           <Image
-            src={product.images[0]?.url || "/placeholder-plant.jpg"}
+            src={product.images[0]?.url || "/placeholder-plant.png"}
             alt={product.images[0]?.alt || product.name}
             fill
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"

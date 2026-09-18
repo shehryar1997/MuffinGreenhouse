@@ -57,7 +57,7 @@ export function CartDrawer() {
                 {cart.items.map((item) => (
                   <div key={`${item.product.id}-${item.variant?.id || "x"}`} className="flex gap-4">
                     <div className="relative w-24 h-24 bg-forest-100 shrink-0">
-                      <Image src={item.product.images[0]?.url || "/placeholder-plant.jpg"} alt={item.product.name} fill className="object-cover" />
+                      <Image src={item.product.images[0]?.url || "/placeholder-plant.png"} alt={item.product.name} fill className="object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-serif text-base text-[#1A1A1A]">{item.product.name}</h3>

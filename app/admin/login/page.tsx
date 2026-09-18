@@ -2,8 +2,6 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { verifyPassword, getSessionCookieValue, COOKIE_NAME } from "@/lib/admin-session"
 
-console.log("ADMIN_PASSWORD from env:", process.env.ADMIN_PASSWORD)
-
 async function login(formData: FormData) {
   "use server"
   const password = formData.get("password") as string

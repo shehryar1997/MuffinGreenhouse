@@ -21,6 +21,8 @@ Do not regenerate the full map unless explicitly asked to.
 `app/page.tsx` — Homepage with sections — FadeIn, KineticHeading, LiftText — @/config/*, @/data/*, @/components/*, framer-motion [LARGE]
 `app/globals.css` — Global styles and CSS variables — N/A — N/A
 `app/favicon.ico` — Site favicon — N/A — N/A
+`app/robots.ts` — Robots.txt for SEO — MetadataRoute.Robots — env:NEXT_PUBLIC_SITE_URL
+`app/sitemap.ts` — Sitemap for SEO — MetadataRoute.Sitemap — supabase/admin-client, env:NEXT_PUBLIC_SITE_URL
 `app/shop/page.tsx` — Shop redirect — N/A — N/A
 `app/shop/all/page.tsx` — All products grid — N/A — N/A
 `app/shop/[category]/page.tsx` — Category product listing — N/A — N/A

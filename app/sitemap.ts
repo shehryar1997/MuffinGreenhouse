@@ -1,0 +1,174 @@
+export const dynamic = "force-dynamic"
+
+import { MetadataRoute } from "next"
+import { supabaseAdmin } from "@/supabase/admin-client"
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com"
+
+// Static routes with their change frequency and priority
+const staticRoutes: MetadataRoute.Sitemap = [
+  {
+    url: `${siteUrl}`,
+    lastModified: new Date(),
+    changeFrequency: "daily",
+    priority: 1.0,
+  },
+  {
+    url: `${siteUrl}/shop/all`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.8,
+  },
+  {
+    url: `${siteUrl}/our-story`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    url: `${siteUrl}/faq`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    url: `${siteUrl}/contact`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    url: `${siteUrl}/journal`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.7,
+  },
+  {
+    url: `${siteUrl}/events`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.7,
+  },
+  {
+    url: `${siteUrl}/reviews`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.6,
+  },
+  {
+    url: `${siteUrl}/plant-finder`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    url: `${siteUrl}/muffin`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    url: `${siteUrl}/shop-by-need`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  },
+  {
+    url: `${siteUrl}/visit-us`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    url: `${siteUrl}/delivery-and-pickup`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    url: `${siteUrl}/our-guarantee`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.5,
+  },
+  {
+    url: `${siteUrl}/account/login`,
+    lastModified: new Date(),
+    changeFrequency: "yearly",
+    priority: 0.3,
+  },
+  {
+    url: `${siteUrl}/account/register`,
+    lastModified: new Date(),
+    changeFrequency: "yearly",
+    priority: 0.3,
+  },
+]
+
+async function getProductRoutes(): Promise<MetadataRoute.Sitemap> {
+  const { data: products, error } = await supabaseAdmin
+    .from("products")
+    .select("slug, updated_at")
+    .not("slug", "is", null)
+
+  if (error) {
+    console.error("Error fetching products for sitemap:", error.message)
+    return []
+  }
+
+  return (products || []).map((product) => ({
+    url: `${siteUrl}/shop/product/${product.slug}`,
+    lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
+    changeFrequency: "weekly",
+    priority: 0.8,
+  }))
+}
+
+async function getJournalRoutes(): Promise<MetadataRoute.Sitemap> {
+  const { data: posts, error } = await supabaseAdmin
+    .from("journal_posts")
+    .select("slug, updated_at")
+    .not("slug", "is", null)
+    .not("published_at", "is", null)
+
+  if (error) {
+    console.error("Error fetching journal posts for sitemap:", error.message)
+    return []
+  }
+
+  return (posts || []).map((post) => ({
+    url: `${siteUrl}/journal/${post.slug}`,
+    lastModified: post.updated_at ? new Date(post.updated_at) : new Date(),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }))
+}
+
+async function getEventRoutes(): Promise<MetadataRoute.Sitemap> {
+  const { data: events, error } = await supabaseAdmin
+    .from("events")
+    .select("slug, updated_at")
+    .not("slug", "is", null)
+
+  if (error) {
+    console.error("Error fetching events for sitemap:", error.message)
+    return []
+  }
+
+  return (events || []).map((event) => ({
+    url: `${siteUrl}/events/${event.slug}`,
+    lastModified: event.updated_at ? new Date(event.updated_at) : new Date(),
+    changeFrequency: "weekly",
+    priority: 0.7,
+  }))
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [productRoutes, journalRoutes, eventRoutes] = await Promise.all([
+    getProductRoutes(),
+    getJournalRoutes(),
+    getEventRoutes(),
+  ])
+
+  return [...staticRoutes, ...productRoutes, ...journalRoutes, ...eventRoutes]
+}

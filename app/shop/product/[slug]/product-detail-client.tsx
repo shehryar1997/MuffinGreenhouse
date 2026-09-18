@@ -47,7 +47,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         <div className="grid lg:grid-cols-2 gap-12">
           <div className="space-y-4">
             <div className="aspect-square relative rounded-2xl overflow-hidden bg-forest-50">
-              <Image src={product.images[selectedImage]?.url || "/placeholder.jpg"} alt={product.name} fill className="object-cover" priority />
+              <Image src={product.images[selectedImage]?.url || "/placeholder-plant.png"} alt={product.name} fill className="object-cover" priority />
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 {product.isNewArrival && <Badge variant="secondary">New</Badge>}
                 {product.stockStatus === "low_stock" && <Badge variant="lowStock">Low Stock</Badge>}

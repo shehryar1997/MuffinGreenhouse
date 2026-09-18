@@ -435,7 +435,7 @@ export default function CheckoutPage() {
                     {/* City */}
                     <div className="mb-4">
                       <label htmlFor="city" className="block text-sm font-medium text-forest-700 mb-1">City <span className="text-red-500">*</span></label>
-                      <CitySelect value={formData.city} onChange={(value) => { handleFieldChange("city", value); handleFieldBlur("city"); }} error={errors.city && touched.city ? true : false} className={errors.city && touched.city ? "border-red-300" : ""} />
+                      <CitySelect value={formData.city} onChange={(value) => { handleFieldChange("city", value); setTouched(prev => ({ ...prev, city: true })); setErrors(prev => ({ ...prev, city: validateField("city", value) })) }} error={errors.city && touched.city ? true : false} className={errors.city && touched.city ? "border-red-300" : ""} />
                       {errors.city && touched.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
                     </div>
 
@@ -566,7 +566,7 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCal
         {items.map((item) => {
           const price = item.variant?.price ?? item.product.price
           const lineTotal = price * item.quantity
-          const imageUrl = item.product.images[0]?.url || "/placeholder-plant.jpg"
+          const imageUrl = item.product.images[0]?.url || "/placeholder-plant.png"
           const imageAlt = item.product.images[0]?.alt || item.product.name
           return (
             <div key={item.product.id} className="flex gap-4">
