@@ -14,12 +14,14 @@ export function CartDrawer() {
   const { cart, toggleCart, removeItem, updateQuantity, itemCount } = useCart()
   const browsePlantsRef = useRef<HTMLAnchorElement>(null)
   
+  const isCartEmpty = cart ? cart.items.length === 0 : false
+
   // Focus the "Browse Plants" link when cart becomes empty
   useEffect(() => {
-    if (cart && cart.items.length === 0 && browsePlantsRef.current) {
+    if (isCartEmpty && browsePlantsRef.current) {
       browsePlantsRef.current.focus()
     }
-  }, [cart?.items.length])
+  }, [isCartEmpty])
   const v = (item: CartItem) => item.variant?.price ?? item.product.price
   
   if (!cart) return null

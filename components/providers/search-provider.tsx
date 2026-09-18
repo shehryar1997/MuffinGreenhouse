@@ -96,7 +96,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
 
     // Trigger debounced filtering with abort capability
     abortControllerRef.current = debouncedFilter(trimmedQuery)
-  }, [products, debouncedFilter])
+  }, [debouncedFilter])
 
   const clearSearch = useCallback(() => {
     // Abort any pending search request

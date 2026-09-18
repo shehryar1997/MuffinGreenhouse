@@ -77,9 +77,12 @@ const nextConfig = {
 }
 
 export default withSentryConfig(withBundleAnalyzer(nextConfig), {
-  // Source-map upload only runs when SENTRY_AUTH_TOKEN (plus SENTRY_ORG /
-  // SENTRY_PROJECT) is set; without them the build just skips the upload.
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
+  telemetry: false,
   silent: !process.env.CI,
+  // Source-map upload needs SENTRY_AUTH_TOKEN; skip it (quietly) when unset.
+  // Note the build still logs one "Will not create release" warning per bundle
+  // in that case — it goes away once the token is set.
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
 })
