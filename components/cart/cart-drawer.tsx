@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import type { CartItem } from "@/types"
 
 export function CartDrawer() {
   const { cart, toggleCart, removeItem, updateQuantity, itemCount } = useCart()
@@ -19,7 +20,7 @@ export function CartDrawer() {
       browsePlantsRef.current.focus()
     }
   }, [cart?.items.length])
-  const v = (p: any) => p.variant?.price ?? p.price
+  const v = (item: CartItem) => item.variant?.price ?? item.product.price
   
   if (!cart) return null
 

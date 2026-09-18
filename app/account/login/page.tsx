@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +9,19 @@ import { Leaf } from "lucide-react"
 import { loginWithPassword } from "./actions"
 
 export default function LoginPage() {
-  const [emailOrPhone, setEmailOrPhone] = useState("")
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get("returnTo")
+  const prefillEmail = searchParams.get("email")
+
+  const [emailOrPhone, setEmailOrPhone] = useState(prefillEmail || "")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -18,7 +31,7 @@ export default function LoginPage() {
     setError(null)
     setIsLoading(true)
 
-    const result = await loginWithPassword(emailOrPhone, password)
+    const result = await loginWithPassword(emailOrPhone, password, returnTo)
 
     setIsLoading(false)
 

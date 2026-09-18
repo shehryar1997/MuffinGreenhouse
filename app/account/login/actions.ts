@@ -30,9 +30,20 @@ export async function resolveEmailOrPhone(emailOrPhone: string): Promise<string 
   return customer.email
 }
 
+// Only ever redirect to a path within this site. `returnTo` comes from a URL
+// query param, which is attacker-controllable - without this check someone
+// could craft a login link (e.g. ?returnTo=https://evil.example) that sends
+// a signed-in user's session off-site.
+function safeReturnTo(returnTo: string | null | undefined): string {
+  if (!returnTo) return "/account"
+  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) return "/account"
+  return returnTo
+}
+
 export async function loginWithPassword(
   emailOrPhone: string,
-  password: string
+  password: string,
+  returnTo?: string | null
 ): Promise<LoginResult> {
   if (!emailOrPhone.trim()) {
     return { success: false, error: "Incorrect email/phone or password" }
@@ -76,6 +87,7 @@ export async function loginWithPassword(
     return { success: false, error: "Incorrect email/phone or password" }
   }
 
-  // Success - redirect to account page
-  redirect("/account")
+  // Success - redirect back to where the user started (e.g. /checkout), or
+  // the account page by default.
+  redirect(safeReturnTo(returnTo))
 }

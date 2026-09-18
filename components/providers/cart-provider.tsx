@@ -1,7 +1,9 @@
 "use client"
 
-import React, { createContext, useContext, useReducer, useCallback } from "react"
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useState } from "react"
 import { Cart, CartItem, Product, ProductVariant } from "@/types"
+
+const CART_STORAGE_KEY = "muffin_cart_v1"
 
 interface CartState extends Cart {
   isOpen: boolean
@@ -14,6 +16,7 @@ type CartAction =
   | { type: "CLEAR_CART" }
   | { type: "TOGGLE_CART"; payload: boolean }
   | { type: "SET_DELIVERY_FEE"; payload: number }
+  | { type: "HYDRATE"; payload: { items: CartItem[]; deliveryFee: number } }
 
 const initialState: CartState = {
   items: [],
@@ -83,7 +86,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       const { subtotal, total } = calculateTotals(state.items, action.payload)
       return { ...state, deliveryFee: action.payload, subtotal, total }
     }
-    
+
+    case "HYDRATE": {
+      const { items, deliveryFee } = action.payload
+      const { subtotal, total } = calculateTotals(items, deliveryFee)
+      return { ...state, items, deliveryFee, subtotal, total }
+    }
+
     default:
       return state
   }
@@ -104,7 +113,46 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, dispatch] = useReducer(cartReducer, initialState)
-  
+  // State (not a ref) so setting it true is batched with the HYDRATE dispatch
+  // below into the same re-render - otherwise the persist effect could run,
+  // on the initial commit, after this flag flips but before the hydrated
+  // items have actually landed in `cart`, and overwrite storage with the
+  // still-empty initialState.
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Load the cart from localStorage once on mount. This runs client-only
+  // (after the initial render, which must match the server's empty state to
+  // avoid a hydration mismatch) so a page navigation/reload - e.g. going to
+  // /account/login and back - doesn't wipe items that were only ever held in
+  // memory before.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(CART_STORAGE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw) as { items?: CartItem[]; deliveryFee?: number }
+        if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+          dispatch({ type: "HYDRATE", payload: { items: parsed.items, deliveryFee: parsed.deliveryFee ?? 0 } })
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load cart from storage:", err)
+    } finally {
+      setIsHydrated(true)
+    }
+  }, [])
+
+  // Persist on every change, but only after the initial load above has run -
+  // otherwise the first render's empty initialState would overwrite whatever
+  // was already saved before hydration gets a chance to read it.
+  useEffect(() => {
+    if (!isHydrated) return
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ items: cart.items, deliveryFee: cart.deliveryFee }))
+    } catch (err) {
+      console.error("Failed to save cart to storage:", err)
+    }
+  }, [cart.items, cart.deliveryFee, isHydrated])
+
   const addItem = useCallback((product: Product, variant: ProductVariant | undefined, quantity: number) => {
     dispatch({ type: "ADD_ITEM", payload: { product, variant, quantity } })
   }, [])

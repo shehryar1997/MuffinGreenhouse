@@ -111,6 +111,10 @@ export default function CheckoutPage() {
   }
 
   const handleEmailBlur = async () => {
+    // Already signed in as this customer - /api/check-customer would report
+    // hasAuth: true for their own email (that's what makes them signed in),
+    // which isn't "someone else's registered account", so skip the check.
+    if (signedInCustomer) return
     if (!formData.email || !validateEmail(formData.email)) {
       setEmailCheckResult(null)
       return
@@ -154,10 +158,9 @@ export default function CheckoutPage() {
       if (Object.keys(productDimensions).length === 0) await fetchProductDimensions(productIds)
       let totalVolumetricWeight = 0
       let totalActualWeight = 0
-      let hasMissingDimensions = false
       cart.items.forEach(item => {
         const dim = productDimensions[item.product.id]
-        if (!dim) { hasMissingDimensions = true; return }
+        if (!dim) return
         const quantity = item.quantity
         const categorySlug = dim.categorySlug?.toLowerCase() || ""
         if (categorySlug === "equipment" || categorySlug.includes("equipment")) {
@@ -166,15 +169,15 @@ export default function CheckoutPage() {
         } else {
           if (dim.boxHeightCm && dim.boxWidthCm && dim.boxBreadthCm) {
             totalVolumetricWeight += (dim.boxHeightCm * dim.boxWidthCm * dim.boxBreadthCm) / 5000 * quantity
-          } else { hasMissingDimensions = true }
+          }
           if (dim.weightKg) totalActualWeight += dim.weightKg * quantity
         }
       })
       const chargeableWeight = Math.max(totalVolumetricWeight, totalActualWeight)
-      if (hasMissingDimensions && chargeableWeight === 0) {
-        setDeliveryFeeError("Some products need dimension data")
-        setDeliveryFee(800)
-      } else if (chargeableWeight === 0) {
+      // Missing/incomplete dimension data for some or all items isn't a
+      // customer-facing error - the flat fallback rate below IS the intended
+      // behavior for that case, same as any other computed fee.
+      if (chargeableWeight === 0) {
         setDeliveryFee(800)
       } else {
         let calculatedFee = chargeableWeight <= 0.5 ? 600 : chargeableWeight <= 1 ? 800 : chargeableWeight <= 3 ? 1000 : chargeableWeight <= 5 ? 1400 : chargeableWeight <= 10 ? 1800 : 2200
@@ -234,10 +237,17 @@ export default function CheckoutPage() {
   }
 
   const handleProceedToPay = async () => {
-    if (emailCheckResult?.hasAuth) { toast.error("This email is registered -- please sign in"); return }
-    if (!validateForm()) { toast.error("Please fix the errors"); return }
-    const checkResult = await checkCustomerEmail(formData.email)
-    if (checkResult.hasAuth) { toast.error("This email is registered -- please sign in"); return }
+    // Skip the "registered, please sign in" gate entirely once already
+    // signed in - there's no other account to check the email against.
+    if (!signedInCustomer) {
+      if (emailCheckResult?.hasAuth) { toast.error("This email is registered -- please sign in"); return }
+      if (!validateForm()) { toast.error("Please fix the errors"); return }
+      const checkResult = await checkCustomerEmail(formData.email)
+      if (checkResult.hasAuth) { toast.error("This email is registered -- please sign in"); return }
+    } else if (!validateForm()) {
+      toast.error("Please fix the errors")
+      return
+    }
     setCurrentStep(2)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -598,8 +608,8 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCal
           {deliveryFeeError && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm text-amber-800">
-                <span className="font-medium">Note:</span> Some products are missing shipping dimensions.
-                We&apos;ll contact you via WhatsApp to confirm the exact delivery cost before shipping.
+                <span className="font-medium">Note:</span> We couldn&apos;t confirm the exact delivery cost right now.
+                We&apos;ll reach out on WhatsApp to confirm it before shipping.
               </p>
             </div>
           )}
