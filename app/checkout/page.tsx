@@ -156,33 +156,38 @@ export default function CheckoutPage() {
     try {
       const productIds = cart.items.map(item => item.product.id)
       if (Object.keys(productDimensions).length === 0) await fetchProductDimensions(productIds)
-      let totalVolumetricWeight = 0
-      let totalActualWeight = 0
+      // Sum one chargeable weight per item and total the whole cart, so an
+      // item with usable data and an item without both count toward the
+      // shipment instead of the second one silently contributing nothing.
+      let totalWeight = 0
       cart.items.forEach(item => {
         const dim = productDimensions[item.product.id]
-        if (!dim) return
         const quantity = item.quantity
-        const categorySlug = dim.categorySlug?.toLowerCase() || ""
+        const categorySlug = dim?.categorySlug?.toLowerCase() || ""
+
         if (categorySlug === "equipment" || categorySlug.includes("equipment")) {
-          const weight = dim.weightKg || 1
-          totalActualWeight += weight * quantity
+          // Equipment is charged by actual weight; assume 1kg/unit if it
+          // hasn't been recorded.
+          totalWeight += (dim?.weightKg || 1) * quantity
+          return
+        }
+
+        const hasFullBoxDimensions = !!(dim?.boxHeightCm && dim?.boxWidthCm && dim?.boxBreadthCm)
+        if (hasFullBoxDimensions) {
+          const volumetricWeight = (dim!.boxHeightCm! * dim!.boxWidthCm! * dim!.boxBreadthCm!) / 5000
+          const actualWeight = dim?.weightKg || 0
+          // Courier convention: charge whichever is greater, volumetric or actual.
+          totalWeight += Math.max(volumetricWeight, actualWeight) * quantity
         } else {
-          if (dim.boxHeightCm && dim.boxWidthCm && dim.boxBreadthCm) {
-            totalVolumetricWeight += (dim.boxHeightCm * dim.boxWidthCm * dim.boxBreadthCm) / 5000 * quantity
-          }
-          if (dim.weightKg) totalActualWeight += dim.weightKg * quantity
+          // Box dimensions are missing or incomplete for this product - fall
+          // back to its recorded actual weight if we at least have that,
+          // otherwise assume a 1kg parcel per unit rather than contributing
+          // zero weight (which would silently drop this item from the fee).
+          totalWeight += (dim?.weightKg || 1) * quantity
         }
       })
-      const chargeableWeight = Math.max(totalVolumetricWeight, totalActualWeight)
-      // Missing/incomplete dimension data for some or all items isn't a
-      // customer-facing error - the flat fallback rate below IS the intended
-      // behavior for that case, same as any other computed fee.
-      if (chargeableWeight === 0) {
-        setDeliveryFee(800)
-      } else {
-        let calculatedFee = chargeableWeight <= 0.5 ? 600 : chargeableWeight <= 1 ? 800 : chargeableWeight <= 3 ? 1000 : chargeableWeight <= 5 ? 1400 : chargeableWeight <= 10 ? 1800 : 2200
-        setDeliveryFee(calculatedFee)
-      }
+      const calculatedFee = totalWeight <= 0.5 ? 600 : totalWeight <= 1 ? 800 : totalWeight <= 3 ? 1000 : totalWeight <= 5 ? 1400 : totalWeight <= 10 ? 1800 : 2200
+      setDeliveryFee(calculatedFee)
     } catch (err) {
       console.error("Delivery fee calculation error:", err)
       setDeliveryFeeError("Failed to calculate delivery fee")

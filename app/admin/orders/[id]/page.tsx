@@ -1,7 +1,8 @@
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
-import { sendOrderConfirmedEmail } from "@/lib/email/send-order-confirmed"
+import { markPaid, markDelivered, cancelOrder } from "./actions"
+import { MarkShippedDialog } from "./mark-shipped-dialog"
 
 // Force fresh data on every load — same reasoning as the orders list page.
 export const dynamic = "force-dynamic"
@@ -16,6 +17,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     .select(
       `id, order_number, status, payment_status, payment_method, delivery_type, subtotal,
        delivery_fee, total, customer_notes, internal_notes, created_at,
+       tracking_number, courier,
        customer:customers(id, name, email, phone),
        address:addresses(label, street, city, province, phone),
        order_items:order_items(id, product_name, variant_name, quantity, unit_price, total_price)`
@@ -31,75 +33,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const address = order.address as unknown as { label: string; street: string; city: string; province: string; phone: string | null } | null
   const items = (order.order_items as unknown as Array<{ id: string; product_name: string; variant_name: string | null; quantity: number; unit_price: number; total_price: number }>) || []
 
-  async function markPaid() {
-    "use server"
-    // Update order status
-    const { error } = await supabaseAdmin
-      .from("orders")
-      .update({ payment_status: "paid", status: "confirmed", confirmed_at: new Date().toISOString() })
-      .eq("id", params.id)
-    if (error) throw new Error(error.message)
-
-    // Send order confirmed email
-    try {
-      const orderData = await supabaseAdmin
-        .from("orders")
-        .select("order_number, total, delivery_type, customer_email, customer_name, order_items(product_name, quantity, unit_price)")
-        .eq("id", params.id)
-        .single()
-
-      if (orderData.data && orderData.data.customer_email) {
-        const items = (orderData.data.order_items as unknown as Array<{ product_name: string; quantity: number; unit_price: number }>) || []
-        await sendOrderConfirmedEmail({
-          toEmail: orderData.data.customer_email,
-          customerName: orderData.data.customer_name,
-          orderNumber: orderData.data.order_number,
-          total: orderData.data.total,
-          items: items.map(item => ({
-            productName: item.product_name,
-            quantity: item.quantity,
-            price: item.unit_price,
-          })),
-          deliveryType: orderData.data.delivery_type as "delivery" | "pickup",
-        })
-      }
-    } catch (emailError) {
-      // Log error but don't fail the mark-as-paid action
-      console.error("Failed to send order confirmed email:", emailError)
-    }
-
-    redirect(`/admin/orders/${params.id}`)
-  }
-
-  async function markShipped() {
-    "use server"
-    const { error } = await supabaseAdmin
-      .from("orders")
-      .update({ status: "shipped", shipped_at: new Date().toISOString() })
-      .eq("id", params.id)
-    if (error) throw new Error(error.message)
-    redirect(`/admin/orders/${params.id}`)
-  }
-
-  async function markDelivered() {
-    "use server"
-    const { error } = await supabaseAdmin
-      .from("orders")
-      .update({ status: "delivered", delivered_at: new Date().toISOString() })
-      .eq("id", params.id)
-    if (error) throw new Error(error.message)
-    redirect(`/admin/orders/${params.id}`)
-  }
-
-  async function cancelOrder() {
-    "use server"
-    const { error } = await supabaseAdmin
-      .from("orders")
-      .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-      .eq("id", params.id)
-    if (error) throw new Error(error.message)
-    redirect(`/admin/orders/${params.id}`)
-  }
+  const markPaidForOrder = markPaid.bind(null, order.id)
+  const markDeliveredForOrder = markDelivered.bind(null, order.id)
+  const cancelOrderForOrder = cancelOrder.bind(null, order.id)
 
   return (
     <div>
@@ -129,34 +65,36 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </div>
             <div className="flex flex-wrap gap-2">
               {order.payment_status !== "paid" && (
-                <form action={markPaid}>
+                <form action={markPaidForOrder}>
                   <button type="submit" className="bg-[#E85D2C] text-white rounded px-4 py-2 text-sm font-medium hover:bg-[#d45124]">
                     Mark as Paid
                   </button>
                 </form>
               )}
               {order.status !== "shipped" && order.status !== "delivered" && order.status !== "cancelled" && (
-                <form action={markShipped}>
-                  <button type="submit" className="bg-white border rounded px-4 py-2 text-sm font-medium hover:bg-neutral-50">
-                    Mark as Shipped
-                  </button>
-                </form>
+                <MarkShippedDialog orderId={order.id} />
               )}
               {order.status !== "delivered" && order.status !== "cancelled" && (
-                <form action={markDelivered}>
+                <form action={markDeliveredForOrder}>
                   <button type="submit" className="bg-white border rounded px-4 py-2 text-sm font-medium hover:bg-neutral-50">
                     Mark as Delivered
                   </button>
                 </form>
               )}
               {order.status !== "cancelled" && order.status !== "delivered" && (
-                <form action={cancelOrder}>
+                <form action={cancelOrderForOrder}>
                   <button type="submit" className="bg-white border border-red-200 text-red-700 rounded px-4 py-2 text-sm font-medium hover:bg-red-50">
                     Cancel Order
                   </button>
                 </form>
               )}
             </div>
+            {order.tracking_number && (
+              <div className="mt-4 pt-4 border-t text-sm text-neutral-600">
+                <span className="font-medium text-neutral-900">{order.courier || "Courier"} tracking:</span>{" "}
+                <span className="font-mono">{order.tracking_number}</span>
+              </div>
+            )}
           </div>
 
           {/* Items */}

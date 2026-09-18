@@ -25,27 +25,34 @@ function formatPrice(price: number): string {
 export async function sendOrderConfirmedEmail(data: OrderConfirmedData): Promise<void> {
   const resend = getResend()
   const greeting = data.customerName ? 'Hi ' + data.customerName + ',' : 'Hi there,'
-  
+
   const itemsList = data.items
     .map(item => item.productName + ' x ' + item.quantity + ' - ' + formatPrice(item.price * item.quantity))
-    .join('\\n')
+    .join('\n')
 
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: [data.toEmail],
     subject: 'Payment received - Order #' + data.orderNumber + ' confirmed!',
-    text: greeting + '\\n\\n' +
-      'Great news! We have received your payment.\\n\\n' +
-      'Your order #' + data.orderNumber + ' is now confirmed and will ship in 1-2 business days.\\n\\n' +
-      '---\\n' +
-      'INVOICE\\n' +
-      '---\\n' +
-      itemsList + '\\n\\n' +
-      'Total: ' + formatPrice(data.total) + '\\n' +
-      'Delivery Type: ' + (data.deliveryType === 'delivery' ? 'Delivery' : 'Pickup') + '\\n\\n' +
-      '---\\n\\n' +
-      'We will send you a tracking update once your order ships.\\n\\n' +
-      '— The Muffin Greenhouse Team',
+    text: `${greeting}
+
+Great news! We have received your payment.
+
+Your order #${data.orderNumber} is now confirmed and will ship in 1-2 business days.
+
+---
+INVOICE
+---
+${itemsList}
+
+Total: ${formatPrice(data.total)}
+Delivery Type: ${data.deliveryType === 'delivery' ? 'Delivery' : 'Pickup'}
+
+---
+
+We will send you a tracking update once your order ships.
+
+— The Muffin Greenhouse Team`,
   })
 
   if (error) {

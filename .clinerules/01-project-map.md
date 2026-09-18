@@ -62,6 +62,8 @@ Do not regenerate the full map unless explicitly asked to.
 `app/api/checkout-confirm/route.ts` — Booking confirmation endpoint (sends booking received email) — POST handler — @/lib/rate-limit, @/supabase/admin-client, @/lib/email/send-booking-received
 `app/api/cron/expire-pending-orders/route.ts` — Cron job to auto-cancel pending orders after 2 hours — GET handler — @/supabase/admin-client, @/lib/email/send-order-cancelled
 `app/api/product-dimensions/route.ts` — Fetch product box dimensions for shipping calculation — POST handler — @/lib/supabase/server-client
+`app/admin/orders/[id]/actions.ts` — Order status server actions (mark paid/shipped/delivered, cancel) — markPaid, markShipped, markDelivered, cancelOrder — @/supabase/admin-client, @/lib/email/send-order-confirmed, @/lib/email/send-order-shipped
+`app/admin/orders/[id]/mark-shipped-dialog.tsx` — Tracking-number entry modal for marking an order shipped — MarkShippedDialog — @radix-ui/react-dialog, ./actions
 
 ### /components
 `components/light-filter-teaser.tsx` — Light level filter section — LightFilterTeaser — @/types, @/components/ui/*, @/data/* [LARGE]
@@ -107,6 +109,7 @@ Do not regenerate the full map unless explicitly asked to.
 `lib/email/send-booking-received.ts` — Booking received email sender — sendBookingReceivedEmail — resend
 `lib/email/send-order-confirmed.ts` — Payment received / order confirmed email sender — sendOrderConfirmedEmail — resend
 `lib/email/send-order-cancelled.ts` — Order cancelled email sender — sendOrderCancelledEmail — resend
+`lib/email/send-order-shipped.ts` — Order shipped email sender with courier tracking number — sendOrderShippedEmail — resend
 
 ### /types
 `types/index.ts` — Core TypeScript types — Category, Product, ProductImage, CareInfo, ProductVariant, Review, CartItem, Cart, User, Address, Order, MyPlant, Event, JournalPost, NavItem, etc. — Includes shipping box dimensions (boxHeightCm, boxWidthCm, boxBreadthCm) — N/A

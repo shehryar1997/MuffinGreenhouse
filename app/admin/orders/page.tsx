@@ -30,7 +30,7 @@ export default async function AdminOrdersPage() {
   const { data: orders, error } = await supabaseAdmin
     .from("orders")
     .select(
-      "id, order_number, status, payment_status, total, delivery_type, created_at, customer:customers(name, email)"
+      "id, order_number, status, payment_status, total, delivery_type, created_at, tracking_number, courier, customer:customers(name, email)"
     )
     .order("created_at", { ascending: false })
 
@@ -56,6 +56,7 @@ export default async function AdminOrdersPage() {
               <th className="px-4 py-3">Total</th>
               <th className="px-4 py-3">Payment</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Tracking #</th>
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3"></th>
             </tr>
@@ -81,6 +82,9 @@ export default async function AdminOrdersPage() {
                       {o.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3 font-mono text-xs text-neutral-600">
+                    {o.tracking_number ? `${o.courier || "Courier"}: ${o.tracking_number}` : "—"}
+                  </td>
                   <td className="px-4 py-3 text-neutral-600">
                     {o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}
                   </td>
@@ -94,7 +98,7 @@ export default async function AdminOrdersPage() {
             })}
             {orderData.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-neutral-500">
+                <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
                   No orders yet.
                 </td>
               </tr>
