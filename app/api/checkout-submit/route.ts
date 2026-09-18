@@ -3,6 +3,7 @@ import { checkRateLimit } from "@/lib/rate-limit"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { sendOrderConfirmationEmail } from "@/lib/email/send-order-confirmation"
 import { pakistanCities } from "@/data/pakistan-cities"
+import * as Sentry from "@sentry/nextjs"
 
 /**
  * CHECKOUT SUBMIT ENDPOINT

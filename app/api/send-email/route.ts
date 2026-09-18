@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
 import { checkRateLimit } from "@/lib/rate-limit"
+import * as Sentry from "@sentry/nextjs"
 
 // From email address
 const FROM_EMAIL = "Muffin Plants <support@muffinplants.com>"
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, id: data?.id })
   } catch (err) {
+    Sentry.captureException(err)
     const message = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
       { error: message },
