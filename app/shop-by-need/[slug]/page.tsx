@@ -3,6 +3,9 @@ import { getProductsByUseCase, useCases } from "@/lib/data/products"
 import { ProductCard } from "@/components/ui/product-card"
 import { UseCaseHeader } from "./use-case-header"
 
+// ISR: revalidate every 5 minutes + on product updates via /api/revalidate
+export const revalidate = 300
+
 interface ShopByNeedPageProps {
   params: { slug: string }
 }

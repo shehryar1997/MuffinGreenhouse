@@ -1,0 +1,146 @@
+// Structured data utilities for JSON-LD schema.org markup
+import { Product } from "@/types"
+import { siteConfig } from "@/config/nav.config"
+
+// Base URL from environment
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com"
+
+/**
+ * Generates Organization schema for the site
+ * Used in the root layout
+ */
+export function generateOrganizationSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Muffin Greenhouse",
+    "url": BASE_URL,
+    "logo": `${BASE_URL}/images/logo.svg`, // TODO: update actual logo URL when available
+    "sameAs": [
+      "https://www.instagram.com/muffinsgreenhouse/"
+    ],
+    "description": siteConfig.description,
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": siteConfig.address.street,
+      "addressLocality": siteConfig.address.city,
+      "addressRegion": "Sindh",
+      "postalCode": siteConfig.address.postalCode,
+      "addressCountry": "PK"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer service",
+      "email": siteConfig.email,
+      "telephone": siteConfig.whatsappNumber.replace("+", "")
+    }
+  }
+}
+
+/**
+ * Generates Product schema for a single product
+ */
+export function generateProductSchema(product: Product) {
+  const mainImage = product.images.length > 0 ? product.images[0].url : ""
+  
+  // Map stockStatus to schema.org availability
+  const availabilityMap = {
+    "in_stock": "https://schema.org/InStock",
+    "low_stock": "https://schema.org/LimitedAvailability",
+    "out_of_stock": "https://schema.org/OutOfStock"
+  } as const
+  
+  const offers = {
+    "@type": "Offer",
+    "price": product.price,
+    "priceCurrency": "PKR",
+    "availability": availabilityMap[product.stockStatus],
+    "url": `${BASE_URL}/shop/product/${product.slug}`,
+    "itemCondition": "https://schema.org/NewCondition",
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingRate": {
+        "@type": "MonetaryAmount",
+        "value": 0,
+        "currency": "PKR"
+      },
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "PK",
+        "addressRegion": "Sindh"
+      }
+    }
+  }
+  
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "description": product.description,
+    "image": mainImage,
+    "sku": product.variants.length > 0 ? product.variants[0].sku : product.id,
+    "brand": {
+      "@type": "Brand",
+      "name": "Muffin Greenhouse"
+    },
+    "offers": offers,
+    "category": product.category.name,
+    "url": `${BASE_URL}/shop/product/${product.slug}`
+  }
+}
+
+/**
+ * Generates BreadcrumbList schema for category/listing pages
+ */
+export function generateBreadcrumbSchema(paths: Array<{ name: string; url: string }>) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": paths.map((item, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "name": item.name,
+      "item": `${BASE_URL}${item.url}`
+    }))
+  }
+}
+
+/**
+ * Generates breadcrumb for shop category page
+ */
+export function generateCategoryBreadcrumb(categoryName: string, categorySlug: string, pageNumber?: number) {
+  const paths = [
+    { name: "Home", url: "/" },
+    { name: "Shop", url: "/shop/all" },
+    { name: categoryName, url: `/shop/${categorySlug}` }
+  ]
+  
+  if (pageNumber && pageNumber > 1) {
+    paths.push({ name: `Page ${pageNumber}`, url: `/shop/${categorySlug}?page=${pageNumber}` })
+  }
+  
+  return generateBreadcrumbSchema(paths)
+}
+
+/**
+ * Generates breadcrumb for shop all page
+ */
+export function generateShopAllBreadcrumb(pageNumber?: number) {
+  const paths = [
+    { name: "Home", url: "/" },
+    { name: "Shop All", url: "/shop/all" }
+  ]
+  
+  if (pageNumber && pageNumber > 1) {
+    paths.push({ name: `Page ${pageNumber}`, url: `/shop/all?page=${pageNumber}` })
+  }
+  
+  return generateBreadcrumbSchema(paths)
+}
+
+/**
+ * Renders JSON-LD script tag as a string
+ */
+export function renderJsonLdScript(data: any): string {
+  return `<script type="application/ld+json">${JSON.stringify(data, null, 2)}</script>`
+}

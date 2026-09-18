@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -89,7 +89,7 @@ export default function CheckoutPage() {
   const validateEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase())
   const validatePhone = (phone: string): boolean => phone.replace(/\D/g, "").length >= 10
 
-  const checkCustomerEmail = async (email: string): Promise<EmailCheckResult> => {
+  const checkCustomerEmail = async (email: string, signal?: AbortSignal): Promise<EmailCheckResult> => {
     if (!email || !validateEmail(email)) return { exists: false, hasAuth: false }
     setIsCheckingEmail(true)
     try {
@@ -97,12 +97,17 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.toLowerCase().trim() }),
+        signal,
       })
       if (!response.ok) throw new Error("Failed to check email")
       const result = await response.json() as EmailCheckResult
       setEmailCheckResult(result)
       return result
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === "AbortError") {
+        return { exists: false, hasAuth: false }
+      }
       console.error("Email check error:", err)
       return { exists: false, hasAuth: false }
     } finally {
@@ -122,18 +127,21 @@ export default function CheckoutPage() {
     await checkCustomerEmail(formData.email)
   }
 
-  const fetchProductDimensions = useCallback(async (productIds: string[]) => {
+  const fetchProductDimensions = useCallback(async (productIds: string[], signal?: AbortSignal) => {
     if (productIds.length === 0) return
     try {
       const response = await fetch("/api/product-dimensions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productIds }),
+        signal,
       })
       if (!response.ok) throw new Error("Failed to fetch product dimensions")
       const dimensions = await response.json() as Record<string, ProductDimensions>
       setProductDimensions(dimensions)
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === "AbortError") return
       console.error("Error fetching product dimensions:", err)
     }
   }, [])

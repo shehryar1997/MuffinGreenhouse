@@ -34,4 +34,11 @@ next-env.d.ts
 .vscode/
 .idea/
 
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+/blob-report/
+/playwright-report/
+
 graphify-out/

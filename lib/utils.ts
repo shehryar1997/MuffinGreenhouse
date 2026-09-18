@@ -25,6 +25,31 @@ export function debounce<T extends (...args: any[]) => void>(
   }
 }
 
+export function debounceWithAbort<T extends (...args: any[]) => void>(
+  fn: (signal: AbortSignal, ...args: Parameters<T>) => void,
+  delay: number
+): (...args: Parameters<T>) => AbortController {
+  let timeout: ReturnType<typeof setTimeout>
+  let controller: AbortController | null = null
+  
+  return (...args: Parameters<T>): AbortController => {
+    if (controller) {
+      controller.abort()
+    }
+    
+    controller = new AbortController()
+    
+    clearTimeout(timeout)
+    timeout = setTimeout(() => {
+      if (controller && !controller.signal.aborted) {
+        fn(controller.signal, ...args)
+      }
+    }, delay)
+    
+    return controller
+  }
+}
+
 export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number

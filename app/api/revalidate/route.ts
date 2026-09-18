@@ -8,8 +8,19 @@ interface WebhookPayload {
     slug?: string;
     category_id?: string;
     category_slug?: string;
+    use_case_tags?: string[];
   };
 }
+
+// Map use case labels to slugs (matches USE_CASE_SLUG_TO_LABEL in lib/data/products.ts)
+const USE_CASE_LABEL_TO_SLUG: Record<string, string> = {
+  "Low-Light Survivors": "low-light-survivors",
+  "Balcony & Rooftop": "balcony-rooftop",
+  "Air-Purifying": "air-purifying",
+  "Pet-Safe": "pet-safe",
+  "Beginner-Proof": "beginner-proof",
+  "Statement Plants": "statement-plants",
+};
 
 export async function POST(request: NextRequest) {
   // Verify secret header
@@ -37,6 +48,17 @@ export async function POST(request: NextRequest) {
     // next 300s ISR window.
     if (body.record?.category_slug) {
       revalidatePath(`/shop/${body.record.category_slug}`);
+    }
+
+    // Revalidate shop-by-need pages if use_case_tags changed
+    if (body.record?.use_case_tags && Array.isArray(body.record.use_case_tags)) {
+      // Convert tags to slugs and revalidate each matching shop-by-need page
+      body.record.use_case_tags.forEach((tag) => {
+        const slug = USE_CASE_LABEL_TO_SLUG[tag];
+        if (slug) {
+          revalidatePath(`/shop-by-need/${slug}`);
+        }
+      });
     }
 
     return NextResponse.json({ revalidated: true, now: Date.now() });

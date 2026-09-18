@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:smoke": "playwright test --grep \"Smoke Tests\""
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.0",
@@ -54,6 +59,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.3.5",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

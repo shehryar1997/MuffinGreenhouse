@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,13 +23,30 @@ export default function PlantFinderPage() {
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  // Fetch products on mount
+  // Fetch products on mount with abort capability
   useEffect(() => {
+    const controller = new AbortController()
+    const signal = controller.signal
+    
     async function loadProducts() {
-      const products = await getAllProducts()
-      setAllProducts(products)
+      if (signal.aborted) return
+      
+      try {
+        const products = await getAllProducts()
+        if (!signal.aborted) {
+          setAllProducts(products)
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") return
+        console.error("Error fetching products:", err)
+      }
     }
+    
     loadProducts()
+    
+    return () => {
+      controller.abort()
+    }
   }, [])
 
   function findPlants(answers: Record<string, string>): Product[] {

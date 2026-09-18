@@ -1,18 +1,56 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo } from "react"
+import dynamic from "next/dynamic"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Plus } from "lucide-react"
-import { shopByNeedCategories } from "@/config/nav.config"
-import { mockEvents } from "@/lib/data/events"
+import { ArrowRight } from "lucide-react"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useParallax } from "@/hooks/use-parallax"
-import { moodThemes, filterProductsByMood, Mood } from "@/lib/mood-utils"
-import { LightFilterTeaser } from "@/components/light-filter-teaser"
-import { formatPrice } from "@/lib/utils"
 import { Product } from "@/types"
+
+// ponytail: Lazy-load below-the-fold sections to improve initial page load
+// LightFilterTeaser is client-only (uses useState), so ssr: false
+const LightFilterTeaser = dynamic(
+  () => import("@/components/light-filter-teaser").then((mod) => ({ default: mod.LightFilterTeaser })),
+  { ssr: false }
+)
+
+// Content sections below-the-fold: SSR-enabled with loading fallback for SEO visibility
+// Using dynamic imports without ssr: false so content remains server-rendered for SEO
+const AtmospherePicker = dynamic(
+  () => import("./sections/atmosphere-picker").then((mod) => ({ default: mod.AtmospherePicker })),
+  { loading: () => <SectionSkeleton /> }
+)
+
+const ShopByNeedSection = dynamic(
+  () => import("./sections/shop-by-need-section").then((mod) => ({ default: mod.ShopByNeedSection })),
+  { loading: () => <SectionSkeleton /> }
+)
+
+const OurStorySection = dynamic(
+  () => import("./sections/our-story-section").then((mod) => ({ default: mod.OurStorySection })),
+  { loading: () => <SectionSkeleton /> }
+)
+
+const EventsSection = dynamic(
+  () => import("./sections/events-section").then((mod) => ({ default: mod.EventsSection })),
+  { loading: () => <SectionSkeleton /> }
+)
+
+// Simple loading skeleton for lazy-loaded sections
+// ponytail: Lightweight CSS-based skeleton, no JS overhead
+function SectionSkeleton() {
+  return (
+    <div className="py-16 lg:py-20 animate-pulse">
+      <div className="container mx-auto px-6 lg:px-12">
+        <div className="h-8 bg-forest-100 rounded w-1/4 mb-8" />
+        <div className="h-64 bg-forest-100 rounded" />
+      </div>
+    </div>
+  )
+}
 
 const FadeIn = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
   const prefersReducedMotion = useReducedMotion()
@@ -165,93 +203,7 @@ function AnimatedHeading({ lines, className = "", stagger = 0.08, delay = 0 }: A
   )
 }
 
-// ponytail: Extracted into component for cleaner page code
-function MoodPlantsGrid({ products, mood, theme }: { products: Product[]; mood: Mood; theme: import("@/lib/mood-utils").MoodTheme }) {
-  // Filter real products by mood using the reusable helper function
-  const moodProducts = useMemo(() => filterProductsByMood(products, mood), [products, mood])
-  const displayProducts = moodProducts.slice(0, 4)
 
-  if (displayProducts.length === 0) {
-    return (
-      <div className={`py-16 text-center font-mono text-xs tracking-widest uppercase ${theme.textMuted}`}>
-        No plants matching this mood yet — check back soon.
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {displayProducts.map((product, i) => (
-        <Link key={product.id} href={`/shop/product/${product.slug}`} className="group cursor-pointer block">
-          <div className={`relative aspect-[3/4] overflow-hidden ${theme.bgSecondary}`}>
-            {product.images[0]?.url ? (
-              <Image 
-                src={product.images[0].url} 
-                alt={product.images[0].alt || product.name}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="(max-width: 768px) 50vw, 25vw"
-              />
-            ) : null}
-            <span className={`absolute top-3 left-3 font-mono text-xs ${theme.textPrimary}`}>{String(i+1).padStart(2,'0')}</span>
-            {product.stockStatus === "out_of_stock" && (
-              <span className={`absolute top-3 right-3 font-mono text-[10px] tracking-wider uppercase px-2 py-1 rounded-sm ${theme.bg === "bg-forest-300" ? "bg-cream-100 text-forest-900" : "bg-forest-900 text-white"}`}>
-                Sold Out
-              </span>
-            )}
-            {product.stockStatus === "low_stock" && (
-              <span className="absolute top-3 right-3 font-mono text-[10px] tracking-wider uppercase bg-clay-500 text-white px-2 py-1 rounded-sm">
-                Only {product.stockCount} left
-              </span>
-            )}
-          </div>
-          <div className="mt-4 flex items-start justify-between">
-            <div>
-              <div className={`flex items-center gap-2 text-xs mb-1 ${theme.textMuted}`}>
-                {product.stockStatus === "out_of_stock" ? (
-                  <span className={theme.textSecondary}>SOLD OUT</span>
-                ) : (
-                  product.isNewArrival && <span className={theme.accentText}>NEW</span>
-                )}
-              </div>
-              <h3 className={`font-serif text-lg transition-colors ${theme.textPrimary} group-hover:${theme.accent.replace("text-", "")}`}>
-                {product.name}
-              </h3>
-              <p className={`font-mono text-sm mt-1 ${theme.textSecondary}`}>
-                {formatPrice(product.price)}
-              </p>
-            </div>
-            <button 
-              className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${theme.border} ${theme.textSecondary} hover:${theme.bgSecondary} hover:${theme.borderHover}`}
-              onClick={(e) => e.preventDefault()}
-              aria-label={`Add ${product.name} to cart`}
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-        </Link>
-      ))}
-    </div>
-  )
-}
-
-// Build use cases list from nav config
-const useCasesList = shopByNeedCategories.map((cat) => {
-  const slug = cat.href.replace("/shop-by-need/", "")
-  const descriptions: Record<string, string> = {
-    "low-light-survivors": "Thrive where the sun doesn't shine",
-    "balcony-rooftop": "Wind and heat warriors for outdoor spaces",
-    "air-purifying": "Breathe better with NASA-approved greens",
-    "pet-safe": "Non-toxic for curious cats and dogs",
-    "beginner-proof": "Hard to kill, easy to love",
-    "statement-plants": "Big, bold, and conversation-starting"
-  }
-  return {
-    key: slug,
-    title: cat.label,
-    description: descriptions[slug] || "Curated for real homes",
-  }
-})
 
 // Component with cursor-reactive parallax effect on the Monstera image
 // Disabled on touch devices and when prefers-reduced-motion is set
@@ -441,163 +393,19 @@ export default function HomeContent({ products }: { products: Product[] }) {
         </div>
       </section>
 
-      {/* Section 003 - Atmosphere Picker */}
-      <section className={`py-24 lg:py-32 transition-colors duration-500 ${moodThemes[selectedMood as Mood].bg}`}>
-        <div className="container mx-auto px-6 lg:px-12">
-          <FadeIn>
-            <div className="mb-16">
-              <span className={`font-mono text-xs ${moodThemes[selectedMood as Mood].textMuted}`}>003</span>
-              <span className={`mx-3 ${moodThemes[selectedMood as Mood].textSecondary}`}>/</span>
-              <span className={`font-mono text-xs tracking-widest ${moodThemes[selectedMood as Mood].textMuted}`}>THE COLLECTION</span>
-            </div>
-          </FadeIn>
-          <FadeIn delay={0.1}>
-            <h2 className="font-serif leading-[0.9] tracking-tight mb-16">
-              <AnimatedHeading
-                lines={["Pick your", "atmosphere."]}
-                className={`text-[clamp(2.5rem,8vw,5.5rem)] ${moodThemes[selectedMood as Mood].textPrimary}`}
-              />
-            </h2>
-          </FadeIn>
-          <FadeIn delay={0.2}>
-            <p className={`text-sm mb-8 ${moodThemes[selectedMood as Mood].textSecondary}`}>Not every plant belongs in every room.</p>
-          </FadeIn>
-          <FadeIn delay={0.3}>
-            <div className="flex items-center gap-3 mb-12 flex-wrap">
-              <span className={`font-mono text-xs uppercase mr-4 ${moodThemes[selectedMood as Mood].textMuted}`}>My room feels</span>
-              {["soft","bright","moody"].map((m) => {
-                const theme = moodThemes[m as Mood]
-                const isSelected = selectedMood === m
-                const currentTheme = moodThemes[selectedMood as Mood]
-                return (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      setSelectedMood(m)
-                      // ponytail: Scroll products into view on mood change for UX
-                      const grid = document.getElementById('mood-products-grid')
-                      if (grid) {
-                        grid.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                      }
-                    }}
-                    className={`px-5 py-2 rounded-full text-xs font-medium tracking-wide border transition-all duration-300 ${isSelected ? theme.buttonActive : `${theme.buttonInactive} ${!isSelected ? currentTheme.accent : theme.buttonInactiveText} hover:${theme.borderHover}`}`}
-                  >
-                    {m.toUpperCase()}
-                  </button>
-                )
-              })}
-            </div>
-          </FadeIn>
-          <FadeIn delay={0.4}>
-            <div id="mood-products-grid">
-              <MoodPlantsGrid products={products} mood={selectedMood as Mood} theme={moodThemes[selectedMood as Mood]} />
-            </div>
-          </FadeIn>
-        </div>
-      </section>
+      {/* Section 003 - Atmosphere Picker (lazy-loaded) */}
+      <AtmospherePicker products={products} />
 
-      {/* Section 004 - Shop by Need */}
-      <section className="py-24 lg:py-32 bg-[#FAF7F2]">
-        <div className="container mx-auto px-6 lg:px-12">
-          <FadeIn>
-            <div className="mb-16">
-              <span className="font-mono text-xs text-forest-500">004</span>
-              <span className="mx-3 text-forest-300">/</span>
-              <span className="font-mono text-xs tracking-widest text-forest-600">SHOP BY NEED</span>
-            </div>
-          </FadeIn>
-          <FadeIn delay={0.1}>
-            <h2 className="font-serif text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A] leading-[0.95] tracking-tight mb-16">
-              <AnimatedHeading lines={["Find your kind of green."]} />
-            </h2>
-          </FadeIn>
-          <FadeIn delay={0.2}>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {useCasesList.map((uc) => (
-                <Link key={uc.key} href={`/shop-by-need/${uc.key}`} className="group p-8 bg-[#E8F5A8] border border-forest-200/50 hover:border-[#D4F542] hover:bg-[#D4F542] transition-colors relative overflow-hidden">
-                  <span className="text-[#E85A3C] text-2xl absolute top-6 right-6">*</span>
-                  <h3 className="font-serif text-2xl mb-2">{uc.title}</h3>
-                  <p className="font-mono text-[10px] tracking-widest text-forest-500 uppercase">{uc.description}</p>
-                </Link>
-              ))}
-            </div>
-          </FadeIn>
-        </div>
-      </section>
+      {/* Section 004 - Shop by Need (lazy-loaded) */}
+      <ShopByNeedSection />
 
 
-      {/* Section 005 - Our Story */}
-      <section className="py-24 lg:py-32 bg-[#FAF7F2] border-t border-forest-200/50">
-        <div className="container mx-auto px-6 lg:px-12">
-          <FadeIn>
-            <div className="mb-16">
-              <span className="font-mono text-xs text-forest-500">005</span>
-              <span className="mx-3 text-forest-300">/</span>
-              <span className="font-mono text-xs tracking-widest text-forest-600">OUR STORY</span>
-            </div>
-          </FadeIn>
-          <div className="grid lg:grid-cols-2 gap-16">
-            <FadeIn delay={0.1}>
-              <h2 className="font-serif leading-[0.95] tracking-tight">
-                <AnimatedHeading
-                  lines={["We killed a lot of", "plants", "so you do not have to."]}
-                  className="text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A] whitespace-nowrap"
-                />
-              </h2>
-            </FadeIn>
-            <FadeIn delay={0.2}>
-              <div className="lg:pt-16">
-                <p className="text-forest-600 text-lg mb-8 max-w-sm">We stock only what we know thrives in Karachi heat, dust, and occasional neglect.</p>
-                <Link href="/our-story" className="inline-flex items-center gap-3 font-mono text-xs tracking-widest uppercase border-b border-forest-300 pb-2 hover:text-[#E85A3C] hover:border-[#E85A3C] transition-colors group">
-                  Read Our Story
-                  <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </div>
-            </FadeIn>
-          </div>
-        </div>
-      </section>
+      {/* Section 005 - Our Story (lazy-loaded) */}
+      <OurStorySection />
 
 
-      {/* Section 006 - Events */}
-      <section className="py-16 lg:py-20 bg-[#D4F542]">
-        <div className="container mx-auto px-6 lg:px-12">
-          <div className="grid lg:grid-cols-2 gap-16">
-            <FadeIn>
-              <div>
-                <span className="font-mono text-xs text-[#1A1A1A]/60">006</span>
-                <span className="mx-2 text-[#1A1A1A]/30">/</span>
-                <span className="font-mono text-xs tracking-widest text-[#1A1A1A]/60">IN THE GREENHOUSE</span>
-                <h2 className="font-serif text-[clamp(2.5rem,6vw,5rem)] text-[#1A1A1A] leading-[0.9] tracking-tight mt-8">
-                  <AnimatedHeading lines={["Get your", "hands dirty."]} className="text-[clamp(2.5rem,6vw,5rem)]" />
-                </h2>
-                <p className="text-[#1A1A1A]/70 mt-6 max-w-xs">Workshops, plant walks, and small rituals for curious people.</p>
-              </div>
-            </FadeIn>
-            <FadeIn delay={0.1}>
-              <div className="space-y-8">
-                {mockEvents.slice(0, 2).map((event) => (
-                  <Link key={event.id} href={`/events/${event.slug}`} className="block border-b border-[#1A1A1A]/20 pb-8 group hover:opacity-80 transition-opacity">
-                    <span className="font-mono text-xs text-[#E85A3C]">{event.price === 0 ? "FREE" : `PKR ${event.price}`}</span>
-                    <h3 className="font-serif text-xl mt-2 text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors">{event.title}</h3>
-                    <p className="font-mono text-[10px] text-[#1A1A1A]/60 tracking-widest mt-2 uppercase">{event.location}</p>
-                  </Link>
-                ))}
-              </div>
-            </FadeIn>
-          </div>
-        </div>
-      </section>
-
-      {/* Section 006 CTA */}
-      <section className="py-12 bg-[#D4F542]">
-        <div className="container mx-auto px-6 lg:px-12">
-          <Link href="/events" className="flex items-center justify-between border-t border-[#1A1A1A]/20 pt-8 group">
-            <span className="font-mono text-xs tracking-widest text-[#1A1A1A]">VIEW ALL EVENTS</span>
-            <ArrowRight className="w-4 h-4 text-[#1A1A1A] group-hover:translate-x-2 transition-transform" />
-          </Link>
-        </div>
-      </section>
+      {/* Section 006 - Events (lazy-loaded) */}
+      <EventsSection />
 
     </div>
   )

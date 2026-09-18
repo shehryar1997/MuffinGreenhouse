@@ -70,6 +70,13 @@ Do not regenerate the full map unless explicitly asked to.
 ### /components
 `components/light-filter-teaser.tsx` — Light level filter section — LightFilterTeaser — @/types, @/components/ui/*, @/data/* [LARGE]
 `components/cart/cart-drawer.tsx` — Cart sidebar drawer — CartDrawer — @/components/providers/cart-provider, @/components/ui/* [LARGE]
+`components/home/home-content.tsx` — Homepage content with lazy-loaded sections — HomeContent, FadeIn, KineticHeading, ParallaxMonstera — next/dynamic, @/hooks/*, @/components/home/* [LARGE]
+`components/home/sections/atmosphere-picker.tsx` — Mood-based plant picker (lazy-loaded) — AtmospherePicker — @/components/home/shared/*, @/lib/mood-utils
+`components/home/sections/shop-by-need-section.tsx` — Shop by need grid (lazy-loaded) — ShopByNeedSection — @/components/home/shared/*, @/config/nav.config
+`components/home/sections/our-story-section.tsx` — Our story section (lazy-loaded) — OurStorySection — @/components/home/shared/*
+`components/home/sections/events-section.tsx` — Events preview section (lazy-loaded) — EventsSection — @/components/home/shared/*, @/lib/data/events
+`components/home/shared/animations.tsx` — Shared animation components for homepage — FadeIn, KineticHeading, KineticLine, LiftText, AnimatedHeading — framer-motion, @/hooks/use-reduced-motion
+`components/home/shared/mood-plants-grid.tsx` — Mood-filtered plant grid component — MoodPlantsGrid — @/types, @/lib/mood-utils
 `components/layout/footer.tsx` — Site footer — Footer — @/config/nav.config
 `components/layout/header.tsx` — Site header with navigation — Header, ShopMegaMenu — @/config/nav.config, @/components/providers/* [LARGE]
 `components/layout/shop-mega-menu.tsx` — Shop dropdown mega menu — ShopMegaMenu — @/config/nav.config [LARGE]

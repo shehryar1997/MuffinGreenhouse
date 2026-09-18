@@ -42,6 +42,67 @@ export async function getAllProducts(): Promise<Product[]> {
   return (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct))
 }
 
+// ============================================================================
+// Paginated Product Fetching (shop/all + category grids)
+// ============================================================================
+// Used by the grid pages instead of getAllProducts/getProductsByCategory so
+// the catalog can grow without ever pulling every row per request. Page size
+// mirrors what the grid pages render per page (see PRODUCTS_PER_PAGE).
+
+export const PRODUCTS_PER_PAGE = 24
+
+export interface PaginatedProducts {
+  products: Product[]
+  totalCount: number
+}
+
+export async function getPaginatedProducts(page: number, pageSize: number = PRODUCTS_PER_PAGE): Promise<PaginatedProducts> {
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT, { count: "exact" })
+    .not("published_at", "is", null)
+    .order("sort_order", { foreignTable: "product_images", ascending: true })
+    .order("sort_order", { foreignTable: "product_variants", ascending: true })
+    .range(from, to)
+
+  if (error) {
+    console.error("Error fetching paginated products:", error)
+    return { products: [], totalCount: 0 }
+  }
+
+  return {
+    products: (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct)),
+    totalCount: count ?? 0,
+  }
+}
+
+export async function getPaginatedProductsByCategory(categorySlug: string, page: number, pageSize: number = PRODUCTS_PER_PAGE): Promise<PaginatedProducts> {
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, error, count } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT, { count: "exact" })
+    .eq("category_slug", categorySlug)
+    .not("published_at", "is", null)
+    .order("sort_order", { foreignTable: "product_images", ascending: true })
+    .order("sort_order", { foreignTable: "product_variants", ascending: true })
+    .range(from, to)
+
+  if (error) {
+    console.error("Error fetching paginated products by category:", error)
+    return { products: [], totalCount: 0 }
+  }
+
+  return {
+    products: (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct)),
+    totalCount: count ?? 0,
+  }
+}
+
 export async function getProductBySlug(slug: string): Promise<Product | undefined> {
   const { data, error } = await supabase
     .from("products")

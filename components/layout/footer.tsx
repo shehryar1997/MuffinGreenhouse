@@ -44,7 +44,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-[#1A1A1A]/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="font-mono text-xs text-[#1A1A1A]/60">© 2024 Muffin / greenhouse</p>
+                    <p className="font-mono text-xs text-[#1A1A1A]/60">© {new Date().getFullYear()} Muffin / greenhouse</p>
           <div className="flex gap-6">
             <a href="https://www.instagram.com/muffinsgreenhouse/" target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-[#1A1A1A]/60 hover:text-[#1A1A1A]">Instagram</a>
             <a href={`https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-[#1A1A1A]/60 hover:text-[#1A1A1A]">WhatsApp</a>

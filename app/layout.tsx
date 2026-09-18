@@ -6,6 +6,7 @@ import { SearchProvider } from "@/components/providers/search-provider"
 import { WishlistProvider } from "@/components/providers/wishlist-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { SiteChrome } from "@/components/layout/site-chrome"
+import { generateOrganizationSchema } from "@/lib/structured-data"
 import "./globals.css"
 
 const playfair = Playfair_Display({
@@ -45,10 +46,16 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const organizationSchema = generateOrganizationSchema()
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#F7F3EA" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema, null, 2) }}
+        />
       </head>
       <body className={`${playfair.variable} ${inter.variable} ${jetbrains.variable} font-sans`}>
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:px-4 focus:py-2 focus:rounded focus:shadow-lg focus:text-dark focus:font-medium">

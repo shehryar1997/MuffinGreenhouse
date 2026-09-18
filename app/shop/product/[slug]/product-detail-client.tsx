@@ -10,6 +10,7 @@ import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
 import { toast } from "sonner"
 import { Product } from "@/types"
+import { generateProductSchema } from "@/lib/structured-data"
 
 interface ProductDetailClientProps {
   product: Product
@@ -20,6 +21,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const { addItem, toggleCart } = useCart()
+
+  const productSchema = generateProductSchema(product)
 
   const handleAddToCart = () => {
     addItem(product, selectedVariant || undefined, quantity)
@@ -157,6 +160,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           </div>
         </div>
       </div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema, null, 2) }}
+      />
     </div>
   )
 }
