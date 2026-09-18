@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import Link from "next/link"
@@ -5,6 +6,12 @@ import { User, Heart, ShoppingBag, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createServerClient } from "@/lib/supabase/server-client"
 import { AccountDashboard } from "./account-dashboard"
+
+export const metadata: Metadata = {
+  title: "Your Account - Muffin Greenhouse",
+  description: "View your orders, saved addresses, and wishlist. Manage your Muffin Greenhouse account.",
+  robots: { index: false, follow: false },
+}
 
 // Types for Supabase data
 interface Customer {

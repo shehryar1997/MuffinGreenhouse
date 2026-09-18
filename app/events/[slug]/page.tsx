@@ -1,4 +1,4 @@
-import { Metadata } from "next"
+import type { Metadata } from "next"
 import { getEventBySlug } from "@/lib/data/events"
 import { notFound } from "next/navigation"
 import EventDetailClient from "./event-detail-client"
@@ -6,11 +6,11 @@ import EventDetailClient from "./event-detail-client"
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const event = getEventBySlug(params.slug)
   if (!event) {
-    return { title: "Event Not Found" }
+    return { title: "Event Not Found - Muffin Greenhouse" }
   }
   return {
-    title: `${event.title} | My Grow House`,
-    description: event.description,
+    title: `${event.title} - Muffin Greenhouse`,
+    description: `${event.description} Join us for this plant event in Karachi. Learn plant care, meet fellow enthusiasts, and take home new knowledge. Book now.`,
   }
 }
 

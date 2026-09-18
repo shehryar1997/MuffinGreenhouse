@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getProductsByUseCase, useCases } from "@/lib/data/products"
 import { ProductCard } from "@/components/ui/product-card"
@@ -5,6 +6,45 @@ import { UseCaseHeader } from "./use-case-header"
 
 // ISR: revalidate every 5 minutes + on product updates via /api/revalidate
 export const revalidate = 300
+
+// SEO-optimized metadata for use case pages
+const useCaseMetadata: Record<string, { title: string; description: string }> = {
+  "low-light-survivors": {
+    title: "Low-Light Indoor Plants - Muffin Greenhouse",
+    description: "Snake plants, ZZ plants, and other shade-loving plants that thrive in dim Karachi apartments. Shop online with home delivery.",
+  },
+  "balcony-rooftop": {
+    title: "Balcony & Rooftop Plants - Muffin Greenhouse",
+    description: "Heat and wind-tolerant plants for Karachi balconies and rooftop gardens. Sun-loving succulents and hardy varieties available.",
+  },
+  "air-purifying": {
+    title: "Air-Purifying Plants - Muffin Greenhouse",
+    description: "NASA-recommended air-cleaning plants including Peace Lily, Snake Plant, and Pothos. Clean your Karachi home air naturally.",
+  },
+  "pet-safe": {
+    title: "Pet-Safe Indoor Plants - Muffin Greenhouse",
+    description: "Non-toxic plants safe for cats and dogs including spider plants, calatheas, and ferns. Pet-friendly greenery for Karachi homes.",
+  },
+  "beginner-proof": {
+    title: "Easy Care Plants for Beginners - Muffin Greenhouse",
+    description: "Hard-to-kill plants perfect for new plant parents in Karachi. Low maintenance options with included care guides. Shop online.",
+  },
+  "statement-plants": {
+    title: "Large Statement Plants - Muffin Greenhouse",
+    description: "Bold, dramatic plants that transform your space: Fiddle Leaf Figs, Monsteras, and Bird of Paradise. Delivery in Karachi.",
+  },
+}
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const meta = useCaseMetadata[params.slug] || {
+    title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1).replace(/-/g, " ")} Plants - Muffin Greenhouse`,
+    description: "Shop plants curated for your needs. Delivery available in Karachi.",
+  }
+  return {
+    title: meta.title,
+    description: meta.description,
+  }
+}
 
 interface ShopByNeedPageProps {
   params: { slug: string }

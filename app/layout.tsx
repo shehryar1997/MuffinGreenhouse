@@ -31,13 +31,20 @@ const jetbrains = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Muffin / greenhouse — Good plants. Good energy.",
-  description: "A plant nursery for Karachi, Pakistan. Locally grown plants for real homes, with honest care advice.",
-  keywords: ["plants", "nursery", "Karachi", "succulents", "aroids", "hoya", "monstera"],
+  title: {
+    default: "Buy Plants Online in Karachi - Muffin Greenhouse",
+    template: "%s - Muffin Greenhouse",
+  },
+  description: "Locally grown indoor plants, pots, and plant care supplies for Karachi homes. Delivery across Pakistan with care tips and 30-day plant guarantee.",
+  keywords: ["plants", "nursery", "Karachi", "Pakistan", "succulents", "aroids", "hoya", "monstera", "indoor plants", "snake plant", "online plant shop"],
   openGraph: {
-    title: "Muffin — Good plants. Good energy.",
-    description: "A plant nursery for Karachi, Pakistan. Locally grown plants for real homes.",
+    title: "Muffin Greenhouse - Good Plants. Good Energy.",
+    description: "Locally grown indoor plants for Karachi homes. Delivery across Pakistan.",
     type: "website",
+    locale: "en_PK",
+  },
+  alternates: {
+    canonical: process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com",
   },
 }
 

@@ -139,7 +139,7 @@ function CheckoutPayContent() {
             <Clock className='w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5' />
             <div>
               <h3 className='font-medium text-amber-900 mb-1'>24-Hour Payment Window</h3>
-              <p className='text-sm text-amber-800'>Pay the total amount to any of the accounts below and share your payment receipt on WhatsApp within 24 hours. Your order is held for 24 hours — if payment is not confirmed within that window, it will be automatically cancelled.</p>
+              <p className='text-sm text-amber-800'>Pay the total amount to any of the accounts below and share your payment receipt on WhatsApp within 24 hours. Your order is held for 24 hours. If payment is not confirmed within that window, it will be automatically cancelled.</p>
             </div>
           </div>
         </div>
@@ -182,7 +182,7 @@ function CheckoutPayContent() {
         <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
           <p className='text-sm text-forest-600 mb-4'>By clicking Confirm Booking, you agree to complete payment within 24 hours.</p>
           <Button onClick={handleConfirmBooking} disabled={confirming} className='w-full h-12 text-base bg-sprout-600 hover:bg-sprout-700'>
-            {confirming ? <><Loader2 className='w-5 h-5 mr-2 animate-spin' />Confirming...</> : <>Confirm Booking — {formatPrice(paymentDetails.total)}</>}
+            {confirming ? <><Loader2 className='w-5 h-5 mr-2 animate-spin' />Confirming...</> : <>Confirm Booking - {formatPrice(paymentDetails.total)}</>}
           </Button>
         </div>
         <div className='bg-white rounded-xl border border-forest-200 p-6'>

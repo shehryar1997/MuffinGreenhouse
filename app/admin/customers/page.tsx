@@ -80,9 +80,9 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
           <tbody>
             {customerData.map((c) => (
               <tr key={c.id} className="border-t hover:bg-neutral-50">
-                <td className="px-4 py-3 font-medium">{c.name || "—"}</td>
+                <td className="px-4 py-3 font-medium">{c.name || "-"}</td>
                 <td className="px-4 py-3">{c.email}</td>
-                <td className="px-4 py-3">{c.phone || "—"}</td>
+                <td className="px-4 py-3">{c.phone || "-"}</td>
                 <td className="px-4 py-3">
                   {c.email_verified ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

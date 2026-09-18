@@ -1,8 +1,14 @@
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { getPaginatedProducts, PRODUCTS_PER_PAGE } from "@/lib/data/products"
 import { ShopAllClient } from "./shop-all-client"
 
 export const revalidate = 300
+
+export const metadata: Metadata = {
+  title: "All Plants & Supplies - Muffin Greenhouse",
+  description: "Browse our full collection of locally grown indoor plants, pots, fertilizers, and tools. Home delivery available in Karachi and across Pakistan.",
+}
 
 interface ShopAllPageProps {
   searchParams: { page?: string }

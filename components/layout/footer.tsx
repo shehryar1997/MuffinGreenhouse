@@ -39,7 +39,7 @@ export function Footer() {
           <div>
             <h3 className="font-mono text-xs tracking-widest uppercase text-[#1A1A1A]/60 mb-4">Visit</h3>
             <p className="text-[#1A1A1A] text-sm">Lane 5, DHA Phase 6</p>
-            <p className="text-[#1A1A1A]/70 text-sm">Daily 10am — 7pm</p>
+            <p className="text-[#1A1A1A]/70 text-sm">Daily 10am to 7pm</p>
           </div>
         </div>
 

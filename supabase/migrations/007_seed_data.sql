@@ -13,7 +13,7 @@ INSERT INTO mood_tags (slug, name, description, sort_order) VALUES
 INSERT INTO use_case_tags (slug, name, description, icon, sort_order) VALUES
     ('low-light-survivors', 'Low-Light Survivors', 'Thrive where the sun does not shine', 'Cloud', 1),
     ('balcony-rooftop', 'Balcony & Rooftop', 'Wind-tolerant and full-sun lovers for outdoor spaces', 'Sun', 2),
-    ('air-purifying', 'Air-Purifying', 'NASA-approved air cleaners for your home', 'Wind', 3),
+    ('air-purifying', 'Air-Purifying', 'Research-backed air cleaners for your home', 'Wind', 3),
     ('pet-safe', 'Pet-Safe', 'Non-toxic plants safe for cats, dogs, and curious kids', 'Heart', 4),
     ('beginner-proof', 'Beginner-Proof', 'Forgiving plants that bounce back from mistakes', 'Sparkles', 5),
     ('statement-plants', 'Statement Plants', 'Big, bold, conversation-starting specimens', 'Crown', 6);

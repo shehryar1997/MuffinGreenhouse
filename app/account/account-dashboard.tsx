@@ -143,7 +143,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
       .single()
 
     if (error || !data) {
-      toast.error("Couldn't save your profile — please try again.")
+      toast.error("Couldn't save your profile. Please try again.")
       setIsSaving(false)
       return
     }
@@ -203,7 +203,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
         .single()
 
       if (error || !data) {
-        toast.error("Couldn't save that address — please try again.")
+        toast.error("Couldn't save that address. Please try again.")
         setIsSavingAddress(false)
         return
       }
@@ -222,7 +222,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
         .single()
 
       if (error || !data) {
-        toast.error("Couldn't save that address — please try again.")
+        toast.error("Couldn't save that address. Please try again.")
         setIsSavingAddress(false)
         return
       }
@@ -239,10 +239,10 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
     setDeletingAddressId(address.id)
     const supabase = createBrowserClient()
 
-    // Soft delete — addresses can be referenced by past orders, so we never
+    // Soft delete. Addresses can be referenced by past orders, so we never
     // hard-delete them, just hide them from this list. Always clear
     // is_default on the row being deleted itself, regardless of whether a
-    // replacement gets promoted below — otherwise an inactive row can be
+    // replacement gets promoted below. Otherwise an inactive row can be
     // left permanently flagged as default alongside a newly-promoted one.
     const { error } = await supabase
       .from("addresses")
@@ -250,7 +250,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
       .eq("id", address.id)
 
     if (error) {
-      toast.error("Couldn't remove that address — please try again.")
+      toast.error("Couldn't remove that address. Please try again.")
       setDeletingAddressId(null)
       return
     }
@@ -283,7 +283,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
       .eq("is_default", true)
 
     if (unsetError) {
-      toast.error("Couldn't update your default address — please try again.")
+      toast.error("Couldn't update your default address. Please try again.")
       setSettingDefaultId(null)
       return
     }
@@ -294,7 +294,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
       .eq("id", address.id)
 
     if (setError) {
-      toast.error("Couldn't update your default address — please try again.")
+      toast.error("Couldn't update your default address. Please try again.")
       setSettingDefaultId(null)
       return
     }
@@ -314,7 +314,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
       .eq("product_id", productId)
 
     if (error) {
-      toast.error("Couldn't update your wishlist — please try again.")
+      toast.error("Couldn't update your wishlist. Please try again.")
       setRemovingWishlistId(null)
       return
     }

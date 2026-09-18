@@ -68,7 +68,7 @@ export default async function AdminOrdersPage() {
                 <tr key={o.id} className="border-t hover:bg-neutral-50">
                   <td className="px-4 py-3 font-mono text-xs">{o.order_number}</td>
                   <td className="px-4 py-3">
-                    {customer ? (customer.name || customer.email) : "—"}
+                    {customer ? (customer.name || customer.email) : "-"}
                   </td>
                   <td className="px-4 py-3 capitalize">{o.delivery_type}</td>
                   <td className="px-4 py-3">Rs {o.total}</td>
@@ -83,10 +83,10 @@ export default async function AdminOrdersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-neutral-600">
-                    {o.tracking_number ? `${o.courier || "Courier"}: ${o.tracking_number}` : "—"}
+                    {o.tracking_number ? `${o.courier || "Courier"}: ${o.tracking_number}` : "-"}
                   </td>
                   <td className="px-4 py-3 text-neutral-600">
-                    {o.created_at ? new Date(o.created_at).toLocaleDateString() : "—"}
+                    {o.created_at ? new Date(o.created_at).toLocaleDateString() : "-"}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link href={`/admin/orders/${o.id}`} className="text-[#E85D2C] hover:underline">

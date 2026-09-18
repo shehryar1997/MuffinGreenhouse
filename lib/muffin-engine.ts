@@ -50,7 +50,7 @@ export function getMuffinResponse(userText: string): string {
 
   // Low light / survival plants
   if (text.includes("low") || text.includes("dark") || text.includes("survivor")) {
-    return "Snake plants, Pothos, ZZ plants — all thrive in low light. 18+ in stock."
+    return "Snake plants, Pothos, ZZ plants. All thrive in low light. 18+ in stock."
   }
 
   // Pet safety

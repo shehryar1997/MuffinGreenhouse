@@ -54,7 +54,7 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
       return
     }
     if (!result.ok) {
-      toast.error("Couldn't update your wishlist — try again")
+      toast.error("Couldn't update your wishlist. Try again")
       return
     }
     toast(wishlisted ? `Removed ${product.name} from wishlist` : `${product.name} added to wishlist`)

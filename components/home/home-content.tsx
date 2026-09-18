@@ -377,7 +377,7 @@ export default function HomeContent({ products }: { products: Product[] }) {
       <section className="py-16 border-t border-forest-200/50">
         <div className="container mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-3 gap-12">
-            {[{num:"01",title:"Choose your light",desc:"Sun, shade, or somewhere between — tell us how your space lives."},{num:"02",title:"Meet your plant",desc:"Matched from our current rarities, not a generic list."},{num:"03",title:"Keep it alive",desc:"Considered care, from someone who stays with you after."}].map((step,i)=> (
+            {[{num:"01",title:"Choose your light",desc:"Sun, shade, or somewhere in between. Tell us how your space lives."},{num:"02",title:"Meet your plant",desc:"Matched from our current rarities, not a generic list."},{num:"03",title:"Keep it alive",desc:"Considered care, from someone who stays with you after."}].map((step,i)=> (
               <FadeIn key={i} delay={i*0.1}>
                 <div className="border-t border-forest-300 pt-6">
                   <span className="font-mono text-xs text-[#E85A3C]">{step.num}</span>

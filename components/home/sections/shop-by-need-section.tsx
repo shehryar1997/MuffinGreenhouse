@@ -7,7 +7,7 @@ import { shopByNeedCategories } from "@/config/nav.config"
 const descriptions: Record<string, string> = {
   "low-light-survivors": "Thrive where the sun doesn't shine",
   "balcony-rooftop": "Wind and heat warriors for outdoor spaces",
-  "air-purifying": "Breathe better with NASA-approved greens",
+  "air-purifying": "Breathe better with research-backed greens",
   "pet-safe": "Non-toxic for curious cats and dogs",
   "beginner-proof": "Hard to kill, easy to love",
   "statement-plants": "Big, bold, and conversation-starting"

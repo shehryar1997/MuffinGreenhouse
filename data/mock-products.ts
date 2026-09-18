@@ -21,27 +21,27 @@ export const categories: Record<string, Category> = {
 export const categoryMeta: Record<string, { title: string; description: string; tagline: string }> = {
   aroids: {
     title: "Aroids",
-    description: "From Monstera to Philodendron — dramatic foliage plants with stunning leaf shapes.",
+    description: "From Monstera to Philodendron. Dramatic foliage plants with stunning leaf shapes.",
     tagline: "Bold leaves, stunning silhouettes.",
   },
   sansevierias: {
     title: "Sansevierias",
-    description: "Snake plants and relatives — architectural, drought-tolerant, and nearly indestructible.",
+    description: "Snake plants and relatives. Architectural, drought-tolerant, and nearly indestructible.",
     tagline: "Architectural beauty that survives anything.",
   },
   agaves: {
     title: "Agaves",
-    description: "Bold succulents with dramatic spiky leaves — perfect for sunny spots.",
+    description: "Bold succulents with dramatic spiky leaves. Perfect for sunny spots.",
     tagline: "Desert drama for your space.",
   },
   mangaves: {
     title: "Mangaves",
-    description: "Agave hybrids with softer edges and faster growth — the best of both worlds.",
+    description: "Agave hybrids with softer edges and faster growth. The best of both worlds.",
     tagline: "Hybrid vigor, striking forms.",
   },
   hoyas: {
     title: "Hoyas",
-    description: "Wax plants — trailing vines with thick, waxy leaves and star-shaped flowers.",
+    description: "Wax plants. Trailing vines with thick, waxy leaves and star-shaped flowers.",
     tagline: "Trailing stars in bloom.",
   },
   orchids: {
@@ -85,7 +85,7 @@ export const mockEvents: Event[] = [
 export const useCases: Record<string, { title: string; desc: string; icon: string }> = {
   "low-light-survivors": { title: "Low-Light Survivors", desc: "Thrive where the sun doesn't shine", icon: "🌙" },
   "balcony-rooftop": { title: "Balcony & Rooftop", desc: "Wind and heat warriors", icon: "🏠" },
-  "air-purifying": { title: "Air-Purifying", desc: "NASA-approved fresh air", icon: "💨" },
+  "air-purifying": { title: "Air-Purifying", desc: "Research-backed fresh air", icon: "💨" },
   "pet-safe": { title: "Pet-Safe", desc: "Non-toxic for curious cats and dogs", icon: "🐾" },
   "beginner-proof": { title: "Beginner-Proof", desc: "Hard to kill, easy to love", icon: "💚" },
   "statement-plants": { title: "Statement Plants", desc: "Big, bold, and conversation-starting", icon: "✨" },

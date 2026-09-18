@@ -21,7 +21,7 @@ export function MoodPlantsGrid({ products, mood, theme }: MoodPlantsGridProps) {
   if (displayProducts.length === 0) {
     return (
       <div className={`py-16 text-center font-mono text-xs tracking-widest uppercase ${theme.textMuted}`}>
-        No plants matching this mood yet — check back soon.
+        No plants matching this mood yet. Check back soon.
       </div>
     )
   }
