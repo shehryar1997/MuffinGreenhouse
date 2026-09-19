@@ -107,7 +107,7 @@ export function Header() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-12">
         <div className="flex items-center justify-between h-16 lg:h-20 border-b border-border">
           
-          {/* LEFT: Hamburger Menu (mobile only) + Search (desktop) */}
+          {/* LEFT: Logo (desktop) / Hamburger (mobile) */}
           <div className="flex items-center gap-2 lg:gap-4 flex-1 lg:flex-none">
             {/* Hamburger Menu Button - Mobile Only */}
             <button 
@@ -121,18 +121,26 @@ export function Header() {
               <Menu className="w-6 h-6 text-foreground" />
             </button>
 
-            {/* Search - Desktop Only */}
-            <button 
-              onClick={openSearch} 
-              className="hidden lg:flex p-2 hover:bg-muted rounded-full transition-colors"
-              aria-label="Search products"
+            {/* Logo - Desktop Only (Left Side) */}
+            <Link 
+              href="/" 
+              className="hidden lg:flex flex-col items-center gap-0.5 p-2 -m-2"
+              aria-label="Muffin Plants - Home"
             >
-              <Search className="w-5 h-5 text-foreground" />
-            </button>
+              <Image
+                src="/logo-nav.png"
+                alt=""
+                width={37}
+                height={40}
+                className="h-10 w-auto object-contain"
+                priority
+              />
+              <span className="font-serif text-xs text-foreground leading-none">Muffin Plants</span>
+            </Link>
           </div>
 
-          {/* CENTER: Logo (always centered on mobile) */}
-          <div className="flex-1 lg:flex-none flex justify-center">
+          {/* CENTER: Logo (mobile only) */}
+          <div className="flex-1 lg:flex-none flex justify-center lg:hidden">
             <Link 
               href="/" 
               className="flex flex-col items-center gap-0.5 p-2 -m-2"
@@ -143,7 +151,7 @@ export function Header() {
                 alt=""
                 width={37}
                 height={40}
-                className="h-9 w-auto lg:h-10 object-contain"
+                className="h-9 w-auto  object-contain"
                 priority
               />
               <span className="font-serif text-xs text-foreground leading-none hidden sm:block">Muffin Plants</span>
@@ -279,7 +287,7 @@ export function Header() {
               aria-label="My Account"
             >
               <User className="w-5 h-5" />
-              <span className="hidden xl:inline">Account</span>
+              <span className="hidden 2xl:inline">Account</span>
             </Link>
 
             {/* Desktop: Reviews */}
@@ -289,7 +297,7 @@ export function Header() {
               aria-label="Customer Reviews"
             >
               <Star className="w-5 h-5" />
-              <span className="hidden xl:inline">Reviews</span>
+              <span className="hidden 2xl:inline">Reviews</span>
             </Link>
 
             {/* Theme Toggle - Desktop */}
