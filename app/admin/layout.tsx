@@ -1,6 +1,3 @@
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
-import { COOKIE_NAME, isValidSessionCookie } from "@/lib/admin-session"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -8,13 +5,9 @@ export const metadata: Metadata = {
   description: "Muffin Plants Admin Dashboard",
 }
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get(COOKIE_NAME)?.value
-
-  if (!token || !(await isValidSessionCookie(token))) {
-    redirect("/admin/login")
-  }
-
+// Auth is enforced in proxy.ts (page navigations) and lib/admin-auth.ts (server
+// actions). Do not redirect here: this layout also wraps /admin/login, so an
+// unauthenticated redirect to /admin/login would loop forever.
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return children
 }
