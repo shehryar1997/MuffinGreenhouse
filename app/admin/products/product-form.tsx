@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { Camera, Loader2 } from "lucide-react"
+import { findProductsByName, type PrefillProduct } from "./actions"
 
 const inputClass = "w-full border rounded px-3 py-2 text-sm"
 const highlightInputClass = "w-full border-2 border-[#E85D2C] rounded px-3 py-2 text-sm bg-orange-50"
@@ -52,6 +54,46 @@ type ExistingProduct = {
   variants?: { name: string; sku: string; price: number; stock_count: number }[]
 }
 
+// Fields copied from an existing product when prefilling by name. sku and slug
+// are intentionally absent (both UNIQUE in the DB); image_url is never touched.
+const PREFILL_VALUE_FIELDS = [
+  "category_name",
+  "description",
+  "short_description",
+  "price",
+  "compare_at_price",
+  "stock_count",
+  "low_stock_threshold",
+  "difficulty",
+  "light_requirement",
+  "water_requirement",
+  "size",
+  "meta_title",
+  "meta_description",
+  "light",
+  "water",
+  "humidity",
+  "temperature",
+  "soil",
+  "fertilizer",
+  "toxicity",
+  "light_summary",
+  "water_summary",
+  "pet_safe_note",
+  "box_height_cm",
+  "box_width_cm",
+  "box_breadth_cm",
+  "weight_kg",
+] as const
+const PREFILL_CHECK_FIELDS = ["is_new_arrival", "is_pet_safe"] as const
+const PREFILL_TAG_FIELDS = ["use_case_tags", "mood_tags"] as const
+
+type ImageRowState = { id: string; url: string; alt_text: string }
+let imageRowSeq = 0
+const newImageRow = (url = "", alt_text = ""): ImageRowState => ({ id: `img-${++imageRowSeq}`, url, alt_text })
+
+type PrefillNote = { source: string; sku: string; filled: number; kept: string[] }
+
 export function ProductForm({
   lookups,
   product,
@@ -61,18 +103,120 @@ export function ProductForm({
   product?: ExistingProduct
   action: (formData: FormData) => void
 }) {
-  const [images, setImages] = useState(product?.images?.length ? product.images : [{ url: "", alt_text: "" }])
+  const [images, setImages] = useState<ImageRowState[]>(() =>
+    product?.images?.length ? product.images.map((i) => newImageRow(i.url, i.alt_text)) : [newImageRow()]
+  )
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set())
   const [variants, setVariants] = useState(product?.variants ?? [])
   const [categoryName, setCategoryName] = useState(product?.category_name ?? "")
   const isOtherEquipment = categoryName === "Other Equipment"
 
+  // --- Autofill from an existing product by name (new products only) ---
+  const formRef = useRef<HTMLFormElement>(null)
+  // Names of fields the user has edited. Programmatic writes don't fire change
+  // events, so this only ever contains real user edits -- prefill never touches them.
+  const touched = useRef<Set<string>>(new Set())
+  const lastLookup = useRef("")
+  const lookupSeq = useRef(0)
+  const [lookupBusy, setLookupBusy] = useState(false)
+  const [lookupError, setLookupError] = useState<string | null>(null)
+  const [candidates, setCandidates] = useState<PrefillProduct[] | null>(null)
+  const [prefillNote, setPrefillNote] = useState<PrefillNote | null>(null)
+
+  function applyPrefill(src: PrefillProduct) {
+    const form = formRef.current
+    if (!form) return
+    let filled = 0
+    const kept: string[] = []
+
+    for (const name of PREFILL_VALUE_FIELDS) {
+      if (touched.current.has(name)) {
+        kept.push(name)
+        continue
+      }
+      const el = form.elements.namedItem(name)
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement)) continue
+      const v = src[name]
+      el.value = v == null ? "" : String(v)
+      if (name === "category_name") setCategoryName(el.value)
+      filled++
+    }
+    for (const name of PREFILL_CHECK_FIELDS) {
+      if (touched.current.has(name)) {
+        kept.push(name)
+        continue
+      }
+      const el = form.querySelector<HTMLInputElement>(`input[name="${name}"]`)
+      if (!el) continue
+      el.checked = !!src[name]
+      filled++
+    }
+    for (const name of PREFILL_TAG_FIELDS) {
+      if (touched.current.has(name)) {
+        kept.push(name)
+        continue
+      }
+      const selected = new Set(src[name] ?? [])
+      form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]`).forEach((box) => {
+        box.checked = selected.has(box.value)
+      })
+      filled++
+    }
+
+    setCandidates(null)
+    setPrefillNote({ source: src.name, sku: src.sku, filled, kept })
+  }
+
+  async function handleNameBlur(e: React.FocusEvent<HTMLInputElement>) {
+    if (product) return // editing an existing product: never prefill
+    const raw = e.currentTarget.value
+    const key = raw.trim().replace(/\s+/g, " ").toLowerCase()
+    if (!key || key === lastLookup.current) return
+    lastLookup.current = key
+    const seq = ++lookupSeq.current
+    setLookupBusy(true)
+    setLookupError(null)
+    setCandidates(null)
+    setPrefillNote(null)
+    try {
+      const { matches, error } = await findProductsByName(raw)
+      if (seq !== lookupSeq.current) return // a newer lookup superseded this one
+      if (error) throw new Error(error)
+      if (matches.length === 1) applyPrefill(matches[0])
+      else if (matches.length > 1) setCandidates(matches)
+    } catch (err) {
+      if (seq !== lookupSeq.current) return
+      lastLookup.current = "" // allow retrying the same name
+      setLookupError(err instanceof Error ? err.message : "Unknown error")
+    } finally {
+      if (seq === lookupSeq.current) setLookupBusy(false)
+    }
+  }
+
+  function setRowUploading(id: string, busy: boolean) {
+    setUploadingIds((prev) => {
+      const next = new Set(prev)
+      if (busy) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
   return (
-    <form action={action} className="space-y-8 bg-white rounded-lg border p-6">
+    <form
+      ref={formRef}
+      action={action}
+      onChange={(e) => {
+        const name = (e.target as HTMLInputElement).name
+        if (name) touched.current.add(name)
+      }}
+      className="space-y-8 bg-white rounded-lg border p-6"
+    >
       <section className="space-y-4">
         <h2 className="font-semibold text-lg border-b pb-2">Basics</h2>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Product Name">
-            <input name="name" defaultValue={product?.name} required className={inputClass} />
+            <input name="name" defaultValue={product?.name} required onBlur={handleNameBlur} className={inputClass} />
           </Field>
           <Field label="SKU">
             <input name="sku" defaultValue={product?.sku} required className={inputClass} />
@@ -97,6 +241,53 @@ export function ProductForm({
             </select>
           </Field>
         </div>
+        {lookupBusy && <p className="text-xs text-neutral-500">Checking existing products…</p>}
+        {lookupError && (
+          <p role="alert" className="text-xs text-red-600">
+            Couldn&apos;t check existing products: {lookupError}
+          </p>
+        )}
+        {candidates && (
+          <div className="border rounded p-3 bg-orange-50 text-sm space-y-2">
+            <p className="font-medium">
+              {candidates.length} existing products share this name. Copy details from one? (SKU, slug and image are never copied.)
+            </p>
+            <ul className="space-y-1">
+              {candidates.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => applyPrefill(c)}
+                    className="w-full text-left border rounded bg-white px-3 py-2 hover:border-[#E85D2C]"
+                  >
+                    <span className="font-medium">{c.sku}</span>
+                    <span className="text-neutral-600">
+                      {" "}
+                      · {c.category_name ?? "no category"} · size {c.size ?? "?"} · PKR {c.price} · stock {c.stock_count ?? 0}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button type="button" onClick={() => setCandidates(null)} className="text-xs text-neutral-600 underline">
+              None — start blank
+            </button>
+          </div>
+        )}
+        {prefillNote && (
+          <div className="border rounded p-3 bg-green-50 text-sm flex items-start justify-between gap-3">
+            <p>
+              Filled {prefillNote.filled} fields from existing product “{prefillNote.source}” ({prefillNote.sku}). All are editable.
+              {prefillNote.kept.length > 0 && (
+                <> Kept what you had already edited: {prefillNote.kept.map((k) => k.replace(/_/g, " ")).join(", ")}.</>
+              )}{" "}
+              <strong>SKU and slug were not copied</strong> — both must be unique, so set new ones.
+            </p>
+            <button type="button" onClick={() => setPrefillNote(null)} className="text-xs text-neutral-600 underline shrink-0">
+              Dismiss
+            </button>
+          </div>
+        )}
         <Field label="Short Description">
           <input name="short_description" defaultValue={product?.short_description ?? ""} className={inputClass} />
         </Field>
@@ -264,22 +455,22 @@ export function ProductForm({
       <section className="space-y-4">
         <h2 className="font-semibold text-lg border-b pb-2">Images</h2>
         <p className="text-xs text-neutral-500">
-          Upload to your Cloudflare R2 bucket first, then paste the resulting URL here. First row is the primary photo.
+          Use the camera button to take or choose a photo (converted to AVIF and stored in Cloudflare R2), or paste an image URL
+          yourself. First row is the primary photo.
         </p>
-        {images.map((img, i) => (
-          <div key={i} className="flex gap-3 items-start">
-            <input name="image_url" defaultValue={img.url} placeholder="https://pub-....r2.dev/..." className={`${inputClass} flex-1`} />
-            <input name="image_alt" defaultValue={img.alt_text} placeholder="Alt text" className={`${inputClass} flex-1`} />
-            <button
-              type="button"
-              onClick={() => setImages(images.filter((_, idx) => idx !== i))}
-              className="text-red-600 text-sm px-2 py-2 shrink-0"
-            >
-              Remove
-            </button>
-          </div>
+        {images.map((img) => (
+          <ImageRow
+            key={img.id}
+            initialUrl={img.url}
+            initialAlt={img.alt_text}
+            onUploadingChange={(busy) => setRowUploading(img.id, busy)}
+            onRemove={() => {
+              setRowUploading(img.id, false)
+              setImages((rows) => rows.filter((r) => r.id !== img.id))
+            }}
+          />
         ))}
-        <button type="button" onClick={() => setImages([...images, { url: "", alt_text: "" }])} className="text-sm text-[#E85D2C]">
+        <button type="button" onClick={() => setImages((rows) => [...rows, newImageRow()])} className="text-sm text-[#E85D2C]">
           + Add image
         </button>
       </section>
@@ -311,8 +502,12 @@ export function ProductForm({
       </section>
 
       <div className="pt-4 border-t flex justify-end">
-        <button type="submit" className="bg-[#E85D2C] text-white rounded px-6 py-3 font-medium">
-          {product ? "Save changes" : "Create product"}
+        <button
+          type="submit"
+          disabled={uploadingIds.size > 0}
+          className="bg-[#E85D2C] text-white rounded px-6 py-3 font-medium disabled:opacity-50"
+        >
+          {uploadingIds.size > 0 ? "Uploading image…" : product ? "Save changes" : "Create product"}
         </button>
       </div>
     </form>
@@ -334,5 +529,122 @@ function Checkbox({ name, label, defaultChecked }: { name: string; label: string
       <input type="checkbox" name={name} defaultChecked={defaultChecked} />
       {label}
     </label>
+  )
+}
+
+const MAX_EDGE_PX = 2000
+// Vercel rejects request bodies over ~4.5MB, and phone photos are often bigger,
+// so shrink in the browser first. The server still converts to AVIF.
+const SKIP_DOWNSCALE_BYTES = 3.5 * 1024 * 1024
+
+async function downscaleForUpload(file: File): Promise<Blob> {
+  try {
+    const bitmap = await createImageBitmap(file) // honours EXIF orientation
+    const scale = Math.min(1, MAX_EDGE_PX / Math.max(bitmap.width, bitmap.height))
+    if (scale === 1 && file.size <= SKIP_DOWNSCALE_BYTES) {
+      bitmap.close()
+      return file
+    }
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.round(bitmap.width * scale)
+    canvas.height = Math.round(bitmap.height * scale)
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9))
+    return blob ?? file
+  } catch {
+    // Browser can't decode it (e.g. HEIC outside Safari) -- let the server try.
+    return file
+  }
+}
+
+function ImageRow({
+  initialUrl,
+  initialAlt,
+  onUploadingChange,
+  onRemove,
+}: {
+  initialUrl: string
+  initialAlt: string
+  onUploadingChange: (busy: boolean) => void
+  onRemove: () => void
+}) {
+  // image_url stays a plain editable text input: pasting a URL by hand works
+  // exactly as before; the camera button just fills it in.
+  const [url, setUrl] = useState(initialUrl)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = "" // allow re-selecting the same file
+    if (!file) return
+    setUploading(true)
+    onUploadingChange(true)
+    setError(null)
+    try {
+      const body = await downscaleForUpload(file)
+      const fd = new FormData()
+      fd.append("file", body, file.name)
+      const res = await fetch("/api/admin/upload-image", { method: "POST", body: fd })
+      const data: { url?: string; error?: string } | null = await res.json().catch(() => null)
+      if (!res.ok || !data?.url) {
+        if (res.status === 401) throw new Error("Your admin session has expired. Log in again, then retry.")
+        if (res.status === 413) throw new Error("That image is too large to upload. Try a smaller photo.")
+        throw new Error(data?.error ?? `Upload failed (HTTP ${res.status}).`)
+      }
+      setUrl(data.url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.")
+    } finally {
+      setUploading(false)
+      onUploadingChange(false)
+    }
+  }
+
+  const showPreview = /^https?:\/\//i.test(url) && brokenUrl !== url
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-3 items-start">
+        <input
+          name="image_url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://images.muffinplants.com/..."
+          className={`${inputClass} flex-1`}
+        />
+        <label
+          className={`shrink-0 inline-flex items-center gap-1.5 border rounded px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-[#E85D2C] ${
+            uploading ? "opacity-60 cursor-wait" : "cursor-pointer hover:border-[#E85D2C]"
+          }`}
+        >
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          {uploading ? "Uploading…" : "Camera"}
+          {/* No name attribute: the file itself must not be submitted with the form. */}
+          <input type="file" accept="image/*" capture="environment" disabled={uploading} onChange={handleFile} className="sr-only" />
+        </label>
+        <input name="image_alt" defaultValue={initialAlt} placeholder="Alt text" className={`${inputClass} flex-1`} />
+        <button type="button" onClick={onRemove} className="text-red-600 text-sm px-2 py-2 shrink-0">
+          Remove
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="text-xs text-red-600">
+          {error}
+        </p>
+      )}
+      {showPreview && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={url}
+          alt="Preview"
+          onError={() => setBrokenUrl(url)}
+          className="h-20 w-20 object-cover rounded border bg-neutral-50"
+        />
+      )}
+      {/^https?:\/\//i.test(url) && brokenUrl === url && <p className="text-xs text-neutral-500">Preview unavailable for this URL.</p>}
+    </div>
   )
 }

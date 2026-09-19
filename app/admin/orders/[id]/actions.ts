@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { sendOrderConfirmedEmail } from "@/lib/email/send-order-confirmed"
 import { sendOrderShippedEmail } from "@/lib/email/send-order-shipped"
 
@@ -37,6 +38,7 @@ async function getOrderForEmail(orderId: string): Promise<OrderForEmail | null> 
 }
 
 export async function markPaid(orderId: string) {
+  await requireAdmin()
   const { error } = await supabaseAdmin
     .from("orders")
     .update({ payment_status: "paid", status: "confirmed", confirmed_at: new Date().toISOString() })
@@ -79,6 +81,9 @@ export interface MarkShippedResult {
 // signal, so this returns a plain result object instead and only redirects
 // on success, same as the account login action does.
 export async function markShipped(orderId: string, trackingNumber: string): Promise<MarkShippedResult> {
+  if (!(await isAdminRequest())) {
+    return { success: false, error: "Your admin session has expired. Log in again." }
+  }
   const trimmedTrackingNumber = trackingNumber.trim()
   if (!trimmedTrackingNumber) {
     return { success: false, error: "Tracking number is required" }
@@ -123,6 +128,7 @@ export async function markShipped(orderId: string, trackingNumber: string): Prom
 }
 
 export async function markDelivered(orderId: string) {
+  await requireAdmin()
   const { error } = await supabaseAdmin
     .from("orders")
     .update({ status: "delivered", delivered_at: new Date().toISOString() })
@@ -132,6 +138,7 @@ export async function markDelivered(orderId: string) {
 }
 
 export async function cancelOrder(orderId: string) {
+  await requireAdmin()
   const { error } = await supabaseAdmin
     .from("orders")
     .update({ status: "cancelled", cancelled_at: new Date().toISOString() })

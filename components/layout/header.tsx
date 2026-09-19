@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, ShoppingBag, Menu, X, User, Star, Sparkles, ChevronRight } from "lucide-react"
+import { Search, ShoppingBag, Menu, X, User, Star, Sparkles, ChevronRight, ArrowLeft } from "lucide-react"
 import { mainNav, shopMegaMenuSections, shopByNeedCategories } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
@@ -290,15 +290,14 @@ export function Header() {
               <span className="hidden 2xl:inline">Account</span>
             </Link>
 
-            {/* Desktop: Reviews */}
-            <Link 
-              href="/reviews" 
-              className="hidden lg:flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors p-2 rounded-full hover:bg-muted"
-              aria-label="Customer Reviews"
+            {/* Desktop: Search */}
+            <button 
+              onClick={openSearch} 
+              className="hidden lg:flex p-2 hover:bg-muted rounded-full transition-colors"
+              aria-label="Search products"
             >
-              <Star className="w-5 h-5" />
-              <span className="hidden 2xl:inline">Reviews</span>
-            </Link>
+              <Search className="w-5 h-5 text-foreground" />
+            </button>
 
             {/* Theme Toggle - Desktop */}
             <div className="hidden lg:block">

@@ -14,6 +14,7 @@ const nextConfig = {
       { protocol: 'https', hostname: 'ik.imagekit.io' },
       { protocol: 'https', hostname: 'images.pexels.com' },
       { protocol: 'https', hostname: 'pub-81f46d28c378411d9acc02aef58b2bee.r2.dev' },
+      { protocol: 'https', hostname: 'images.muffinplants.com' },
     ],
     formats: ['image/webp', 'image/avif'], // ponytail: Optimized image formats
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -56,7 +57,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; img-src 'self' data: https://images.unsplash.com https://res.cloudinary.com https://ik.imagekit.io https://images.pexels.com https://pub-81f46d28c378411d9acc02aef58b2bee.r2.dev; ${scriptSrc} style-src 'self' 'unsafe-inline'; font-src 'self'; ${connectSrc} frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;`,
+            value: `default-src 'self'; img-src 'self' data: https://images.unsplash.com https://res.cloudinary.com https://ik.imagekit.io https://images.pexels.com https://pub-81f46d28c378411d9acc02aef58b2bee.r2.dev https://images.muffinplants.com; ${scriptSrc} style-src 'self' 'unsafe-inline'; font-src 'self'; ${connectSrc} frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;`,
           },
           {
             key: 'X-Frame-Options',

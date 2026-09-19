@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { requireAdmin } from "@/lib/admin-auth"
 
 // Force fresh data on every load — a dynamic route param alone doesn't
 // reliably opt this page out of caching, and this page needs to reflect
@@ -41,6 +42,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
 
   async function updateCustomer(formData: FormData) {
     "use server"
+    await requireAdmin()
 
     const name = formData.get("name") as string
     const phone = formData.get("phone") as string

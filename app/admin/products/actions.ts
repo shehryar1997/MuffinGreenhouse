@@ -1,10 +1,113 @@
 "use server"
 
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 
+// Fields copied when prefilling a new product from an existing one. Deliberately
+// excludes id, sku and slug (sku/slug are UNIQUE), image data (kept as-is in the
+// form), variants (their SKUs are unique too), and published/featured flags.
+const PREFILL_COLUMNS = [
+  "id",
+  "sku",
+  "name",
+  "category_name",
+  "description",
+  "short_description",
+  "price",
+  "compare_at_price",
+  "stock_count",
+  "low_stock_threshold",
+  "difficulty",
+  "light_requirement",
+  "water_requirement",
+  "size",
+  "is_new_arrival",
+  "is_pet_safe",
+  "meta_title",
+  "meta_description",
+  "light",
+  "water",
+  "humidity",
+  "temperature",
+  "soil",
+  "fertilizer",
+  "toxicity",
+  "light_summary",
+  "water_summary",
+  "pet_safe_note",
+  "box_height_cm",
+  "box_width_cm",
+  "box_breadth_cm",
+  "weight_kg",
+  "use_case_tags",
+  "mood_tags",
+].join(", ")
+
+export type PrefillProduct = {
+  id: string
+  sku: string
+  name: string
+  category_name: string | null
+  description: string
+  short_description: string | null
+  price: number
+  compare_at_price: number | null
+  stock_count: number | null
+  low_stock_threshold: number | null
+  difficulty: string | null
+  light_requirement: string
+  water_requirement: string | null
+  size: string | null
+  is_new_arrival: boolean | null
+  is_pet_safe: boolean | null
+  meta_title: string | null
+  meta_description: string | null
+  light: string | null
+  water: string | null
+  humidity: string | null
+  temperature: string | null
+  soil: string | null
+  fertilizer: string | null
+  toxicity: string | null
+  light_summary: string | null
+  water_summary: string | null
+  pet_safe_note: string | null
+  box_height_cm: number | null
+  box_width_cm: number | null
+  box_breadth_cm: number | null
+  weight_kg: number | null
+  use_case_tags: string[]
+  mood_tags: string[]
+}
+
+const normalizeName = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase()
+
+// Case-insensitive, whitespace-normalised exact-name lookup used by the
+// "autofill from existing product" convenience on the new-product form.
+export async function findProductsByName(name: string): Promise<{ matches: PrefillProduct[]; error?: string }> {
+  if (!(await isAdminRequest())) {
+    return { matches: [], error: "Your admin session has expired. Log in again." }
+  }
+  const wanted = normalizeName(name ?? "")
+  if (!wanted) return { matches: [] }
+
+  // Escape LIKE wildcards so names containing % or _ match literally.
+  const escaped = wanted.replace(/[\\%_]/g, (c) => `\\${c}`)
+  const { data, error } = await supabaseAdmin
+    .from("products")
+    .select(PREFILL_COLUMNS)
+    .ilike("name", `%${escaped}%`)
+    .limit(50)
+  if (error) return { matches: [], error: error.message }
+
+  const matches = ((data ?? []) as unknown as PrefillProduct[]).filter((p) => normalizeName(p.name) === wanted)
+  return { matches }
+}
+
 export async function getFormLookups() {
+  await requireAdmin()
   const [{ data: categories }, { data: useCaseTags }, { data: moodTags }] = await Promise.all([
     supabaseAdmin.from("categories").select("name").order("name"),
     supabaseAdmin.from("use_case_tags").select("name").order("name"),
@@ -66,6 +169,7 @@ function parseProductFields(formData: FormData) {
 }
 
 export async function createProduct(formData: FormData) {
+  await requireAdmin()
   const fields = parseProductFields(formData)
   const { data, error } = await supabaseAdmin.from("products").insert(fields).select("id").single()
 
@@ -80,6 +184,7 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function updateProduct(productId: string, formData: FormData) {
+  await requireAdmin()
   const fields = parseProductFields(formData)
   const { error } = await supabaseAdmin.from("products").update(fields).eq("id", productId)
 
@@ -94,6 +199,7 @@ export async function updateProduct(productId: string, formData: FormData) {
 }
 
 export async function deleteProduct(productId: string) {
+  await requireAdmin()
   const { error } = await supabaseAdmin.from("products").delete().eq("id", productId)
   if (error) {
     throw new Error(error.message)
