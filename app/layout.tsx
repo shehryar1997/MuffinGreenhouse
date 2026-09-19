@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Playfair_Display, Inter, JetBrains_Mono } from "next/font/google"
+import { GoogleAnalytics } from "@next/third-parties/google"
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { CartProvider } from "@/components/providers/cart-provider"
 import { SearchProvider } from "@/components/providers/search-provider"
@@ -78,6 +79,7 @@ export default function RootLayout({
             </CartProvider>
           </SearchProvider>
         </ThemeProvider>
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ""} />
       </body>
     </html>
   )

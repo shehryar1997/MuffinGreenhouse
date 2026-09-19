@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { trackPurchase } from '@/lib/analytics'
 import { formatPrice } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CheckCircle, Loader2, MessageCircle, Clock, AlertCircle, Copy, Check } from 'lucide-react'
@@ -86,6 +87,19 @@ function CheckoutPayContent() {
     try {
       const res = await fetch('/api/checkout-confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...paymentDetails }) })
       if (!res.ok) { const err = await res.json().catch(() => ({ error: 'Unknown' })); throw new Error(err.error || 'Failed') }
+      
+      // Fire GA4 purchase event after successful booking
+      trackPurchase({
+        transaction_id: paymentDetails.orderNumber,
+        value: paymentDetails.total,
+        currency: 'PKR',
+        items: paymentDetails.items.map((item) => ({
+          item_name: item.productName,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      })
+      
       setConfirmed(true); toast.success('Booking confirmed!')
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Failed') } finally { setConfirming(false) }
   }

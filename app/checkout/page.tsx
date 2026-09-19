@@ -9,6 +9,7 @@ import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
 import { toast } from "sonner"
 import { redirect, useRouter } from "next/navigation"
+import { trackBeginCheckout } from "@/lib/analytics"
 import { Package, Truck, Check, AlertCircle, Loader2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
 import Link from "next/link"
@@ -85,6 +86,21 @@ export default function CheckoutPage() {
 
   const subtotal = cart.subtotal
   const total = useMemo(() => deliveryType === "pickup" ? subtotal : subtotal + deliveryFee, [subtotal, deliveryFee, deliveryType])
+
+  // Fire GA4 begin_checkout event when cart is loaded
+  useEffect(() => {
+    if (itemCount > 0) {
+      trackBeginCheckout({
+        value: cart.subtotal,
+        currency: "PKR",
+        items: cart.items.map((item) => ({
+          item_name: item.product.name,
+          quantity: item.quantity,
+          price: item.variant?.price ?? item.product.price,
+        })),
+      })
+    }
+  }, [itemCount])
 
   const validateEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase())
   const validatePhone = (phone: string): boolean => phone.replace(/\D/g, "").length >= 10
