@@ -1,8 +1,21 @@
 // Single source of truth for the delivery fee. Used by the checkout page (to
 // show the customer a price) and by /api/checkout-submit (to charge one) -- the
 // server never trusts a fee sent by the browser.
+//
+// Two independent parts, added together for a mixed cart:
+//  * Plants: unchanged logic -- flat Karachi rate, otherwise a courier weight tier.
+//  * Tools & Equipment (Fertilizer, Other Equipment, Pots, Planting Media): a flat
+//    rate per kg of the actual product weight x quantity, in every city.
+
+import { isNonPlantCategorySlug } from "./product-categories"
 
 export const KARACHI_DELIVERY_FEE = 400
+
+/** PKR per kg for Tools & Equipment: e.g. 5 x 1kg gravel = 1 x 5 x 120 = 600. */
+export const EQUIPMENT_FEE_PER_KG = 120
+
+/** Weight assumed for an equipment item whose weight was never recorded (legacy rows). */
+const EQUIPMENT_FALLBACK_WEIGHT_KG = 1
 
 export interface DeliveryFeeDimensions {
   categorySlug: string | null
@@ -54,12 +67,33 @@ export function chargeableWeightKg(items: DeliveryFeeItem[]): number {
   return totalWeight
 }
 
+export function isEquipmentItem(item: DeliveryFeeItem): boolean {
+  return isNonPlantCategorySlug(item.dim?.categorySlug)
+}
+
+/** Delivery fee for the Tools & Equipment lines of a cart: 120 PKR x kg x quantity. */
+export function equipmentDeliveryFee(items: DeliveryFeeItem[]): number {
+  const totalKg = items.reduce((sum, { dim, quantity }) => {
+    const unitKg = dim?.weightKg && dim.weightKg > 0 ? dim.weightKg : EQUIPMENT_FALLBACK_WEIGHT_KG
+    return sum + unitKg * quantity
+  }, 0)
+  return Math.round(totalKg * EQUIPMENT_FEE_PER_KG)
+}
+
+/** Delivery fee for the plant lines of a cart (the original logic, unchanged). */
+export function plantDeliveryFee(city: string | null | undefined, plantItems: DeliveryFeeItem[]): number {
+  if (plantItems.length === 0) return 0
+  if (city === "Karachi") return KARACHI_DELIVERY_FEE
+  return shippingFeeForWeight(chargeableWeightKg(plantItems))
+}
+
 export function calculateDeliveryFee(params: {
   deliveryType: "delivery" | "pickup"
   city: string | null | undefined
   items: DeliveryFeeItem[]
 }): number {
   if (params.deliveryType === "pickup") return 0
-  if (params.city === "Karachi") return KARACHI_DELIVERY_FEE
-  return shippingFeeForWeight(chargeableWeightKg(params.items))
+  const equipmentItems = params.items.filter(isEquipmentItem)
+  const plantItems = params.items.filter((item) => !isEquipmentItem(item))
+  return plantDeliveryFee(params.city, plantItems) + equipmentDeliveryFee(equipmentItems)
 }

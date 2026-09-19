@@ -12,6 +12,7 @@
 // ============================================================================
 
 import { Resend } from "resend"
+import { emailSignOff } from "./common"
 
 const FROM_EMAIL = "Muffin Plants <support@muffinplants.com>"
 
@@ -36,7 +37,7 @@ export async function sendOtpEmail(toEmail: string, code: string): Promise<void>
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: [toEmail],
-    subject: "Your Muffin Greenhouse verification code",
+    subject: "Your Muffin Plants verification code",
     text: `Hi there,
 
 Your verification code is: ${code}
@@ -45,7 +46,7 @@ This code will expire in 5 minutes.
 
 If you didn't request this verification code, you can safely ignore this email.
 
-— The Muffin Greenhouse Team`,
+${emailSignOff()}`,
   })
 
   if (error) {

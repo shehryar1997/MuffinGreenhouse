@@ -15,14 +15,22 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     supabaseAdmin
       .from("products")
       .select(
-        "*, images:product_images(url, alt_text), variants:product_variants(name, sku, price, stock_count)"
+        "*, images:product_images(url, alt_text, sort_order), variants:product_variants(id, name, sku, price, stock_count, sort_order, is_active)"
       )
       .eq("id", id)
+      .order("sort_order", { referencedTable: "product_images", ascending: true })
+      .order("sort_order", { referencedTable: "product_variants", ascending: true })
       .maybeSingle(),
   ])
 
   if (!product) {
     notFound()
+  }
+
+  // Retired variants (removed from a product that already had orders) stay hidden here.
+  const visibleProduct = {
+    ...product,
+    variants: ((product.variants ?? []) as Array<{ is_active: boolean | null }>).filter((v) => v.is_active !== false),
   }
 
   const updateWithId = updateProduct.bind(null, id)
@@ -34,7 +42,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         <h1 className="text-2xl font-serif">Edit {product.name}</h1>
         <DeleteProductButton productName={product.name} action={deleteWithId} />
       </div>
-      <ProductForm lookups={lookups} product={product} action={updateWithId} />
+      <ProductForm lookups={lookups} product={visibleProduct} action={updateWithId} />
     </div>
   )
 }

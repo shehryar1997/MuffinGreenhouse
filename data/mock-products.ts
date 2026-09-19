@@ -9,6 +9,7 @@ export const categories: Record<string, Category> = {
   mangaves: { id: "cat-4", slug: "mangaves", name: "Mangaves", sortOrder: 4, isActive: true },
   hoyas: { id: "cat-5", slug: "hoyas", name: "Hoyas", sortOrder: 5, isActive: true },
   orchids: { id: "cat-6", slug: "orchids", name: "Orchids", sortOrder: 6, isActive: true },
+  "cacti-succulents": { id: "cat-7", slug: "cacti-succulents", name: "Cacti & Succulents", sortOrder: 7, isActive: true },
   all: { id: "cat-0", slug: "all", name: "All Plants", sortOrder: 0, isActive: true },
   // Tools & Equipment
   "planting-media": { id: "cat-10", slug: "planting-media", name: "Planting Media", sortOrder: 10, isActive: true },
@@ -48,6 +49,11 @@ export const categoryMeta: Record<string, { title: string; description: string; 
     title: "Orchids",
     description: "Exquisite blooms that bring tropical elegance to any room.",
     tagline: "Elegance in every petal.",
+  },
+  "cacti-succulents": {
+    title: "Cacti & Succulents",
+    description: "Sun-loving cacti and succulents that store their own water. Compact, sculptural and easy to care for.",
+    tagline: "Tough, tiny, and full of character.",
   },
   "planting-media": {
     title: "Planting Media",

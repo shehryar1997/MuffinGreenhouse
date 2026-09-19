@@ -110,6 +110,7 @@ async function getProductRoutes(): Promise<MetadataRoute.Sitemap> {
     .from("products")
     .select("slug, updated_at")
     .not("slug", "is", null)
+    .not("published_at", "is", null)
 
   if (error) {
     console.error("Error fetching products for sitemap:", error.message)
@@ -121,6 +122,25 @@ async function getProductRoutes(): Promise<MetadataRoute.Sitemap> {
     lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
     changeFrequency: "weekly",
     priority: 0.8,
+  }))
+}
+
+async function getCategoryRoutes(): Promise<MetadataRoute.Sitemap> {
+  const { data: categories, error } = await supabaseAdmin
+    .from("categories")
+    .select("slug, updated_at")
+    .eq("is_active", true)
+
+  if (error) {
+    console.error("Error fetching categories for sitemap:", error.message)
+    return []
+  }
+
+  return (categories || []).map((category) => ({
+    url: `${siteUrl}/shop/${category.slug}`,
+    lastModified: category.updated_at ? new Date(category.updated_at) : new Date(),
+    changeFrequency: "weekly",
+    priority: 0.7,
   }))
 }
 
@@ -164,11 +184,12 @@ async function getEventRoutes(): Promise<MetadataRoute.Sitemap> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [productRoutes, journalRoutes, eventRoutes] = await Promise.all([
+  const [productRoutes, categoryRoutes, journalRoutes, eventRoutes] = await Promise.all([
     getProductRoutes(),
+    getCategoryRoutes(),
     getJournalRoutes(),
     getEventRoutes(),
   ])
 
-  return [...staticRoutes, ...productRoutes, ...journalRoutes, ...eventRoutes]
+  return [...staticRoutes, ...categoryRoutes, ...productRoutes, ...journalRoutes, ...eventRoutes]
 }

@@ -3,6 +3,7 @@ import { Product } from "@/types"
 import { supabase } from "@/supabase/client"
 import { mapSupabaseProductToProduct } from "./adapters"
 import { SupabaseProduct } from "@/supabase/client"
+import { isPlantProduct } from "@/lib/product-categories"
 
 // Re-export static category/use-case display config (not product data)
 export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
@@ -19,7 +20,7 @@ export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
 const PRODUCT_SELECT = `
   *,
   images:product_images(id, url, alt_text, sort_order, is_primary),
-  variants:product_variants(id, sku, name, price, stock_status, stock_count, is_default)
+  variants:product_variants(id, sku, name, price, stock_status, stock_count, is_default, is_active)
 `
 
 // ============================================================================
@@ -172,7 +173,8 @@ export async function getProductsByUseCase(useCaseSlug: string): Promise<Product
     return []
   }
 
-  return (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct))
+  // Use-case tags are a plant concept; never list Tools & Equipment here.
+  return (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct)).filter(isPlantProduct)
 }
 
 export async function getWeeklySoldCount(): Promise<number> {

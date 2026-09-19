@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { sendOrderConfirmedEmail } from "@/lib/email/send-order-confirmed"
 import { sendOrderShippedEmail } from "@/lib/email/send-order-shipped"
+import { sendOrderCancelledEmail } from "@/lib/email/send-order-cancelled"
 
 const DEFAULT_COURIER = "Leopards Courier"
 
@@ -139,10 +140,41 @@ export async function markDelivered(orderId: string) {
 
 export async function cancelOrder(orderId: string) {
   await requireAdmin()
+
+  const { data: before, error: readError } = await supabaseAdmin
+    .from("orders")
+    .select("status, payment_status, order_number, customer:customers(email, name)")
+    .eq("id", orderId)
+    .maybeSingle()
+  if (readError) throw new Error(readError.message)
+  if (!before) throw new Error("Order not found")
+  // Already cancelled (double click / stale page): don't cancel or e-mail twice.
+  if (before.status === "cancelled") redirect(`/admin/orders/${orderId}`)
+
   const { error } = await supabaseAdmin
     .from("orders")
     .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
     .eq("id", orderId)
   if (error) throw new Error(error.message)
+
+  // Tell the customer: "cancelled because the invoice wasn't cleared -- book again any time".
+  // Skipped for orders that were already PAID: that wording would be wrong for a customer who
+  // paid, so a cancelled paid order needs a personal message from you instead.
+  if (before.payment_status !== "paid") {
+    try {
+      const customer = before.customer as unknown as { email: string; name: string | null } | null
+      if (customer?.email) {
+        await sendOrderCancelledEmail({
+          toEmail: customer.email,
+          customerName: customer.name,
+          orderNumber: before.order_number,
+        })
+      }
+    } catch (emailError) {
+      // The order is already cancelled; don't fail the action because the e-mail didn't go out.
+      console.error("Failed to send order cancelled email:", emailError)
+    }
+  }
+
   redirect(`/admin/orders/${orderId}`)
 }

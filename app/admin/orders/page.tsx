@@ -40,10 +40,39 @@ export default async function AdminOrdersPage() {
 
   const orderData = orders ?? []
 
+  // ---- Summary ----
+  // "Shipped" counts every order that has gone out (shipped or since delivered).
+  const shippedCount = orderData.filter((o) => o.status === "shipped" || o.status === "delivered").length
+  const cancelledCount = orderData.filter((o) => o.status === "cancelled").length
+  // Revenue = money actually received: paid orders that were not cancelled afterwards.
+  const revenue = orderData
+    .filter((o) => o.payment_status === "paid" && o.status !== "cancelled")
+    .reduce((sum, o) => sum + Number(o.total ?? 0), 0)
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-serif">Orders ({orderData.length})</h1>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs uppercase tracking-wide text-neutral-500">Total orders</p>
+          <p className="text-2xl font-semibold mt-1">{orderData.length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs uppercase tracking-wide text-neutral-500">Orders shipped</p>
+          <p className="text-2xl font-semibold mt-1 text-blue-700">{shippedCount}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs uppercase tracking-wide text-neutral-500">Orders cancelled</p>
+          <p className="text-2xl font-semibold mt-1 text-red-600">{cancelledCount}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs uppercase tracking-wide text-neutral-500">Revenue</p>
+          <p className="text-2xl font-semibold mt-1 text-green-700">Rs {revenue.toLocaleString("en-PK")}</p>
+          <p className="text-[11px] text-neutral-500 mt-1">Paid orders, excluding cancelled</p>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg border overflow-hidden overflow-x-auto">

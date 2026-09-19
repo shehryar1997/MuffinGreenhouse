@@ -1,5 +1,6 @@
 ﻿// Order confirmed/payment received email sender
 import { Resend } from 'resend'
+import { emailSignOff } from './common'
 
 const FROM_EMAIL = 'Muffin Plants <support@muffinplants.com>'
 
@@ -52,7 +53,7 @@ Delivery Type: ${data.deliveryType === 'delivery' ? 'Delivery' : 'Pickup'}
 
 We will send you a tracking update once your order ships.
 
-— The Muffin Greenhouse Team`,
+${emailSignOff()}`,
   })
 
   if (error) {

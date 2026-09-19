@@ -8,24 +8,8 @@ import { formatPrice } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CheckCircle, Loader2, MessageCircle, Clock, AlertCircle, Copy, Check } from 'lucide-react'
 import { siteConfig } from '@/config/nav.config'
+import { PAYMENT_ACCOUNTS } from '@/config/payment-accounts'
 import { PAYMENT_SUMMARY_KEY_PREFIX, type PaymentSummary } from '@/lib/checkout-summary'
-
-const PAYMENT_ACCOUNTS = {
-  hbl: { title: 'HBL Bank Transfer', icon: '🏦', details: [
-    { label: 'Bank', value: 'Habib Bank Limited (HBL)' },
-    { label: 'Account Title', value: 'Muffin Greenhouse' },
-    { label: 'Account Number', value: '03239533242' },
-    { label: 'IBAN', value: 'PK93HABB0028807901590001' },
-  ]},
-  jazzcash: { title: 'JazzCash', icon: '📱', details: [
-    { label: 'Account Title', value: 'Muhammad Shehryar' },
-    { label: 'Mobile Number', value: '03202065474' },
-  ]},
-  easypaisa: { title: 'Easypaisa', icon: '💳', details: [
-    { label: 'Account Title', value: 'Muhammad Shehryar' },
-    { label: 'Mobile Number', value: '03202065474' },
-  ]},
-}
 
 export default function CheckoutPayPage() {
   return (

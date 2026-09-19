@@ -82,6 +82,8 @@ export interface SupabaseProductVariant {
   stock_status: string
   stock_count: number
   is_default: boolean
+  // false = retired: removed in the admin panel but kept because past orders reference it
+  is_active?: boolean
 }
 
 export interface SearchFilters {

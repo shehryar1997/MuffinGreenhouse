@@ -1,5 +1,7 @@
 import { Product, Category, ProductImage, ProductVariant, CareInfo } from '@/types'
 import { SupabaseProduct, SupabaseProductImage, SupabaseProductVariant } from '@/supabase/client'
+import { isNonPlantCategorySlug, isNonPlantCategoryName } from '@/lib/product-categories'
+import { isWithinNewArrivalWindow } from '@/lib/new-arrival'
 
 /**
  * Maps a SupabaseProduct (snake_case) to the app's Product type (camelCase)
@@ -7,6 +9,9 @@ import { SupabaseProduct, SupabaseProductImage, SupabaseProductVariant } from '@
  * the products row (no joins) -- mirrors the Airtable Products table 1:1.
  */
 export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
+  // Tools & Equipment (pots, fertilizer, media...) have no use-case / mood tags: the admin form
+  // never saves them, and this also hides any left over from before that rule existed.
+  const isToolOrEquipment = isNonPlantCategorySlug(row.category_slug) || isNonPlantCategoryName(row.category_name)
   return {
     id: row.id,
     name: row.name,
@@ -20,15 +25,17 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     stockCount: row.stock_count,
     images: (row.images ?? []).map(mapSupabaseImage),
     careInfo: mapSupabaseCareInfo(row),
-    variants: (row.variants ?? []).map(mapSupabaseVariant),
-    useCaseTags: row.use_case_tags ?? [],
-    isNewArrival: row.is_new_arrival,
+    // Retired variants (is_active = false) are never offered for sale.
+    variants: (row.variants ?? []).filter((v) => v.is_active !== false).map(mapSupabaseVariant),
+    useCaseTags: isToolOrEquipment ? [] : row.use_case_tags ?? [],
+    // The "New" badge lasts 14 days from publishing, even if the flag hasn't been cleared yet.
+    isNewArrival: !!row.is_new_arrival && isWithinNewArrivalWindow(row.published_at, row.created_at),
     isPetSafe: row.is_pet_safe,
     difficulty: row.difficulty,
     lightRequirement: row.light_requirement,
     waterRequirement: row.water_requirement,
     size: row.size,
-    moodTags: row.mood_tags ?? [],
+    moodTags: isToolOrEquipment ? [] : row.mood_tags ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? row.created_at,
     // Shipping box dimensions

@@ -31,6 +31,10 @@ const categoryMetadata: Record<string, { title: string; description: string }> =
     title: "Orchids for Sale - Muffin Greenhouse",
     description: "Exquisite phalaenopsis and dendrobium orchids for Karachi homes. Tropical elegance with care guidance included. Order online.",
   },
+  "cacti-succulents": {
+    title: "Cacti & Succulents - Muffin Greenhouse",
+    description: "Hardy cacti and succulents for sunny windows, balconies and desks in Karachi. Low-water plants delivered across Pakistan. Shop online.",
+  },
   "planting-media": {
     title: "Potting Soil & Planting Media - Muffin Greenhouse",
     description: "Premium coco coir, perlite, vermiculite, and custom soil mixes for indoor plants. Available for delivery across Karachi and Pakistan.",

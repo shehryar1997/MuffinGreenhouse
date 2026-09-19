@@ -1,9 +1,9 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, useTransition } from "react"
 import { Camera, ImageIcon, Loader2 } from "lucide-react"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
-import { findProductsByName, type PrefillProduct } from "./actions"
+import { findProductsByName, type PrefillProduct, type ProductActionResult } from "./actions"
 
 const inputClass = "w-full border rounded px-3 py-2 text-sm"
 const highlightInputClass = "w-full border-2 border-[#E85D2C] rounded px-3 py-2 text-sm bg-orange-50"
@@ -52,8 +52,22 @@ type ExistingProduct = {
   use_case_tags: string[]
   mood_tags: string[]
   images?: { url: string; alt_text: string }[]
-  variants?: { name: string; sku: string; price: number; stock_count: number }[]
+  variants?: { id?: string; name: string; sku: string; price: number; stock_count: number }[]
 }
+
+// A variant row in the form. `key` is a stable client-side React key (rows can be removed
+// from the middle); `id` is the database id of an existing variant ("" for a new one), so
+// saving updates that variant in place instead of recreating it.
+type VariantRow = { key: number; id: string; name: string; sku: string; price: number; stock_count: number }
+let variantRowSeq = 0
+const newVariantRow = (v?: { id?: string; name: string; sku: string; price: number; stock_count: number }): VariantRow => ({
+  key: ++variantRowSeq,
+  id: v?.id ?? "",
+  name: v?.name ?? "",
+  sku: v?.sku ?? "",
+  price: v?.price ?? 0,
+  stock_count: v?.stock_count ?? 0,
+})
 
 // Fields copied from an existing product when prefilling by name. sku and slug
 // are intentionally absent (both UNIQUE in the DB); image_url is never touched.
@@ -113,17 +127,23 @@ export function ProductForm({
 }: {
   lookups: Lookups
   product?: ExistingProduct
-  action: (formData: FormData) => void
+  action: (formData: FormData) => Promise<ProductActionResult>
 }) {
   const [images, setImages] = useState<ImageRowState[]>(() =>
     product?.images?.length ? product.images.map((i) => newImageRow(i.url, i.alt_text)) : [newImageRow()]
   )
   const [pickNotice, setPickNotice] = useState<string | null>(null)
-  const [variants, setVariants] = useState(product?.variants ?? [])
+  const [variants, setVariants] = useState<VariantRow[]>(() => (product?.variants ?? []).map((v) => newVariantRow(v)))
   const [categoryName, setCategoryName] = useState(product?.category_name ?? "")
-  const isOtherEquipment = categoryName === "Other Equipment"
-  // Tools & Equipment (Fertilizer, Other Equipment, Pots, Planting Media) have no plant care info.
+  // Tools & Equipment (Fertilizer, Other Equipment, Pots, Planting Media) have no plant care
+  // info, size, box dimensions or tags -- and are delivered at 120 PKR per kg, so weight is mandatory.
   const isPlantCategory = !isNonPlantCategoryName(categoryName)
+  const weightRequired = !isPlantCategory
+
+  // Saving is driven from onSubmit (not <form action>) so a validation error from the server
+  // can be shown without React 19 resetting every field the admin just typed.
+  const [isSaving, startSaving] = useTransition()
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // --- Autofill from an existing product by name (new products only) ---
   const formRef = useRef<HTMLFormElement>(null)
@@ -209,6 +229,24 @@ export function ProductForm({
 
   const uploadingCount = images.filter((r) => r.uploading).length
 
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (uploadingCount > 0 || isSaving) return
+    const formData = new FormData(e.currentTarget)
+    setSaveError(null)
+    startSaving(async () => {
+      try {
+        const result = await action(formData)
+        if (result?.error) {
+          setSaveError(result.error)
+          window.scrollTo({ top: 0, behavior: "smooth" })
+        }
+      } catch {
+        setSaveError("Something went wrong while saving. Check your connection and try again.")
+      }
+    })
+  }
+
   function updateRow(id: string, patch: Partial<ImageRowState>) {
     setImages((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
@@ -258,13 +296,18 @@ export function ProductForm({
   return (
     <form
       ref={formRef}
-      action={action}
+      onSubmit={handleSubmit}
       onChange={(e) => {
         const { name } = e.target as unknown as { name?: string }
         if (name) touched.current.add(name)
       }}
       className="space-y-8 bg-white rounded-lg border p-6"
     >
+      {saveError && (
+        <div role="alert" className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-3">
+          {saveError}
+        </div>
+      )}
       <section className="space-y-4">
         <h2 className="font-semibold text-lg border-b pb-2">Basics</h2>
         <div className="grid grid-cols-2 gap-4">
@@ -373,27 +416,43 @@ export function ProductForm({
         </div>
         <p className="text-xs text-neutral-500">Stock status (In Stock / Low Stock / Out of Stock) is derived automatically.</p>
         <div className="grid grid-cols-4 gap-4">
-          <Field label="Box Height (cm)">
-            <input type="number" name="box_height_cm" defaultValue={product?.box_height_cm ?? ""} className={inputClass} />
-          </Field>
-          <Field label="Box Width (cm)">
-            <input type="number" name="box_width_cm" defaultValue={product?.box_width_cm ?? ""} className={inputClass} />
-          </Field>
-          <Field label="Box Breadth (cm)">
-            <input type="number" name="box_breadth_cm" defaultValue={product?.box_breadth_cm ?? ""} className={inputClass} />
-          </Field>
-          <Field label={isOtherEquipment ? "Weight (kg) *" : "Weight (kg)"}>
-            <input type="number" name="weight_kg" defaultValue={product?.weight_kg ?? ""} step="0.01" min="0" className={isOtherEquipment ? highlightInputClass : inputClass} />
+          {/* Box dimensions only apply to plants; hidden (not unmounted) for Tools & Equipment so values survive a category switch. */}
+          <div className={isPlantCategory ? "contents" : "hidden"}>
+            <Field label="Box Height (cm)">
+              <input type="number" name="box_height_cm" defaultValue={product?.box_height_cm ?? ""} className={inputClass} />
+            </Field>
+            <Field label="Box Width (cm)">
+              <input type="number" name="box_width_cm" defaultValue={product?.box_width_cm ?? ""} className={inputClass} />
+            </Field>
+            <Field label="Box Breadth (cm)">
+              <input type="number" name="box_breadth_cm" defaultValue={product?.box_breadth_cm ?? ""} className={inputClass} />
+            </Field>
+          </div>
+          <Field label={weightRequired ? "Weight (kg) *" : "Weight (kg)"}>
+            <input
+              type="number"
+              name="weight_kg"
+              defaultValue={product?.weight_kg ?? ""}
+              step="0.01"
+              min={weightRequired ? "0.01" : "0"}
+              required={weightRequired}
+              className={weightRequired ? highlightInputClass : inputClass}
+            />
           </Field>
         </div>
+        {weightRequired && (
+          <p className="text-xs text-neutral-500">
+            Weight is required for {categoryName}: delivery for these products is charged at 120 PKR per kg (weight × quantity).
+          </p>
+        )}
       </section>
 
       <section className="space-y-4">
         <h2 className="font-semibold text-lg border-b pb-2">{isPlantCategory ? "Plant Attributes" : "Attributes"}</h2>
         {!isPlantCategory && (
           <p className="text-xs text-neutral-500">
-            Care requirements (light, water, humidity, etc.) don&apos;t apply to {categoryName}, so they&apos;re hidden here and won&apos;t
-            appear on the website.
+            Care requirements, size, box dimensions and use-case / mood tags don&apos;t apply to {categoryName}, so they&apos;re hidden
+            here and won&apos;t appear on the website.
           </p>
         )}
         <div className="grid grid-cols-4 gap-4">
@@ -421,17 +480,17 @@ export function ProductForm({
                 <option value="high">High</option>
               </select>
             </Field>
+            <Field label="Size">
+              <select name="size" defaultValue={product?.size ?? "medium"} className={inputClass}>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+              </select>
+            </Field>
           </div>
-          <Field label="Size">
-            <select name="size" defaultValue={product?.size ?? "medium"} className={inputClass}>
-              <option value="small">Small</option>
-              <option value="medium">Medium</option>
-              <option value="large">Large</option>
-            </select>
-          </Field>
         </div>
         <div className="flex gap-6 flex-wrap">
-          <Checkbox name="is_new_arrival" label="New Arrival?" defaultChecked={product?.is_new_arrival} />
+          <Checkbox name="is_new_arrival" label="New Arrival? (the “New” tag is removed automatically 14 days after publishing)" defaultChecked={product?.is_new_arrival} />
           <div className={isPlantCategory ? "contents" : "hidden"}>
             <Checkbox name="is_pet_safe" label="Pet Safe?" defaultChecked={product?.is_pet_safe} />
           </div>
@@ -440,7 +499,7 @@ export function ProductForm({
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className={isPlantCategory ? "space-y-4" : "hidden"}>
         <h2 className="font-semibold text-lg border-b pb-2">Use Case & Mood Tags</h2>
         <div>
           <p className="text-sm font-medium mb-2">Use Case Tags</p>
@@ -543,15 +602,16 @@ export function ProductForm({
 
       <section className="space-y-4">
         <h2 className="font-semibold text-lg border-b pb-2">Variants (optional)</h2>
-        {variants.map((v, i) => (
-          <div key={i} className="flex gap-3 items-start">
+        {variants.map((v) => (
+          <div key={v.key} className="flex gap-3 items-start">
+            <input type="hidden" name="variant_id" value={v.id} />
             <input name="variant_name" defaultValue={v.name} placeholder='e.g. Medium - 8" pot' className={`${inputClass} flex-1`} />
             <input name="variant_sku" defaultValue={v.sku} placeholder="SKU" className={`${inputClass} flex-1`} />
             <input type="number" name="variant_price" defaultValue={v.price} placeholder="Price" className={`${inputClass} w-28`} />
             <input type="number" name="variant_stock" defaultValue={v.stock_count} placeholder="Stock" className={`${inputClass} w-24`} />
             <button
               type="button"
-              onClick={() => setVariants(variants.filter((_, idx) => idx !== i))}
+              onClick={() => setVariants(variants.filter((row) => row.key !== v.key))}
               className="text-red-600 text-sm px-2 py-2 shrink-0"
             >
               Remove
@@ -560,7 +620,7 @@ export function ProductForm({
         ))}
         <button
           type="button"
-          onClick={() => setVariants([...variants, { name: "", sku: "", price: 0, stock_count: 0 }])}
+          onClick={() => setVariants([...variants, newVariantRow()])}
           className="text-sm text-[#E85D2C]"
         >
           + Add variant
@@ -570,14 +630,16 @@ export function ProductForm({
       <div className="pt-4 border-t flex justify-end">
         <button
           type="submit"
-          disabled={uploadingCount > 0}
+          disabled={uploadingCount > 0 || isSaving}
           className="bg-[#E85D2C] text-white rounded px-6 py-3 font-medium disabled:opacity-50"
         >
           {uploadingCount > 0
             ? `Uploading ${uploadingCount} image${uploadingCount > 1 ? "s" : ""}…`
-            : product
-              ? "Save changes"
-              : "Create product"}
+            : isSaving
+              ? "Saving…"
+              : product
+                ? "Save changes"
+                : "Create product"}
         </button>
       </div>
     </form>

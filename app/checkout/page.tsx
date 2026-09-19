@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/utils"
 import { toast } from "sonner"
 import { redirect, useRouter } from "next/navigation"
 import { trackBeginCheckout } from "@/lib/analytics"
-import { calculateDeliveryFee as computeDeliveryFee, KARACHI_DELIVERY_FEE } from "@/lib/delivery-fee"
+import { calculateDeliveryFee as computeDeliveryFee } from "@/lib/delivery-fee"
 import { PAYMENT_SUMMARY_KEY_PREFIX } from "@/lib/checkout-summary"
 import { Package, Truck, Check, AlertCircle, Loader2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
@@ -170,12 +170,6 @@ export default function CheckoutPage() {
   const calculateDeliveryFee = useCallback(async () => {
     if (deliveryType === "pickup") {
       setDeliveryFee(0)
-      setDeliveryFeeError(null)
-      setIsCalculatingDeliveryFee(false)
-      return
-    }
-    if (formData.city === "Karachi") {
-      setDeliveryFee(KARACHI_DELIVERY_FEE)
       setDeliveryFeeError(null)
       setIsCalculatingDeliveryFee(false)
       return

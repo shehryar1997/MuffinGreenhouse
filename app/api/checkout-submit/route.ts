@@ -5,7 +5,7 @@ import * as Sentry from "@sentry/nextjs"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { createServerClient } from "@/lib/supabase/server-client"
-import { sendOrderConfirmationEmail } from "@/lib/email/send-order-confirmation"
+import { sendBookingReceivedEmail } from "@/lib/email/send-booking-received"
 import { pakistanCities } from "@/data/pakistan-cities"
 import { calculateDeliveryFee, type DeliveryFeeDimensions } from "@/lib/delivery-fee"
 import type { PaymentSummary } from "@/lib/checkout-summary"
@@ -317,23 +317,27 @@ export async function POST(request: NextRequest) {
       price: Number(item.unit_price),
     }))
 
-    // Fire-and-forget order confirmation email
-    // ponytail: Non-blocking - email failure shouldn't fail the order
+    // "Order booked -- your plants are on hold for 24 hours, please pay" e-mail, sent as soon as
+    // the order is placed. (The "payment received / order confirmed" e-mail goes out later, when
+    // the order is marked as paid in the admin panel.)
+    // Awaited so it completes before the serverless function is frozen; a failure never fails the order.
     if (customerEmail && orderItems) {
-      sendOrderConfirmationEmail({
-        toEmail: customerEmail,
-        customerName,
-        orderNumber: orderNumber?.toString() ?? orderId,
-        orderId: orderId.toString(),
-        items: summaryItems.map(({ productName, quantity, price }) => ({ productName, quantity, price })),
-        subtotal,
-        deliveryFee,
-        total,
-        deliveryType: body.deliveryType,
-        paymentMethod: body.paymentMethod,
-      }).catch((err) => {
-        console.error("Failed to send order confirmation email:", err)
-      })
+      try {
+        await sendBookingReceivedEmail({
+          toEmail: customerEmail,
+          customerName,
+          orderNumber: orderNumber?.toString() ?? orderId,
+          items: summaryItems.map(({ productName, quantity, price }) => ({ productName, quantity, price })),
+          subtotal,
+          deliveryFee,
+          total,
+          deliveryType: body.deliveryType,
+          paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        })
+      } catch (emailError) {
+        console.error("Failed to send booking email:", emailError)
+        Sentry.captureException(emailError)
+      }
     }
 
     // The payment page gets its details from this object (via sessionStorage),

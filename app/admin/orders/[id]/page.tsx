@@ -3,6 +3,9 @@ import { notFound } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { markPaid, markDelivered, cancelOrder } from "./actions"
 import { MarkShippedDialog } from "./mark-shipped-dialog"
+import { ConfirmSubmitButton } from "../../_components/confirm-submit-button"
+import { whatsAppLink } from "@/lib/whatsapp-link"
+import { paymentAccountsAsText } from "@/config/payment-accounts"
 
 // Force fresh data on every load — same reasoning as the orders list page.
 export const dynamic = "force-dynamic"
@@ -38,6 +41,15 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const markPaidForOrder = markPaid.bind(null, order.id)
   const markDeliveredForOrder = markDelivered.bind(null, order.id)
   const cancelOrderForOrder = cancelOrder.bind(null, order.id)
+
+  // WhatsApp click-to-chat (opens WhatsApp with the message ready; you press send).
+  const customerFirstName = customer?.name?.trim().split(/\s+/)[0]
+  const whatsappPhone = customer?.phone || address?.phone || null
+  const awaitingPayment = order.payment_status !== "paid" && order.status !== "cancelled"
+  const whatsappMessage = awaitingPayment
+    ? `Hi ${customerFirstName ?? "there"}! This is Muffin Plants. Your order ${order.order_number} is booked and your items are on hold for 24 hours. Total: Rs ${order.total}.\n\nPlease send your payment to any one of these accounts within 24 hours and share the receipt here to confirm your booking:\n\n${paymentAccountsAsText()}`
+    : `Hi ${customerFirstName ?? "there"}! This is Muffin Plants, writing about your order ${order.order_number}.`
+  const whatsappHref = whatsAppLink(whatsappPhone, whatsappMessage)
 
   return (
     <div>
@@ -85,9 +97,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               )}
               {order.status !== "cancelled" && order.status !== "delivered" && (
                 <form action={cancelOrderForOrder}>
-                  <button type="submit" className="bg-white border border-red-200 text-red-700 rounded px-4 py-2 text-sm font-medium hover:bg-red-50">
+                  <ConfirmSubmitButton
+                    message={`Cancel order ${order.order_number}?${order.payment_status !== "paid" ? " The customer will be e-mailed that the order was cancelled because the invoice wasn't cleared." : " This order is already paid, so no cancellation e-mail will be sent."}`}
+                    className="bg-white border border-red-200 text-red-700 rounded px-4 py-2 text-sm font-medium hover:bg-red-50"
+                  >
                     Cancel Order
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
               )}
             </div>
@@ -145,6 +160,18 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 <Link href={`/admin/customers/${customer.id}`} className="text-[#E85D2C] hover:underline text-xs">
                   View customer profile
                 </Link>
+                {whatsappHref ? (
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-2 rounded bg-[#25D366] px-3 py-2 text-xs font-medium text-white hover:bg-[#128C7E]"
+                  >
+                    {awaitingPayment ? "WhatsApp payment details" : "Message on WhatsApp"}
+                  </a>
+                ) : (
+                  <p className="mt-3 text-xs text-neutral-500">No phone number on file for WhatsApp.</p>
+                )}
               </div>
             ) : (
               <p className="text-sm text-neutral-500">Guest order — no linked account.</p>

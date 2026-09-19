@@ -2,7 +2,7 @@
 
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
-import { deleteUploadedImages, uploadedKeyFromUrl } from "@/lib/r2"
+import { deleteUnreferencedProductImages } from "@/lib/product-images"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
@@ -127,194 +127,342 @@ export async function getFormLookups() {
 // on it for those categories (see lib/product-categories.ts).
 const NON_PLANT_LIGHT_PLACEHOLDER = "medium"
 
-function parseProductFields(formData: FormData) {
-  const categoryName = formData.get("category_name") as string
-  // Tools & Equipment have no care info. The form hides those fields, but hidden
-  // values still submit (and may linger from a category switch), so enforce it here.
+/** What a create/update/delete action hands back to the form. `undefined` = success (the action redirects). */
+export type ProductActionResult = { error: string } | undefined
+
+type PgError = { code?: string; message: string }
+
+function friendlyDbError(error: PgError): string {
+  if (error.code === "23505") {
+    return "That SKU or slug is already used by another product. Change it and save again."
+  }
+  return error.message
+}
+
+// Blank -> null, otherwise a finite number (anything else is reported by the caller).
+function optionalNumber(formData: FormData, name: string): number | null | "invalid" {
+  const raw = formData.get(name)
+  if (raw === null || String(raw).trim() === "") return null
+  const value = Number(raw)
+  return Number.isFinite(value) ? value : "invalid"
+}
+
+function parseProductFields(
+  formData: FormData,
+  existingPublishedAt: string | null
+): { fields: Record<string, unknown> } | { error: string } {
+  const text = (name: string) => String(formData.get(name) ?? "").trim()
+  const categoryName = text("category_name")
+  // Tools & Equipment have no care info, size, box dimensions or tags. The form hides
+  // those fields, but hidden values still submit (and may linger from a category
+  // switch), so enforce it here.
   const isPlant = !isNonPlantCategoryName(categoryName)
-  const careText = (name: string) => (isPlant ? (formData.get(name) as string) || null : null)
+  const careText = (name: string) => (isPlant ? text(name) || null : null)
+
+  for (const [field, label] of [
+    ["name", "Product name"],
+    ["sku", "SKU"],
+    ["slug", "Slug"],
+    ["description", "Description"],
+    ["category_name", "Category"],
+  ] as const) {
+    if (!text(field)) return { error: `${label} is required.` }
+  }
+
+  const price = Number(formData.get("price"))
+  if (!Number.isFinite(price) || price < 0) return { error: "Price must be a valid number." }
+
+  const compareAt = optionalNumber(formData, "compare_at_price")
+  const weight = optionalNumber(formData, "weight_kg")
+  const boxHeight = optionalNumber(formData, "box_height_cm")
+  const boxWidth = optionalNumber(formData, "box_width_cm")
+  const boxBreadth = optionalNumber(formData, "box_breadth_cm")
+  if ([compareAt, weight, boxHeight, boxWidth, boxBreadth].includes("invalid")) {
+    return { error: "Compare-at price, weight and box dimensions must be valid numbers." }
+  }
+
+  // Delivery for Tools & Equipment is charged per kg (120 PKR/kg), so a product without a
+  // weight would ship for free -- refuse to save one.
+  if (!isPlant && !(typeof weight === "number" && weight > 0)) {
+    return {
+      error: `Weight (kg) is required for ${categoryName}. Delivery for these products is charged by weight (120 PKR per kg), so it must be greater than 0.`,
+    }
+  }
+  if (typeof weight === "number" && weight < 0) return { error: "Weight can't be negative." }
 
   return {
-    sku: formData.get("sku") as string,
-    name: formData.get("name") as string,
-    slug: formData.get("slug") as string,
-    description: formData.get("description") as string,
-    short_description: (formData.get("short_description") as string) || null,
-    // category_id/category_slug auto-resolve from category_name via the
-    // trg_sync_product_category trigger -- we only ever send the name here.
-    category_name: categoryName,
-    price: Number(formData.get("price")),
-    compare_at_price: formData.get("compare_at_price") ? Number(formData.get("compare_at_price")) : null,
-    currency: "PKR",
-    stock_count: Number(formData.get("stock_count") || 0),
-    low_stock_threshold: Number(formData.get("low_stock_threshold") || 10),
-    difficulty: isPlant ? (formData.get("difficulty") as string) : null,
-    light_requirement: isPlant ? (formData.get("light_requirement") as string) : NON_PLANT_LIGHT_PLACEHOLDER,
-    water_requirement: isPlant ? (formData.get("water_requirement") as string) : null,
-    size: formData.get("size") as string,
-    is_new_arrival: formData.get("is_new_arrival") === "on",
-    is_pet_safe: isPlant && formData.get("is_pet_safe") === "on",
-    is_featured: formData.get("is_featured") === "on",
-    published_at: formData.get("published") === "on" ? new Date().toISOString() : null,
-    meta_title: (formData.get("meta_title") as string) || null,
-    meta_description: (formData.get("meta_description") as string) || null,
-    light: careText("light"),
-    water: careText("water"),
-    humidity: careText("humidity"),
-    temperature: careText("temperature"),
-    soil: careText("soil"),
-    fertilizer: careText("fertilizer"),
-    toxicity: careText("toxicity"),
-    light_summary: careText("light_summary"),
-    water_summary: careText("water_summary"),
-    pet_safe_note: careText("pet_safe_note"),
-    // trg_validate_product_tags rejects any value not already in
-    // use_case_tags/mood_tags -- the form only offers valid checkboxes,
-    // so this should always pass, but the DB guard stays as a backstop.
-    use_case_tags: formData.getAll("use_case_tags") as string[],
-    mood_tags: formData.getAll("mood_tags") as string[],
-    // Shipping dimensions (optional, used for shipping cost calculation)
-    box_height_cm: formData.get("box_height_cm") ? Number(formData.get("box_height_cm")) : null,
-    box_width_cm: formData.get("box_width_cm") ? Number(formData.get("box_width_cm")) : null,
-    box_breadth_cm: formData.get("box_breadth_cm") ? Number(formData.get("box_breadth_cm")) : null,
-    weight_kg: formData.get("weight_kg") ? Number(formData.get("weight_kg")) : null,
+    fields: {
+      sku: text("sku"),
+      name: text("name"),
+      slug: text("slug"),
+      description: text("description"),
+      short_description: text("short_description") || null,
+      // category_id/category_slug auto-resolve from category_name via the
+      // trg_sync_product_category trigger -- we only ever send the name here.
+      category_name: categoryName,
+      price,
+      compare_at_price: compareAt,
+      currency: "PKR",
+      stock_count: Number(formData.get("stock_count") || 0),
+      low_stock_threshold: Number(formData.get("low_stock_threshold") || 10),
+      difficulty: isPlant ? text("difficulty") : null,
+      light_requirement: isPlant ? text("light_requirement") : NON_PLANT_LIGHT_PLACEHOLDER,
+      water_requirement: isPlant ? text("water_requirement") : null,
+      size: isPlant ? text("size") || null : null,
+      is_new_arrival: formData.get("is_new_arrival") === "on",
+      is_pet_safe: isPlant && formData.get("is_pet_safe") === "on",
+      is_featured: formData.get("is_featured") === "on",
+      // Keep the original publish date when a published product is simply re-saved --
+      // it's what the "New" badge's 14-day window counts from.
+      published_at: formData.get("published") === "on" ? (existingPublishedAt ?? new Date().toISOString()) : null,
+      meta_title: text("meta_title") || null,
+      meta_description: text("meta_description") || null,
+      light: careText("light"),
+      water: careText("water"),
+      humidity: careText("humidity"),
+      temperature: careText("temperature"),
+      soil: careText("soil"),
+      fertilizer: careText("fertilizer"),
+      toxicity: careText("toxicity"),
+      light_summary: careText("light_summary"),
+      water_summary: careText("water_summary"),
+      pet_safe_note: careText("pet_safe_note"),
+      // trg_validate_product_tags rejects any value not already in
+      // use_case_tags/mood_tags -- the form only offers valid checkboxes,
+      // so this should always pass, but the DB guard stays as a backstop.
+      use_case_tags: isPlant ? (formData.getAll("use_case_tags") as string[]) : [],
+      mood_tags: isPlant ? (formData.getAll("mood_tags") as string[]) : [],
+      // Shipping box dimensions apply to plants only (equipment is charged by weight).
+      box_height_cm: isPlant ? (boxHeight as number | null) : null,
+      box_width_cm: isPlant ? (boxWidth as number | null) : null,
+      box_breadth_cm: isPlant ? (boxBreadth as number | null) : null,
+      weight_kg: weight as number | null,
+    },
   }
 }
 
-export async function createProduct(formData: FormData) {
-  await requireAdmin()
-  const fields = parseProductFields(formData)
-  const { data, error } = await supabaseAdmin.from("products").insert(fields).select("id").single()
+// The storefront is ISR-cached; the DB webhook also revalidates, but doing it here means a
+// save is visible on the site immediately even if that webhook is down.
+function revalidateStorefront() {
+  revalidatePath("/", "layout")
+}
 
-  if (error) {
-    throw new Error(error.message)
+export async function createProduct(formData: FormData): Promise<ProductActionResult> {
+  await requireAdmin()
+  const parsed = parseProductFields(formData, null)
+  if ("error" in parsed) return { error: parsed.error }
+
+  const { data, error } = await supabaseAdmin.from("products").insert(parsed.fields).select("id").single()
+  if (error) return { error: friendlyDbError(error) }
+
+  const syncError = await syncImagesAndVariants(data.id, formData)
+  if (syncError) {
+    // Don't leave a half-created product behind -- the form still holds everything, so the user can retry.
+    await supabaseAdmin.from("products").delete().eq("id", data.id)
+    return { error: syncError }
   }
 
-  await syncImagesAndVariants(data.id, formData)
-
   revalidatePath("/admin/products")
+  revalidateStorefront()
   redirect("/admin/products")
 }
 
-export async function updateProduct(productId: string, formData: FormData) {
+export async function updateProduct(productId: string, formData: FormData): Promise<ProductActionResult> {
   await requireAdmin()
-  const fields = parseProductFields(formData)
-  const { error } = await supabaseAdmin.from("products").update(fields).eq("id", productId)
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  const { data: existing, error: readError } = await supabaseAdmin
+    .from("products")
+    .select("published_at")
+    .eq("id", productId)
+    .maybeSingle()
+  if (readError) return { error: readError.message }
+  if (!existing) return { error: "This product no longer exists. It may have been deleted." }
 
-  await syncImagesAndVariants(productId, formData)
+  const parsed = parseProductFields(formData, (existing.published_at as string | null) ?? null)
+  if ("error" in parsed) return { error: parsed.error }
+
+  // A plain UPDATE: the row (and its id) is edited in place, never re-created.
+  const { error } = await supabaseAdmin.from("products").update(parsed.fields).eq("id", productId)
+  if (error) return { error: friendlyDbError(error) }
+
+  const syncError = await syncImagesAndVariants(productId, formData)
+  if (syncError) return { error: `Your product details were saved, but: ${syncError}` }
 
   revalidatePath("/admin/products")
+  revalidateStorefront()
   redirect("/admin/products")
 }
 
-export async function deleteProduct(productId: string) {
+export async function deleteProduct(productId: string): Promise<ProductActionResult> {
   await requireAdmin()
   const { data: images } = await supabaseAdmin.from("product_images").select("url").eq("product_id", productId)
   const { error } = await supabaseAdmin.from("products").delete().eq("id", productId)
   if (error) {
-    throw new Error(error.message)
+    if (error.code === "23503") {
+      return {
+        error:
+          "This product appears in past orders (or stock records), so it can't be deleted without breaking your order history. Edit it and untick “Published” to hide it from the shop instead.",
+      }
+    }
+    return { error: error.message }
   }
-  // product_images rows cascade-delete with the product; now drop their files.
-  await deleteUnreferencedImages((images ?? []).map((i) => i.url as string))
+  // product_images rows cascade-delete with the product; now drop their files from R2.
+  await deleteUnreferencedProductImages((images ?? []).map((i) => i.url as string))
   revalidatePath("/admin/products")
+  revalidateStorefront()
   redirect("/admin/products")
 }
 
-// Every table/column that can hold an image URL. A file is only deleted from R2
-// once none of these still reference it.
-const IMAGE_URL_COLUMNS = [
-  ["product_images", "url"],
-  ["product_images", "thumbnail_url"],
-  ["categories", "image_url"],
-  ["events", "image_url"],
-  ["journal_posts", "cover_image_url"],
-] as const
-
-// Deletes R2 files that were uploaded via the admin uploader and are no longer
-// referenced anywhere. Best-effort: if a reference check fails we keep the files
-// (an orphan is harmless; deleting an image that's still in use is not).
-async function deleteUnreferencedImages(candidateUrls: string[]) {
-  const urls = Array.from(new Set(candidateUrls.filter((u) => uploadedKeyFromUrl(u))))
-  if (urls.length === 0) return
-
-  const stillUsed = new Set<string>()
-  for (const [table, column] of IMAGE_URL_COLUMNS) {
-    const { data, error } = await supabaseAdmin.from(table).select(column).in(column, urls)
-    if (error) {
-      console.error(`[images] reference check failed on ${table}.${column}; keeping files:`, error.message)
-      return
-    }
-    for (const row of (data ?? []) as unknown as Record<string, string | null>[]) {
-      if (row[column]) stillUsed.add(row[column] as string)
-    }
-  }
-  await deleteUploadedImages(urls.filter((u) => !stillUsed.has(u)))
+type StockStatus = "in_stock" | "low_stock" | "out_of_stock"
+function stockStatusFor(stock: number, threshold: number): StockStatus {
+  if (stock <= 0) return "out_of_stock"
+  return stock <= threshold ? "low_stock" : "in_stock"
 }
 
-// Images and variants are submitted as repeatable rows (same field name,
-// FormData.getAll reads them in order). Variants are wiped and reinserted per
-// save, same pattern the old n8n sync used -- row counts per product are always
-// small. Images insert the new rows first and delete the old ones after, so a
-// failed save can never leave a product with no images.
-async function syncImagesAndVariants(productId: string, formData: FormData) {
+// Images and variants are submitted as repeatable rows (same field name, FormData.getAll
+// reads them in order). Both are SYNCED against what's already stored -- existing rows are
+// updated in place, only genuinely new ones are inserted, only removed ones are deleted --
+// instead of wiping and recreating every row on each save. That keeps row ids stable
+// (carts, orders and wishlists point at variant ids) and avoids needless writes.
+// Returns an error message, or null on success.
+async function syncImagesAndVariants(productId: string, formData: FormData): Promise<string | null> {
+  const imageError = await syncImages(productId, formData)
+  if (imageError) return imageError
+  return syncVariants(productId, formData)
+}
+
+async function syncImages(productId: string, formData: FormData): Promise<string | null> {
   const imageUrls = formData.getAll("image_url") as string[]
   const imageAlts = formData.getAll("image_alt") as string[]
-  // Drop blank rows *before* numbering so the first real image is always primary.
-  const imageRows = imageUrls
-    .map((url, i) => ({ url: url.trim(), alt_text: imageAlts[i] || "" }))
-    .filter((row) => row.url.length > 0)
-    .map((row, i) => ({ ...row, product_id: productId, sort_order: i, is_primary: i === 0 }))
+
+  // Drop blank and duplicate rows *before* numbering so the first real image is always primary.
+  const seen = new Set<string>()
+  const desired: Array<{ url: string; alt_text: string }> = []
+  imageUrls.forEach((raw, i) => {
+    const url = raw.trim()
+    if (!url || seen.has(url)) return
+    seen.add(url)
+    desired.push({ url, alt_text: imageAlts[i] ?? "" })
+  })
 
   const { data: existing, error: readError } = await supabaseAdmin
     .from("product_images")
-    .select("id, url")
+    .select("id, url, alt_text, sort_order, is_primary")
     .eq("product_id", productId)
-  if (readError) throw new Error(`Could not read existing images: ${readError.message}`)
+  if (readError) return `Could not read the existing images: ${readError.message}`
 
-  let insertedIds: string[] = []
-  if (imageRows.length > 0) {
-    const { data: inserted, error: insertError } = await supabaseAdmin.from("product_images").insert(imageRows).select("id")
-    if (insertError) throw new Error(`Saving images failed: ${insertError.message}`)
-    insertedIds = (inserted ?? []).map((r) => r.id as string)
+  const rowByUrl = new Map<string, NonNullable<typeof existing>[number]>()
+  for (const row of existing ?? []) if (!rowByUrl.has(row.url as string)) rowByUrl.set(row.url as string, row)
+
+  const keptIds = new Set<string>()
+  const toInsert: Array<Record<string, unknown>> = []
+  const toUpdate: Array<{ id: string; values: Record<string, unknown> }> = []
+
+  desired.forEach((image, index) => {
+    const row = rowByUrl.get(image.url)
+    const isPrimary = index === 0
+    if (!row) {
+      toInsert.push({ product_id: productId, url: image.url, alt_text: image.alt_text, sort_order: index, is_primary: isPrimary })
+      return
+    }
+    keptIds.add(row.id as string)
+    if (row.sort_order !== index || row.is_primary !== isPrimary || (row.alt_text ?? "") !== image.alt_text) {
+      toUpdate.push({ id: row.id as string, values: { sort_order: index, is_primary: isPrimary, alt_text: image.alt_text } })
+    }
+  })
+
+  // New rows first, removals last: a failure can never leave a product with no images.
+  if (toInsert.length > 0) {
+    const { error } = await supabaseAdmin.from("product_images").insert(toInsert)
+    if (error) return `Saving images failed: ${error.message}`
+  }
+  for (const { id, values } of toUpdate) {
+    const { error } = await supabaseAdmin.from("product_images").update(values).eq("id", id)
+    if (error) return `Saving images failed: ${error.message}`
   }
 
-  const oldIds = (existing ?? []).map((r) => r.id as string)
-  if (oldIds.length > 0) {
-    const { error: deleteError } = await supabaseAdmin.from("product_images").delete().in("id", oldIds)
-    if (deleteError) {
-      // Undo the inserts so a retry doesn't leave every image duplicated.
-      if (insertedIds.length > 0) await supabaseAdmin.from("product_images").delete().in("id", insertedIds)
-      throw new Error(`Saving images failed: ${deleteError.message}`)
+  const removed = (existing ?? []).filter((row) => !keptIds.has(row.id as string))
+  if (removed.length > 0) {
+    const { error } = await supabaseAdmin
+      .from("product_images")
+      .delete()
+      .in("id", removed.map((r) => r.id as string))
+    if (error) return `Removing old images failed: ${error.message}`
+    // Photos that were replaced or removed: delete their files from Cloudflare R2 too
+    // (unless another product/category/etc. still uses the same file).
+    await deleteUnreferencedProductImages(removed.map((r) => r.url as string))
+  }
+  return null
+}
+
+async function syncVariants(productId: string, formData: FormData): Promise<string | null> {
+  const ids = formData.getAll("variant_id") as string[]
+  const names = formData.getAll("variant_name") as string[]
+  const skus = formData.getAll("variant_sku") as string[]
+  const prices = formData.getAll("variant_price") as string[]
+  const stocks = formData.getAll("variant_stock") as string[]
+  const productSku = String(formData.get("sku") ?? "").trim()
+  const threshold = Number(formData.get("low_stock_threshold") || 10)
+
+  const rows = names
+    .map((name, i) => {
+      const stock = Number(stocks[i] || 0)
+      return {
+        id: (ids[i] ?? "").trim(),
+        name: name.trim(),
+        sku: skus[i]?.trim() || `${productSku}-${i + 1}`,
+        price: Number(prices[i] || 0),
+        stock_count: stock,
+        stock_status: stockStatusFor(stock, threshold),
+        sort_order: i,
+        is_default: i === 0,
+        is_active: true,
+      }
+    })
+    .filter((row) => row.name.length > 0)
+    .map((row, i) => ({ ...row, sort_order: i, is_default: i === 0 }))
+
+  if (rows.some((r) => !Number.isFinite(r.price) || r.price < 0 || !Number.isFinite(r.stock_count) || r.stock_count < 0)) {
+    return "Variant prices and stock must be valid, non-negative numbers."
+  }
+  if (new Set(rows.map((r) => r.sku)).size !== rows.length) {
+    return "Two variants have the same SKU. Every variant needs its own unique SKU."
+  }
+
+  const { data: existing, error: readError } = await supabaseAdmin
+    .from("product_variants")
+    .select("id")
+    .eq("product_id", productId)
+  if (readError) return `Could not read the existing variants: ${readError.message}`
+  const existingIds = new Set((existing ?? []).map((v) => v.id as string))
+
+  const keptIds = new Set<string>()
+  for (const { id, ...values } of rows) {
+    if (id && existingIds.has(id)) {
+      keptIds.add(id)
+      const { error } = await supabaseAdmin.from("product_variants").update(values).eq("id", id).eq("product_id", productId)
+      if (error) return `Saving variant “${values.name}” failed: ${friendlyDbError(error)}`
+    } else {
+      const { error } = await supabaseAdmin.from("product_variants").insert({ ...values, product_id: productId })
+      if (error) return `Saving variant “${values.name}” failed: ${friendlyDbError(error)}`
     }
   }
 
-  // Images that were on the product before and aren't anymore (replaced or removed).
-  const kept = new Set(imageRows.map((r) => r.url))
-  await deleteUnreferencedImages((existing ?? []).map((r) => r.url as string).filter((u) => !kept.has(u)))
-
-  const variantNames = formData.getAll("variant_name") as string[]
-  const variantSkus = formData.getAll("variant_sku") as string[]
-  const variantPrices = formData.getAll("variant_price") as string[]
-  const variantStocks = formData.getAll("variant_stock") as string[]
-
-  await supabaseAdmin.from("product_variants").delete().eq("product_id", productId)
-  const variantRows = variantNames
-    .map((name, i) => ({
-      product_id: productId,
-      name: name.trim(),
-      sku: variantSkus[i]?.trim() || `${formData.get("sku")}-${i + 1}`,
-      price: Number(variantPrices[i] || 0),
-      stock_count: Number(variantStocks[i] || 0),
-      sort_order: i,
-      is_default: i === 0,
-      is_active: true,
-    }))
-    .filter((row) => row.name.length > 0)
-  if (variantRows.length > 0) {
-    await supabaseAdmin.from("product_variants").insert(variantRows)
+  // Variants removed in the form. A variant that appears in past orders can't be deleted
+  // (order history points at it), so it is retired instead: hidden from the shop, stock zeroed.
+  for (const id of existingIds) {
+    if (keptIds.has(id)) continue
+    const { error } = await supabaseAdmin.from("product_variants").delete().eq("id", id)
+    if (!error) continue
+    if (error.code === "23503") {
+      const { error: retireError } = await supabaseAdmin
+        .from("product_variants")
+        .update({ is_active: false, stock_count: 0, stock_status: "out_of_stock" })
+        .eq("id", id)
+      if (retireError) return `Removing a variant failed: ${retireError.message}`
+    } else {
+      return `Removing a variant failed: ${error.message}`
+    }
   }
+  return null
 }

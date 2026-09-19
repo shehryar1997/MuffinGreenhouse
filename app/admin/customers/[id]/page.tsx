@@ -2,6 +2,8 @@ import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { requireAdmin } from "@/lib/admin-auth"
+import { DeleteCustomerButton } from "../delete-customer-button"
+import { deleteCustomer } from "../actions"
 
 // Force fresh data on every load — a dynamic route param alone doesn't
 // reliably opt this page out of caching, and this page needs to reflect
@@ -26,7 +28,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   // Fetch customer
   const { data: customer } = await supabaseAdmin
     .from("customers")
-    .select("id, email, phone, name, email_verified, created_at")
+    .select("id, email, phone, name, email_verified, created_at, auth_id")
     .eq("id", id)
     .maybeSingle()
 
@@ -49,6 +51,18 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
     )
     .eq("customer_id", id)
     .order("created_at", { ascending: false })
+
+  // Wishlist: plants/products the customer saved on their account
+  const { data: wishlistRows } = await supabaseAdmin
+    .from("wishlist_items")
+    .select("id, created_at, product:products(name, slug, price, published_at)")
+    .eq("customer_id", id)
+    .order("created_at", { ascending: false })
+  const wishlist = (wishlistRows ?? []) as unknown as Array<{
+    id: string
+    created_at: string | null
+    product: { name: string; slug: string; price: number; published_at: string | null } | null
+  }>
 
   async function updateCustomer(formData: FormData) {
     "use server"
@@ -74,12 +88,20 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-serif">{customer.name || "Unnamed Customer"}</h1>
-        <Link
-          href="/admin/customers"
-          className="text-sm text-neutral-600 hover:text-neutral-900"
-        >
-          ← Back to customers
-        </Link>
+        <div className="flex items-center gap-6">
+          <DeleteCustomerButton
+            email={customer.email}
+            orderCount={orders?.length ?? 0}
+            action={deleteCustomer.bind(null, customer.id)}
+            label="Delete profile"
+          />
+          <Link
+            href="/admin/customers"
+            className="text-sm text-neutral-600 hover:text-neutral-900"
+          >
+            ← Back to customers
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -226,8 +248,63 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
           </div>
         </div>
 
-        {/* Addresses Sidebar */}
-        <div>
+        {/* Sidebar: login info, wishlist, addresses */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-lg font-serif mb-4">Login</h2>
+            <dl className="text-sm space-y-2">
+              <div className="flex justify-between gap-4">
+                <dt className="text-neutral-500">Account</dt>
+                <dd>{customer.auth_id ? "Signed up on the website" : "Guest (no account)"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-neutral-500">Sign-in email</dt>
+                <dd className="break-all text-right">{customer.email}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-neutral-500">Password</dt>
+                <dd className="text-right text-neutral-600">••••••••</dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-xs text-neutral-500">
+              Passwords can&apos;t be viewed: the sign-in system stores only a one-way scrambled version, so nobody — including you and us —
+              can read a customer&apos;s password. To help someone who&apos;s locked out, ask them to use a password reset, or delete the
+              profile so they can sign up again.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg border p-6">
+            <h2 className="text-lg font-serif mb-4">Wishlist ({wishlist.length})</h2>
+            {wishlist.length === 0 ? (
+              <p className="text-neutral-500 text-sm">Nothing saved to their wishlist.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {wishlist.map((item) =>
+                  item.product ? (
+                    <li key={item.id} className="flex items-start justify-between gap-3">
+                      <span>
+                        {item.product.published_at ? (
+                          <Link href={`/shop/product/${item.product.slug}`} className="text-[#E85D2C] hover:underline" target="_blank">
+                            {item.product.name}
+                          </Link>
+                        ) : (
+                          <>
+                            {item.product.name} <span className="text-xs text-neutral-400">(unpublished)</span>
+                          </>
+                        )}
+                      </span>
+                      <span className="shrink-0 text-neutral-500">Rs {item.product.price}</span>
+                    </li>
+                  ) : (
+                    <li key={item.id} className="text-neutral-400">
+                      (product no longer available)
+                    </li>
+                  )
+                )}
+              </ul>
+            )}
+          </div>
+
           <div className="bg-white rounded-lg border p-6">
             <h2 className="text-lg font-serif mb-4">Saved Addresses</h2>
             {addresses?.length === 0 ? (
