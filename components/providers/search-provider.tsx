@@ -16,12 +16,15 @@ interface SearchState {
     primary_image: string | null
     category_name: string
   }>
+  /** Full match count from the search RPC, not just the (max 6) suggestions above. */
+  totalCount: number
 }
 
 interface SearchContextType {
   isOpen: boolean
   query: string
   results: SearchState['results']
+  totalCount: number
   openSearch: () => void
   closeSearch: () => void
   setQuery: (query: string) => void
@@ -35,6 +38,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     isOpen: false,
     query: "",
     results: [],
+    totalCount: 0,
   })
 
   const openSearch = useCallback(() => {
@@ -57,17 +61,17 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       const sanitizedQuery = sanitizeSearchTerm(query)
       if (sanitizedQuery.length < 2) {
         if (!signal.aborted) {
-          setState((prev) => ({ ...prev, results: [] }))
+          setState((prev) => ({ ...prev, results: [], totalCount: 0 }))
         }
         return
       }
-      
+
       try {
-        const suggestions = await searchProductsSuggestions(sanitizedQuery)
+        const { results: suggestions, totalCount } = await searchProductsSuggestions(sanitizedQuery)
         // Only update state if not aborted
         if (!signal.aborted) {
-          setState((prev) => ({ 
-            ...prev, 
+          setState((prev) => ({
+            ...prev,
             results: suggestions.map(s => ({
               id: s.id,
               name: s.name,
@@ -75,13 +79,14 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
               price: s.price,
               primary_image: s.primary_image,
               category_name: '' // Will be populated if needed
-            }))
+            })),
+            totalCount,
           }))
         }
       } catch {
         // Silently fail - empty results on error
         if (!signal.aborted) {
-          setState((prev) => ({ ...prev, results: [] }))
+          setState((prev) => ({ ...prev, results: [], totalCount: 0 }))
         }
       }
     }, 250), // 250ms debounce as specified
@@ -94,7 +99,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
         abortControllerRef.current.abort()
         abortControllerRef.current = null
       }
-      setState((prev) => ({ ...prev, query: "", results: [] }))
+      setState((prev) => ({ ...prev, query: "", results: [], totalCount: 0 }))
       return
     }
 
@@ -121,6 +126,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       isOpen: false,
       query: "",
       results: [],
+      totalCount: 0,
     })
   }, [])
 
@@ -129,12 +135,13 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       isOpen: state.isOpen,
       query: state.query,
       results: state.results,
+      totalCount: state.totalCount,
       openSearch,
       closeSearch,
       setQuery,
       clearSearch,
     }),
-    [state.isOpen, state.query, state.results, openSearch, closeSearch, setQuery, clearSearch]
+    [state.isOpen, state.query, state.results, state.totalCount, openSearch, closeSearch, setQuery, clearSearch]
   )
 
   return (

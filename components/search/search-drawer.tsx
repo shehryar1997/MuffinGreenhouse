@@ -14,7 +14,7 @@ import { sanitizeSearchTerm } from "@/lib/search-term"
 
 export function SearchDrawer() {
   const router = useRouter()
-  const { isOpen, closeSearch, query, setQuery, results } = useSearch()
+  const { isOpen, closeSearch, query, setQuery, results, totalCount } = useSearch()
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Focus the input when drawer opens
@@ -83,7 +83,7 @@ export function SearchDrawer() {
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            <SearchResults results={results} query={query} onClose={handleClose} />
+            <SearchResults results={results} totalCount={totalCount} query={query} onClose={handleClose} />
           </div>
         </Drawer.Content>
       </Drawer.Portal>
@@ -100,11 +100,12 @@ interface SearchResultsProps {
     primary_image: string | null
     category_name: string
   }>
+  totalCount: number
   query: string
   onClose: () => void
 }
 
-function SearchResults({ results, query, onClose }: SearchResultsProps) {
+function SearchResults({ results, totalCount, query, onClose }: SearchResultsProps) {
   const router = useRouter()
   
   if (query.trim() === "") {
@@ -195,7 +196,7 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
           variant="outline"
           className="border-foreground hover:bg-foreground hover:text-background"
         >
-          See all {results.length} results <ArrowRight className="w-3 h-3 ml-2" />
+          See all {totalCount} results <ArrowRight className="w-3 h-3 ml-2" />
         </Button>
       </div>
     </div>

@@ -379,21 +379,24 @@ export async function searchProducts(params: SearchProductsParams): Promise<Pagi
     pageSize = PRODUCTS_PER_PAGE,
   } = params
 
-  // Call the search_products SQL function
+  // Call the search_products SQL function. Its deployed parameter names are all
+  // `p_`-prefixed (confirmed against the live DB: migrations/008_functions.sql in the
+  // repo is stale and does not match what's actually deployed) -- calling with the
+  // unprefixed names silently fails with PGRST202 and every search returns nothing.
   const { data, error } = await supabase.rpc('search_products', {
-    search_query: query || null,
-    category_slug: categorySlug || null,
-    use_case_slugs: useCaseSlugs?.length ? useCaseSlugs : null,
-    mood_slugs: moodSlugs?.length ? moodSlugs : null,
-    light_levels: lightLevels?.length ? lightLevels : null,
-    difficulties: difficulties?.length ? difficulties : null,
-    min_price: minPrice || null,
-    max_price: maxPrice || null,
-    is_pet_safe: isPetSafe ?? null,
-    is_new_arrival: isNewArrival ?? null,
-    sort_by: sortBy,
-    page_size: pageSize,
-    page_offset: (page - 1) * pageSize,
+    p_search_query: query || null,
+    p_category_slug: categorySlug || null,
+    p_use_case_slugs: useCaseSlugs?.length ? useCaseSlugs : null,
+    p_mood_slugs: moodSlugs?.length ? moodSlugs : null,
+    p_light_levels: lightLevels?.length ? lightLevels : null,
+    p_difficulties: difficulties?.length ? difficulties : null,
+    p_min_price: minPrice || null,
+    p_max_price: maxPrice || null,
+    p_is_pet_safe: isPetSafe ?? null,
+    p_is_new_arrival: isNewArrival ?? null,
+    p_sort_by: sortBy,
+    p_page_size: pageSize,
+    p_page_offset: (page - 1) * pageSize,
   })
 
   if (error) {
@@ -438,38 +441,43 @@ export async function searchProducts(params: SearchProductsParams): Promise<Pagi
 
 /**
  * Lightweight search for suggestions (returns minimal fields).
- * Used by search drawer when typing.
+ * Used by search drawer when typing. `totalCount` is the full match count from the
+ * SQL function (not just the 6 rows returned), so the drawer's "See all N results"
+ * button can show the real number instead of capping at the suggestion list length.
  */
-export async function searchProductsSuggestions(query: string): Promise<Array<{
-  id: string
-  name: string
-  slug: string
-  price: number
-  primary_image: string | null
-}>> {
+export async function searchProductsSuggestions(query: string): Promise<{
+  results: Array<{
+    id: string
+    name: string
+    slug: string
+    price: number
+    primary_image: string | null
+  }>
+  totalCount: number
+}> {
   if (!query || query.length < 2) {
-    return []
+    return { results: [], totalCount: 0 }
   }
 
   const { data, error } = await supabase.rpc('search_products', {
-    search_query: query,
-    category_slug: null,
-    use_case_slugs: null,
-    mood_slugs: null,
-    light_levels: null,
-    difficulties: null,
-    min_price: null,
-    max_price: null,
-    is_pet_safe: null,
-    is_new_arrival: null,
-    sort_by: 'relevance',
-    page_size: 6,
-    page_offset: 0,
+    p_search_query: query,
+    p_category_slug: null,
+    p_use_case_slugs: null,
+    p_mood_slugs: null,
+    p_light_levels: null,
+    p_difficulties: null,
+    p_min_price: null,
+    p_max_price: null,
+    p_is_pet_safe: null,
+    p_is_new_arrival: null,
+    p_sort_by: 'relevance',
+    p_page_size: 6,
+    p_page_offset: 0,
   })
 
   if (error) {
     console.error('Error searching suggestions:', error)
-    return []
+    return { results: [], totalCount: 0 }
   }
 
   // Map to minimal shape for suggestions
@@ -479,13 +487,18 @@ export async function searchProductsSuggestions(query: string): Promise<Array<{
     slug: string
     price: number
     primary_image: string | null
+    total_count: number
     [key: string]: unknown
   }
-  return (data ?? []).map((row: SuggestionRow) => ({
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
-    price: row.price,
-    primary_image: row.primary_image,
-  }))
+  const rows = (data ?? []) as SuggestionRow[]
+  return {
+    results: rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      price: row.price,
+      primary_image: row.primary_image,
+    })),
+    totalCount: rows[0]?.total_count ?? 0,
+  }
 }
