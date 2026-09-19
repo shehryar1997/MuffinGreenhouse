@@ -26,7 +26,7 @@ export default function TermsConditionsPage() {
             <h2 className="font-serif text-xl text-[#1A1A1A]">2. Payment</h2>
             <p>We accept HBL, JazzCash, EasyPaisa, NayaPay, SadaPay, Zindgi. Send receipt via WhatsApp. No card gateway.</p>
             <h2 className="font-serif text-xl text-[#1A1A1A]">3. Delivery</h2>
-            <p>Karachi: Rs 400 flat. Self-pickup: Free. Out of city: Volumetric via Leopards Air.</p>
+            <p>Karachi: Rs 400 flat for up to 4 items, Rs 1,000 for 5 or more. Self-pickup: Free. Out of city: Volumetric via Leopards Air.</p>
             <h2 className="font-serif text-xl text-[#1A1A1A]">4. Reviews</h2>
             <p>No fake reviews. All reviews are authentic customer feedback.</p>
             <h2 className="font-serif text-xl text-[#1A1A1A]">5. Law</h2>

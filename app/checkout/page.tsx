@@ -10,7 +10,14 @@ import { formatPrice } from "@/lib/utils"
 import { toast } from "sonner"
 import { redirect, useRouter } from "next/navigation"
 import { trackBeginCheckout } from "@/lib/analytics"
-import { calculateDeliveryFee as computeDeliveryFee } from "@/lib/delivery-fee"
+import {
+  calculateDeliveryFee as computeDeliveryFee,
+  isEquipmentItem,
+  karachiDeliveryFee,
+  KARACHI_DELIVERY_FEE,
+  KARACHI_LARGE_ORDER_DELIVERY_FEE,
+  KARACHI_LARGE_ORDER_ITEM_THRESHOLD,
+} from "@/lib/delivery-fee"
 import { PAYMENT_SUMMARY_KEY_PREFIX } from "@/lib/checkout-summary"
 import { Package, Truck, Check, AlertCircle, Loader2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
@@ -87,6 +94,11 @@ export default function CheckoutPage() {
   const [touched, setTouched] = useState<TouchedFields>({ fullName: false, email: false, contactNumber: false, fullAddress: false, city: false })
 
   const subtotal = cart.subtotal
+  // Karachi flat rate shown on the Home Delivery button; mirrors plantDeliveryFee (plant lines only).
+  const karachiFee = useMemo(
+    () => karachiDeliveryFee(cart.items.filter((item) => !isEquipmentItem({ dim: productDimensions[item.product.id], quantity: item.quantity })).length),
+    [cart.items, productDimensions]
+  )
   const total = useMemo(() => deliveryType === "pickup" ? subtotal : subtotal + deliveryFee, [subtotal, deliveryFee, deliveryType])
 
   // Fire GA4 begin_checkout once, when the cart has loaded with items
@@ -455,7 +467,7 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Delivery Options */}
-                    <DeliveryOptionsSection city={formData.city} deliveryType={deliveryType} onSelect={setDeliveryType} />
+                    <DeliveryOptionsSection city={formData.city} deliveryType={deliveryType} onSelect={setDeliveryType} karachiFee={karachiFee} />
                   </div>
 
                   {/* Proceed Button */}
@@ -516,7 +528,7 @@ export default function CheckoutPage() {
 }
 
 // Delivery Options Section Component
-function DeliveryOptionsSection({ city, deliveryType, onSelect }: { city: string; deliveryType: "delivery" | "pickup"; onSelect: (type: "delivery" | "pickup") => void }) {
+function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { city: string; deliveryType: "delivery" | "pickup"; onSelect: (type: "delivery" | "pickup") => void; karachiFee: number }) {
   const isKarachi = city === "Karachi"
   return (
     <div className="pt-4 border-t border-forest-100">
@@ -538,8 +550,8 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect }: { city: string
               <div className={`p-2 rounded-lg ${deliveryType === "delivery" ? "bg-clay-500 text-white" : "bg-forest-100 text-forest-600"}`}><Truck className="w-5 h-5" /></div>
               <div className="flex-1">
                 <div className="font-medium">Home Delivery</div>
-                <div className="text-sm text-forest-500">Standard Karachi delivery charges apply</div>
-                <div className="text-sm font-mono mt-1">{formatPrice(400)}</div>
+                <div className="text-sm text-forest-500">{`${formatPrice(KARACHI_DELIVERY_FEE)} for up to ${KARACHI_LARGE_ORDER_ITEM_THRESHOLD} items, ${formatPrice(KARACHI_LARGE_ORDER_DELIVERY_FEE)} for ${KARACHI_LARGE_ORDER_ITEM_THRESHOLD + 1} or more`}</div>
+                <div className="text-sm font-mono mt-1">{formatPrice(karachiFee)}</div>
               </div>
             </div>
           </button>

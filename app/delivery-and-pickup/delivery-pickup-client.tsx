@@ -26,7 +26,7 @@ export function DeliveryPickupClient() {
               </div>
             </div>
             <ul className="space-y-2 text-forest-700">
-              <li>PKR 450 flat rate across Karachi</li>
+              <li>PKR 400 flat rate across Karachi for up to 4 items, PKR 1,000 for 5 or more</li>
               <li>Plants travel first-class: custom boxes, moisture retention, the works</li>
               <li>Live tracking via WhatsApp. Watch your green friend roll up in style</li>
             </ul>

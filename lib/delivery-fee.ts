@@ -3,13 +3,17 @@
 // server never trusts a fee sent by the browser.
 //
 // Two independent parts, added together for a mixed cart:
-//  * Plants: unchanged logic -- flat Karachi rate, otherwise a courier weight tier.
+//  * Plants: flat Karachi rate (higher for larger orders), otherwise a courier weight tier.
 //  * Tools & Equipment (Fertilizer, Other Equipment, Pots, Planting Media): a flat
 //    rate per kg of the actual product weight x quantity, in every city.
 
 import { isNonPlantCategorySlug } from "./product-categories"
 
 export const KARACHI_DELIVERY_FEE = 400
+
+/** Karachi plant orders with MORE than this many cart lines pay the higher flat rate. */
+export const KARACHI_LARGE_ORDER_ITEM_THRESHOLD = 4
+export const KARACHI_LARGE_ORDER_DELIVERY_FEE = 1000
 
 /** PKR per kg for Tools & Equipment: e.g. 5 x 1kg gravel = 1 x 5 x 120 = 600. */
 export const EQUIPMENT_FEE_PER_KG = 120
@@ -80,10 +84,15 @@ export function equipmentDeliveryFee(items: DeliveryFeeItem[]): number {
   return Math.round(totalKg * EQUIPMENT_FEE_PER_KG)
 }
 
-/** Delivery fee for the plant lines of a cart (the original logic, unchanged). */
+/** Flat Karachi fee for a plant order, by number of cart lines (distinct products). */
+export function karachiDeliveryFee(plantLineCount: number): number {
+  return plantLineCount > KARACHI_LARGE_ORDER_ITEM_THRESHOLD ? KARACHI_LARGE_ORDER_DELIVERY_FEE : KARACHI_DELIVERY_FEE
+}
+
+/** Delivery fee for the plant lines of a cart. */
 export function plantDeliveryFee(city: string | null | undefined, plantItems: DeliveryFeeItem[]): number {
   if (plantItems.length === 0) return 0
-  if (city === "Karachi") return KARACHI_DELIVERY_FEE
+  if (city === "Karachi") return karachiDeliveryFee(plantItems.length)
   return shippingFeeForWeight(chargeableWeightKg(plantItems))
 }
 
