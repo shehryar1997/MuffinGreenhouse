@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, ShoppingBag, Menu, X, User, Star, Sparkles } from "lucide-react"
-import { mainNav, shopMegaMenuSections } from "@/config/nav.config"
+import { Search, ShoppingBag, Menu, X, User, Star, Sparkles, ChevronRight } from "lucide-react"
+import { mainNav, shopMegaMenuSections, shopByNeedCategories } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +14,10 @@ import { ThemeToggle } from "@/components/ui/theme-toggle"
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [shopMenuOpen, setShopMenuOpen] = useState(false)
+  const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const shopMenuTimeout = useRef<NodeJS.Timeout | null>(null)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const firstFocusableRef = useRef<HTMLButtonElement>(null)
   const { toggleCart, itemCount } = useCart()
   const { openSearch } = useSearch()
 
@@ -32,6 +35,67 @@ export function Header() {
     }, 150)
   }
 
+  // Close mobile menu on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mobileMenuOpen) {
+        setMobileMenuOpen(false)
+      }
+    }
+    document.addEventListener("keydown", handleEscape)
+    return () => document.removeEventListener("keydown", handleEscape)
+  }, [mobileMenuOpen])
+
+  // Focus trap and initial focus
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    
+    const focusableElements = mobileMenuRef.current?.querySelectorAll(
+      'a[href], button, [tabindex]:not([tabindex="-1"])'
+    )
+    if (!focusableElements?.length) return
+
+    const firstElement = focusableElements[0] as HTMLElement
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement) {
+          lastElement?.focus()
+          e.preventDefault()
+        }
+      } else {
+        if (document.activeElement === lastElement) {
+          firstElement?.focus()
+          e.preventDefault()
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleTabKey)
+    firstElement?.focus()
+
+    return () => document.removeEventListener("keydown", handleTabKey)
+  }, [mobileMenuOpen])
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [mobileMenuOpen])
+
+  const toggleSection = (sectionId: string) => {
+    setExpandedSection(expandedSection === sectionId ? null : sectionId)
+  }
+
   return (
     <>
     <motion.header
@@ -40,20 +104,51 @@ export function Header() {
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="container mx-auto px-6 lg:px-12">
-        <div className="flex items-center justify-between h-20 border-b border-border">
-          {/* Logo */}
-          <Link href="/" className="flex flex-col items-center gap-0.5">
-            <Image
-              src="/logo-nav.png"
-              alt="Muffin Plants"
-              width={37}
-              height={40}
-              className="h-10 w-auto object-contain"
-              priority
-            />
-            <span className="font-serif text-sm text-foreground leading-none">Muffin Plants</span>
-          </Link>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-12">
+        <div className="flex items-center justify-between h-16 lg:h-20 border-b border-border">
+          
+          {/* LEFT: Hamburger Menu (mobile only) + Search (desktop) */}
+          <div className="flex items-center gap-2 lg:gap-4 flex-1 lg:flex-none">
+            {/* Hamburger Menu Button - Mobile Only */}
+            <button 
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-3 -ml-2 hover:bg-muted rounded-full transition-colors"
+              style={{ touchAction: "manipulation" }}
+              aria-label="Open navigation menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
+            >
+              <Menu className="w-6 h-6 text-foreground" />
+            </button>
+
+            {/* Search - Desktop Only */}
+            <button 
+              onClick={openSearch} 
+              className="hidden lg:flex p-2 hover:bg-muted rounded-full transition-colors"
+              aria-label="Search products"
+            >
+              <Search className="w-5 h-5 text-foreground" />
+            </button>
+          </div>
+
+          {/* CENTER: Logo (always centered on mobile) */}
+          <div className="flex-1 lg:flex-none flex justify-center">
+            <Link 
+              href="/" 
+              className="flex flex-col items-center gap-0.5 p-2 -m-2"
+              aria-label="Muffin Plants - Home"
+            >
+              <Image
+                src="/logo-nav.png"
+                alt=""
+                width={37}
+                height={40}
+                className="h-9 w-auto lg:h-10 object-contain"
+                priority
+              />
+              <span className="font-serif text-xs text-foreground leading-none hidden sm:block">Muffin Plants</span>
+            </Link>
+          </div>
 
           {/* Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
@@ -174,36 +269,60 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Actions */}
-          <div className="flex items-center gap-6">
-            <button onClick={openSearch} className="p-2 hover:opacity-60 transition-opacity hidden sm:flex">
-              <Search className="w-5 h-5 text-forest-700" />
-            </button>
-            <Link href="/account" className="p-2 hover:opacity-60 transition-opacity hidden sm:flex">
-              <User className="w-5 h-5 text-forest-700" />
+          {/* RIGHT: Actions (Cart + Account on mobile, full nav on desktop) */}
+          <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-1 lg:flex-none justify-end">
+            
+            {/* Desktop: Account */}
+            <Link 
+              href="/account" 
+              className="hidden lg:inline-flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors p-2 rounded-full hover:bg-muted"
+              aria-label="My Account"
+            >
+              <User className="w-5 h-5" />
+              <span className="hidden xl:inline">Account</span>
             </Link>
 
-            {/* Menu Toggle */}
-            <button
-              className="flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-forest-600"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              aria-expanded={mobileMenuOpen}
+            {/* Desktop: Reviews */}
+            <Link 
+              href="/reviews" 
+              className="hidden lg:flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors p-2 rounded-full hover:bg-muted"
+              aria-label="Customer Reviews"
             >
-              <span className="hidden sm:inline">{mobileMenuOpen ? 'Close' : 'Menu'}</span>
-              <span className="text-[#E85A3C] font-semibold sm:hidden" aria-hidden="true">&#8594;</span>
-              <span className="text-[#E85A3C] font-semibold hidden sm:inline" aria-hidden="true">&#8594;</span>
-            </button>
+              <Star className="w-5 h-5" />
+              <span className="hidden xl:inline">Reviews</span>
+            </Link>
 
-            {/* Theme Toggle */}
-            <ThemeToggle />
+            {/* Theme Toggle - Desktop */}
+            <div className="hidden lg:block">
+              <ThemeToggle />
+            </div>
 
-            {/* Cart */}
-            <button onClick={() => toggleCart(true)} className="flex items-center gap-2">
-              <span className="font-mono text-xs tracking-widest uppercase text-forest-600 hidden sm:inline">Cart</span>
-              <Badge className="bg-transparent border border-forest-300 text-forest-700 text-xs font-mono px-2 py-0.5">
-                {itemCount}
-              </Badge>
+            {/* Account Icon - Mobile/Tablet */}
+            <Link 
+              href="/account" 
+              className="p-3 lg:hidden hover:bg-muted rounded-full transition-colors"
+              style={{ touchAction: "manipulation" }}
+              aria-label="My Account"
+            >
+              <User className="w-6 h-6 text-foreground" />
+            </Link>
+
+            {/* Cart - All screens */}
+            <button 
+              onClick={() => toggleCart(true)} 
+              className="p-3 -mr-2 lg:-mr-0 lg:px-2 lg:py-2 hover:bg-muted rounded-full transition-colors flex items-center gap-2"
+              style={{ touchAction: "manipulation" }}
+              aria-label={`Shopping cart with ${itemCount} items`}
+            >
+              <span className="font-mono text-xs tracking-widest uppercase text-forest-600 hidden lg:inline">Cart</span>
+              <span className="relative">
+                <ShoppingBag className="w-6 h-6 lg:w-5 lg:h-5 text-foreground" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#E85A3C] text-white text-[10px] font-mono font-medium rounded-full flex items-center justify-center">
+                    {itemCount > 9 ? "9+" : itemCount}
+                  </span>
+                )}
+              </span>
             </button>
           </div>
         </div>
