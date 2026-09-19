@@ -24,7 +24,7 @@ export function ShopByNeedSection() {
   })
 
   return (
-    <section className="py-24 lg:py-32 bg-[#FAF7F2]">
+    <section className="py-24 lg:py-32 bg-cream-100">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <div className="mb-16">
@@ -34,17 +34,17 @@ export function ShopByNeedSection() {
           </div>
         </FadeIn>
         <FadeIn delay={0.1}>
-          <h2 className="font-serif text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A] leading-[0.95] tracking-tight mb-16">
+          <h2 className="font-serif text-[clamp(2rem,6vw,4rem)] text-forest-950 leading-[0.95] tracking-tight mb-16">
             <AnimatedHeading lines={["Find your kind of green."]} />
           </h2>
         </FadeIn>
         <FadeIn delay={0.2}>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {useCasesList.map((uc) => (
-              <Link key={uc.key} href={`/shop-by-need/${uc.key}`} className="group p-8 bg-[#E8F5A8] border border-forest-200/50 hover:border-[#D4F542] hover:bg-[#D4F542] transition-colors relative overflow-hidden">
-                <span className="text-[#E85A3C] text-2xl absolute top-6 right-6">*</span>
+              <Link key={uc.key} href={`/shop-by-need/${uc.key}`} className="group p-8 bg-sprout-100 border border-forest-200/50 hover:border-sprout-300 hover:bg-sprout-300 transition-colors relative overflow-hidden">
+                <span className="text-clay-500 text-2xl absolute top-6 right-6">*</span>
                 <h3 className="font-serif text-2xl mb-2">{uc.title}</h3>
-                <p className="font-mono text-[10px] tracking-widest text-forest-500 uppercase">{uc.description}</p>
+                <p className="font-mono text-xs tracking-widest text-forest-500 uppercase">{uc.description}</p>
               </Link>
             ))}
           </div>

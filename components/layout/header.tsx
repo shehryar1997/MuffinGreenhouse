@@ -271,7 +271,7 @@ export function Header() {
                 <Link 
                   key={item.id}
                   href={item.href} 
-                  className="font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-[#1A1A1A] transition-colors"
+                  className="font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-forest-950 transition-colors"
                 >
                   {item.label}
                 </Link>
@@ -300,7 +300,7 @@ export function Header() {
             >
               <Heart className="w-5 h-5 text-foreground" />
               {wishlistCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-0.5 bg-clay-500 text-white text-[11px] font-mono font-semibold rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-0.5 bg-clay-500 text-white text-xs font-mono font-semibold rounded-full flex items-center justify-center">
                   {wishlistCount > 9 ? "9+" : wishlistCount}
                 </span>
               )}
@@ -351,7 +351,7 @@ export function Header() {
               <span className="relative">
                 <ShoppingBag className="w-6 h-6 lg:w-5 lg:h-5 text-foreground" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-0.5 bg-primary text-primary-foreground text-[11px] font-mono font-semibold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-0.5 bg-primary text-primary-foreground text-xs font-mono font-semibold rounded-full flex items-center justify-center">
                     {itemCount > 9 ? "9+" : itemCount}
                   </span>
                 )}
@@ -387,7 +387,7 @@ export function Header() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-[#FAF7F2] z-[100] shadow-2xl"
+            className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-cream-100 z-[100] shadow-2xl"
           >
             {/* The panel is full-width on phones and covers the header, so it needs its own close control. */}
             <button
@@ -415,13 +415,13 @@ export function Header() {
                       <span className="font-mono text-sm text-forest-500">{String(i + 1).padStart(2, '0')}</span>
                       {item.isAi ? (
                         <span className="flex items-center gap-2">
-                          <span className="font-serif text-4xl text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors">
+                          <span className="font-serif text-4xl text-forest-950 group-hover:text-clay-500 transition-colors">
                             {item.label}
                           </span>
                           <Sparkles className="w-5 h-5 text-forest-500" />
                         </span>
                       ) : (
-                        <span className="font-serif text-4xl text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors">
+                        <span className="font-serif text-4xl text-forest-950 group-hover:text-clay-500 transition-colors">
                           {item.label}
                         </span>
                       )}

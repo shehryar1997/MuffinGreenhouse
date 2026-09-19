@@ -42,12 +42,12 @@ export function MoodPlantsGrid({ products, mood, theme }: MoodPlantsGridProps) {
             ) : null}
             <span className={`absolute top-3 left-3 font-mono text-xs ${theme.textPrimary}`}>{String(i + 1).padStart(2, '0')}</span>
             {product.stockStatus === "out_of_stock" && (
-              <span className={`absolute top-3 right-3 font-mono text-[10px] tracking-wider uppercase px-2 py-1 rounded-sm ${theme.bg === "bg-forest-950" ? "bg-cream-100 text-forest-900" : "bg-forest-900 text-white"}`}>
+              <span className={`absolute top-3 right-3 font-mono text-xs tracking-wider uppercase px-2 py-1 rounded-sm ${theme.bg === "bg-forest-950" ? "bg-cream-100 text-forest-900" : "bg-forest-900 text-white"}`}>
                 Sold Out
               </span>
             )}
             {product.stockStatus === "low_stock" && (
-              <span className="absolute top-3 right-3 font-mono text-[10px] tracking-wider uppercase bg-clay-500 text-white px-2 py-1 rounded-sm">
+              <span className="absolute top-3 right-3 font-mono text-xs tracking-wider uppercase bg-clay-500 text-white px-2 py-1 rounded-sm">
                 Only {product.stockCount} left
               </span>
             )}
@@ -61,7 +61,7 @@ export function MoodPlantsGrid({ products, mood, theme }: MoodPlantsGridProps) {
                   product.isNewArrival && <span className={theme.accentText}>NEW</span>
                 )}
               </div>
-              <h3 className={`font-serif text-lg transition-colors ${theme.textPrimary} group-hover:${theme.accent.replace("text-", "")}`}>
+              <h3 className={`font-serif text-lg transition-colors ${theme.textPrimary} group-hover:opacity-80`}>
                 {product.name}
               </h3>
               <p className={`font-mono text-sm mt-1 ${theme.textSecondary}`}>
@@ -69,7 +69,8 @@ export function MoodPlantsGrid({ products, mood, theme }: MoodPlantsGridProps) {
               </p>
             </div>
             <button
-              className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${theme.border} ${theme.textSecondary} hover:${theme.bgSecondary} hover:${theme.borderHover}`}
+              // ponytail: theme-based hover classes removed - Tailwind cannot parse hover:${theme.bg}
+              className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors hover:opacity-80 ${theme.border} ${theme.textSecondary}`}
               onClick={(e) => e.preventDefault()}
               aria-label={`Add ${product.name} to cart`}
             >

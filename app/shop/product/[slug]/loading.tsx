@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 // Product detail skeleton - matches ProductDetailClient layout
 export default function Loading() {
   return (
-    <div className="bg-[#FAF7F2] min-h-screen pt-28 pb-8">
+    <div className="bg-cream-100 min-h-screen pt-28 pb-8">
       <div className="container mx-auto px-4">
         {/* Breadcrumb skeleton */}
         <div className="flex items-center gap-2 mb-6">
@@ -79,7 +79,7 @@ export default function Loading() {
               <Skeleton className="h-7 w-40 mb-4" />
               <div className="grid grid-cols-2 gap-3">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-[#F7F3EA]">
+                  <div key={i} className="flex items-start gap-3 p-4 rounded-xl bg-cream-100">
                     <Skeleton className="w-10 h-10 rounded-full shrink-0" />
                     <div className="flex-1 space-y-2">
                       <Skeleton className="h-3 w-12" />

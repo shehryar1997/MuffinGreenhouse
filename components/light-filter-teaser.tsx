@@ -110,12 +110,12 @@ export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
                     
                     {/* Stock badge */}
                     {product.stockStatus === "out_of_stock" && (
-                      <span className="absolute top-2 left-2 font-mono text-[10px] tracking-wider uppercase bg-forest-900/80 text-white px-2 py-1 rounded-sm">
+                      <span className="absolute top-2 left-2 font-mono text-xs tracking-wider uppercase bg-forest-900/80 text-white px-2 py-1 rounded-sm">
                         Sold Out
                       </span>
                     )}
                     {product.stockStatus === "low_stock" && (
-                      <span className="absolute top-2 left-2 font-mono text-[10px] tracking-wider uppercase bg-clay-500 text-white px-2 py-1 rounded-sm">
+                      <span className="absolute top-2 left-2 font-mono text-xs tracking-wider uppercase bg-clay-500 text-white px-2 py-1 rounded-sm">
                         {product.stockCount} left
                       </span>
                     )}
@@ -123,7 +123,7 @@ export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
                   
                   {/* Product Info */}
                   <div className="mt-3 text-center">
-                    <h4 className="font-serif text-sm text-[#1A1A1A] group-hover:text-clay-600 transition-colors line-clamp-1">
+                    <h4 className="font-serif text-sm text-forest-950 group-hover:text-clay-600 transition-colors line-clamp-1">
                       {product.name}
                     </h4>
                     <p className="font-mono text-xs text-forest-500 mt-1">

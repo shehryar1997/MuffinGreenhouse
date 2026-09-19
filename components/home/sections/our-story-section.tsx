@@ -6,7 +6,7 @@ import { FadeIn, AnimatedHeading } from "@/components/home/shared/animations"
 
 export function OurStorySection() {
   return (
-    <section className="py-24 lg:py-32 bg-[#FAF7F2] border-t border-forest-200/50">
+    <section className="py-24 lg:py-32 bg-cream-100 border-t border-forest-200/50">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <div className="mb-16">
@@ -20,14 +20,14 @@ export function OurStorySection() {
             <h2 className="font-serif leading-[0.95] tracking-tight">
               <AnimatedHeading
                 lines={["We killed a lot of", "plants", "so you do not have to."]}
-                className="text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A] whitespace-nowrap"
+                className="text-[clamp(2rem,6vw,4rem)] text-forest-950 whitespace-nowrap"
               />
             </h2>
           </FadeIn>
           <FadeIn delay={0.2}>
             <div className="lg:pt-16">
               <p className="text-forest-600 text-lg mb-8 max-w-sm">We stock only what we know thrives in Karachi heat, dust, and occasional neglect.</p>
-              <Link href="/our-story" className="inline-flex items-center gap-3 font-mono text-xs tracking-widest uppercase border-b border-forest-300 pb-2 hover:text-[#E85A3C] hover:border-[#E85A3C] transition-colors group">
+              <Link href="/our-story" className="inline-flex items-center gap-3 font-mono text-xs tracking-widest uppercase border-b border-forest-300 pb-2 hover:text-clay-500 hover:border-clay-500 transition-colors group">
                 Read Our Story
                 <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
               </Link>

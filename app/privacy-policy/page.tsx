@@ -8,22 +8,22 @@ export const metadata: Metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="min-h-screen bg-[#F7F3EA]">
+    <div className="min-h-screen bg-cream-100">
       <div className="container mx-auto px-6 lg:px-12 py-16 max-w-4xl">
         <section className="mb-12">
-          <span className="font-mono text-xs tracking-widest uppercase text-[#1A1A1A]/50">
+          <span className="font-mono text-xs tracking-widest uppercase text-forest-950/50">
             Legal Notice
           </span>
-          <h1 className="font-serif text-4xl md:text-5xl text-[#1A1A1A] leading-[1.1] tracking-tight mt-2">
+          <h1 className="font-serif text-4xl md:text-5xl text-forest-950 leading-[1.1] tracking-tight mt-2">
             Privacy Policy
           </h1>
-          <p className="text-[#1A1A1A]/60 mt-4 text-sm">
+          <p className="text-forest-950/60 mt-4 text-sm">
             Last updated: January 2026
           </p>
         </section>
 
-        <div className="bg-white rounded-sm p-8 lg:p-12 border border-[#1A1A1A]/10">
-          <div className="space-y-6 text-[#1A1A1A]/80">
+        <div className="bg-white rounded-sm p-8 lg:p-12 border border-forest-950/10">
+          <div className="space-y-6 text-forest-950/80">
             
             <div className="bg-amber-50 border border-amber-200 rounded-sm p-4">
               <p className="text-sm text-amber-800 font-medium mb-1">
@@ -35,14 +35,14 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
-              <h2 className="font-serif text-2xl text-[#1A1A1A] mb-3">1. Introduction</h2>
+              <h2 className="font-serif text-2xl text-forest-950 mb-3">1. Introduction</h2>
               <p className="leading-relaxed">
                 Muffin Greenhouse operates the website muffinplants.com. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or make a purchase. By using our services, you consent to the practices described herein.
               </p>
             </div>
 
             <div>
-              <h2 className="font-serif text-2xl text-[#1A1A1A] mb-3">2. Information We Collect</h2>
+              <h2 className="font-serif text-2xl text-forest-950 mb-3">2. Information We Collect</h2>
               <p className="leading-relaxed mb-2">We collect the following when you create an account or place an order:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Full name, email address, phone number</li>
@@ -56,7 +56,7 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
-              <h2 className="font-serif text-2xl text-[#1A1A1A] mb-3">3. How We Use Your Information</h2>
+              <h2 className="font-serif text-2xl text-forest-950 mb-3">3. How We Use Your Information</h2>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Processing and fulfilling orders</li>
                 <li>Communicating about orders and deliveries</li>
@@ -67,14 +67,14 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
-              <h2 className="font-serif text-2xl text-[#1A1A1A] mb-3">4. Data Storage and Security</h2>
+              <h2 className="font-serif text-2xl text-forest-950 mb-3">4. Data Storage and Security</h2>
               <p className="leading-relaxed">
                 Your data is stored securely in our Supabase database. Payment receipt images are stored privately and are not publicly accessible. We implement appropriate measures to protect your data.
               </p>
             </div>
 
             <div>
-              <h2 className="font-serif text-2xl text-[#1A1A1A] mb-3">5. Analytics</h2>
+              <h2 className="font-serif text-2xl text-forest-950 mb-3">5. Analytics</h2>
               <p className="leading-relaxed mb-2">
                 We use <strong>Google Analytics 4</strong> to understand how visitors use our website. This helps us improve our services and user experience.
               </p>
@@ -94,7 +94,7 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
-              <h2 className="font-serif text-2xl text-[#1A1A1A] mb-3">6. Third-Party Disclosure</h2>
+              <h2 className="font-serif text-2xl text-forest-950 mb-3">6. Third-Party Disclosure</h2>
               <p className="leading-relaxed mb-2">We do not sell your data. Information is only shared with:</p>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Leopards Courier:</strong> Name, phone, and address for shipping only.</li>
@@ -103,14 +103,14 @@ export default function PrivacyPolicyPage() {
             </div>
 
             <div>
-              <h2 className="font-serif text-2xl text-[#1A1A1A] mb-3">7. Your Rights</h2>
+              <h2 className="font-serif text-2xl text-forest-950 mb-3">7. Your Rights</h2>
               <p className="leading-relaxed">
                 Under PECA 2016 and consumer protection principles, you may request access, correction, or deletion of your data. Contact us via WhatsApp at +92 309 5360009.
               </p>
             </div>
 
             <div>
-              <h2 className="font-serif text-2xl text-[#1A1A1A] mb-3">8. Cookies</h2>
+              <h2 className="font-serif text-2xl text-forest-950 mb-3">8. Cookies</h2>
               <p className="leading-relaxed">
                 See our <Link href="/cookie-policy" className="underline hover:no-underline">Cookie Policy</Link>.
               </p>

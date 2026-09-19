@@ -66,7 +66,7 @@ function PlantFilters({ filters, updateFilter }: { filters: FilterState; updateF
                 value={val}
                 checked={filters.lighting === val}
                 onChange={(e) => updateFilter("lighting", e.target.value)}
-                className="accent-[#E85A3C]"
+                className="accent-clay-500"
               />
               <span className="text-sm text-forest-700">
                 {val === "low" ? "Low Light" : val === "medium" ? "Medium Light" : val === "bright" ? "Bright Indirect" : "Full Sun"}
@@ -92,7 +92,7 @@ function PlantFilters({ filters, updateFilter }: { filters: FilterState; updateF
                 value={val}
                 checked={filters.petFriendly === val}
                 onChange={(e) => updateFilter("petFriendly", e.target.value)}
-                className="accent-[#E85A3C]"
+                className="accent-clay-500"
               />
               <span className="text-sm text-forest-700">{val === "yes" ? "Yes" : "No"}</span>
             </label>
@@ -116,7 +116,7 @@ function PlantFilters({ filters, updateFilter }: { filters: FilterState; updateF
                 value={val}
                 checked={filters.watering === val}
                 onChange={(e) => updateFilter("watering", e.target.value)}
-                className="accent-[#E85A3C]"
+                className="accent-clay-500"
               />
               <span className="text-sm text-forest-700">
                 {val === "low" ? "Low (Drought Tolerant)" : val === "medium" ? "Medium (Weekly)" : "High (Frequently)"}

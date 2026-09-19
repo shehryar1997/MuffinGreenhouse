@@ -26,7 +26,7 @@ export function ShopMegaMenu({ isOpen, onClose }: ShopMegaMenuProps) {
         />
         
         {/* Mega menu content */}
-        <div className="absolute left-0 right-0 top-full bg-[#FAF7F2] border-b border-forest-200/50 shadow-lg z-50">
+        <div className="absolute left-0 right-0 top-full bg-cream-100 border-b border-forest-200/50 shadow-lg z-50">
           <div className="container mx-auto px-6 lg:px-12 py-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
               {shopMegaMenuSections.map((section) => (
@@ -42,14 +42,14 @@ export function ShopMegaMenu({ isOpen, onClose }: ShopMegaMenuProps) {
                       <li key={item.id}>
                         <Link
                           href={item.href}
-                          className="group flex items-center gap-2 font-mono text-sm text-forest-600 hover:text-[#1A1A1A] transition-colors py-1"
+                          className="group flex items-center gap-2 font-mono text-sm text-forest-600 hover:text-forest-950 transition-colors py-1"
                           onClick={onClose}
                         >
                           <span className="relative">
                             {item.label}
                             {item.featured && (
                               <span className="absolute -right-3 -top-1">
-                                <Star className="w-2.5 h-2.5 fill-[#E85A3C] text-[#E85A3C]" />
+                                <Star className="w-2.5 h-2.5 fill-clay-500 text-clay-500" />
                               </span>
                             )}
                           </span>
@@ -89,7 +89,7 @@ export function ShopMegaMenu({ isOpen, onClose }: ShopMegaMenuProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute left-0 right-0 top-full bg-[#FAF7F2] border-b border-forest-200/50 shadow-lg z-50"
+            className="absolute left-0 right-0 top-full bg-cream-100 border-b border-forest-200/50 shadow-lg z-50"
           >
             <div className="container mx-auto px-6 lg:px-12 py-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
@@ -106,14 +106,14 @@ export function ShopMegaMenu({ isOpen, onClose }: ShopMegaMenuProps) {
                         <li key={item.id}>
                           <Link
                             href={item.href}
-                            className="group flex items-center gap-2 font-mono text-sm text-forest-600 hover:text-[#1A1A1A] transition-colors py-1"
+                            className="group flex items-center gap-2 font-mono text-sm text-forest-600 hover:text-forest-950 transition-colors py-1"
                             onClick={onClose}
                           >
                             <span className="relative">
                               {item.label}
                               {item.featured && (
                                 <span className="absolute -right-3 -top-1">
-                                  <Star className="w-2.5 h-2.5 fill-[#E85A3C] text-[#E85A3C]" />
+                                  <Star className="w-2.5 h-2.5 fill-clay-500 text-clay-500" />
                                 </span>
                               )}
                             </span>

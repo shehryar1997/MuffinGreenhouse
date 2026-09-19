@@ -22,7 +22,7 @@ export function ShopAllClient({ products, currentPage, totalPages }: ShopAllClie
         const { filters, maxPrice, hasActiveFilters, updateFilter, clearFilters } = helpers
         return (
           <>
-            <div className="bg-[#FAF7F2] min-h-screen pb-8 pt-28 lg:pt-36">
+            <div className="bg-cream-100 min-h-screen pb-8 pt-28 lg:pt-36">
               <div className="container mx-auto px-4">
                 <div className="mb-8">
                   <h1 className="font-serif text-4xl lg:text-5xl text-forest-900 leading-tight">All plants</h1>
@@ -48,7 +48,7 @@ export function ShopAllClient({ products, currentPage, totalPages }: ShopAllClie
                     {filteredProducts.length === 0 ? (
                       <div className="text-center py-20 bg-white rounded-lg border border-forest-200">
                         <p className="text-forest-600 text-lg mb-2">No plants match your filters.</p>
-                        <button onClick={clearFilters} className="text-[#E85A3C] underline font-medium">
+                        <button onClick={clearFilters} className="text-clay-500 hover:text-clay-600 underline font-medium">
                           Clear all filters
                         </button>
                       </div>
