@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button"
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
-
-  // Avoid hydration mismatch
-  React.useEffect(() => setMounted(true), [])
+  // false during SSR/hydration, true afterwards -- avoids a hydration mismatch
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
   if (!mounted) {
     return (

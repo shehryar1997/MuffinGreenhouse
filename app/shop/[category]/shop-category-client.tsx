@@ -5,7 +5,7 @@ import { ProductCard } from "@/components/ui/product-card"
 import { ProductFilters, FilterSidebar } from "@/components/shop/product-filters"
 import { Pagination } from "@/components/shop/pagination"
 import type { Product } from "@/types"
-import { generateCategoryBreadcrumb } from "@/lib/structured-data"
+import { generateCategoryBreadcrumb, serializeJsonLd } from "@/lib/structured-data"
 import { isNonPlantCategorySlug } from "@/lib/product-categories"
 
 interface CategoryMeta {
@@ -83,7 +83,7 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
           </div>
           <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema, null, 2) }}
+            dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
           />
         </>
       )}

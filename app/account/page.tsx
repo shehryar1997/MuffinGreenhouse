@@ -14,14 +14,6 @@ export const metadata: Metadata = {
 }
 
 // Types for Supabase data
-interface Customer {
-  id: string
-  auth_id: string
-  email: string
-  phone: string | null
-  name: string | null
-}
-
 interface Address {
   id: string
   customer_id: string
@@ -64,6 +56,19 @@ interface WishlistItem {
     slug: string
     price: number
     images: { url: string; alt: string }[]
+  } | null
+}
+
+// Shape of a wishlist_items row as returned by the select() below
+interface WishlistRow {
+  id: string
+  product_id: string
+  product: {
+    id: string
+    name: string
+    slug: string
+    price: number
+    images: { url: string; alt_text: string | null; sort_order: number | null }[] | null
   } | null
 }
 
@@ -116,10 +121,11 @@ export default async function AccountPage() {
   const cookieStore = await cookies()
   const supabase = createServerClient(cookieStore)
 
-  // Check for active session
-  const { data: { session } } = await supabase.auth.getSession()
+  // getUser() re-validates the token with Supabase Auth; getSession() only
+  // decodes the cookie and must not be trusted for authorization on the server.
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session) {
+  if (!user) {
     return <SignedOutState />
   }
 
@@ -127,7 +133,7 @@ export default async function AccountPage() {
   const { data: customer } = await supabase
     .from("customers")
     .select("id, auth_id, email, phone, name")
-    .eq("auth_id", session.user.id)
+    .eq("auth_id", user.id)
     .single()
 
   if (!customer) {
@@ -164,7 +170,7 @@ export default async function AccountPage() {
     .eq("customer_id", customer.id)
     .order("created_at", { ascending: false })
 
-  const wishlistItems: WishlistItem[] = (wishlistRaw ?? []).map((item: any) => ({
+  const wishlistItems: WishlistItem[] = ((wishlistRaw ?? []) as unknown as WishlistRow[]).map((item) => ({
     id: item.id,
     product_id: item.product_id,
     product: item.product
@@ -174,8 +180,8 @@ export default async function AccountPage() {
           slug: item.product.slug,
           price: item.product.price,
           images: (item.product.images ?? [])
-            .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-            .map((img: any) => ({ url: img.url, alt: img.alt_text || item.product.name })),
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .map((img) => ({ url: img.url, alt: img.alt_text || item.product!.name })),
         }
       : null,
   }))

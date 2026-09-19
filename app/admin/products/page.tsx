@@ -1,17 +1,19 @@
 import Link from "next/link"
 import { Search } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { sanitizeSearchTerm } from "@/lib/search-term"
 
 // Force fresh data on every load — same class of stale-admin-data bug
 // found on the customers/orders pages, fixed here too for consistency.
 export const dynamic = "force-dynamic"
 
 interface AdminProductsPageProps {
-  searchParams: { q?: string }
+  searchParams: Promise<{ q?: string }>
 }
 
 export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
-  const query = searchParams.q?.trim().toLowerCase() || ""
+  const { q } = await searchParams
+  const query = sanitizeSearchTerm(q).toLowerCase()
 
   let productsQuery = supabaseAdmin
     .from("products")

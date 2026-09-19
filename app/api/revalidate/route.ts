@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
+import { safeEqual } from "@/lib/safe-compare";
 
 interface WebhookPayload {
   table: string;
@@ -25,7 +26,8 @@ const USE_CASE_LABEL_TO_SLUG: Record<string, string> = {
 export async function POST(request: NextRequest) {
   // Verify secret header
   const secret = request.headers.get("x-revalidate-secret");
-  if (secret !== process.env.REVALIDATE_SECRET) {
+  const expected = process.env.REVALIDATE_SECRET;
+  if (!expected || !(await safeEqual(secret, expected))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -63,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ revalidated: true, now: Date.now() });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Revalidate error:", error);
+    return NextResponse.json({ error: "Revalidation failed" }, { status: 500 });
   }
 }

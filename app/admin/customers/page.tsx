@@ -5,13 +5,15 @@ import { Search } from "lucide-react"
 // customer's stale phone/address/etc. after they've just updated it.
 export const dynamic = "force-dynamic"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { sanitizeSearchTerm } from "@/lib/search-term"
 
 interface AdminCustomersPageProps {
-  searchParams: { q?: string }
+  searchParams: Promise<{ q?: string }>
 }
 
 export default async function AdminCustomersPage({ searchParams }: AdminCustomersPageProps) {
-  const query = searchParams.q?.trim().toLowerCase() || ""
+  const { q } = await searchParams
+  const query = sanitizeSearchTerm(q).toLowerCase()
 
   // Fetch customers with order count
   let customersQuery = supabaseAdmin

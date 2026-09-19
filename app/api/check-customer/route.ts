@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { checkRateLimit, RateLimiter } from "@/lib/rate-limit"
 
 /**
  * CHECK CUSTOMER ENDPOINT
@@ -20,7 +21,14 @@ interface CheckCustomerResponse {
   hasAuth: boolean
 }
 
+// Looser than the checkout limits (the form calls this on e-mail blur), but
+// still caps how fast anyone can probe which e-mails are registered.
+const checkCustomerLimiter = new RateLimiter({ interval: 60_000, max: 20 })
+
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = checkRateLimit(request, checkCustomerLimiter)
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = (await request.json()) as CheckCustomerRequest
 
@@ -33,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Normalize email (lowercase, trim)
-    const normalizedEmail = body.email.toLowerCase().trim()
+    const normalizedEmail = body.email.toLowerCase().trim().slice(0, 254)
 
     // Query customers table for this email
     const { data, error } = await supabaseAdmin

@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import { getAllJournalPosts } from "@/lib/data/journal"
 import { JournalPageClient } from "./journal-client"
 
 export const metadata: Metadata = {

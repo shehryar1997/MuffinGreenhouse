@@ -2,12 +2,13 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { COOKIE_NAME, isValidSessionCookie } from "@/lib/admin-session"
 
-// middleware.ts only gates /admin/* page navigations. A server action can be
+// proxy.ts only gates /admin/* page navigations. A server action can be
 // POSTed to from any path, and every admin action runs with the service-role
 // key (RLS bypassed), so each one must verify the admin session itself.
 
 export async function isAdminRequest(): Promise<boolean> {
-  return isValidSessionCookie(cookies().get(COOKIE_NAME)?.value)
+  const cookieStore = await cookies()
+  return isValidSessionCookie(cookieStore.get(COOKIE_NAME)?.value)
 }
 
 /** For actions that redirect/throw: sends unauthenticated callers to the login page. */

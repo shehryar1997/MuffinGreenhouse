@@ -5,7 +5,8 @@ import { COOKIE_NAME } from "@/lib/admin-session"
 
 async function logout() {
   "use server"
-  cookies().delete(COOKIE_NAME)
+  const cookieStore = await cookies()
+  cookieStore.delete(COOKIE_NAME)
   redirect("/admin/login")
 }
 

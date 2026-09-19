@@ -8,16 +8,26 @@ import { requireAdmin } from "@/lib/admin-auth"
 // the customer's latest profile/address/order data every time.
 export const dynamic = "force-dynamic"
 
+interface OrderItemRow {
+  id: string
+  product_name: string
+  variant_name: string | null
+  quantity: number
+  total_price: number
+}
+
 interface CustomerDetailPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function CustomerDetailPage({ params }: CustomerDetailPageProps) {
+  const { id } = await params
+
   // Fetch customer
   const { data: customer } = await supabaseAdmin
     .from("customers")
     .select("id, email, phone, name, email_verified, created_at")
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle()
 
   if (!customer) {
@@ -28,7 +38,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
   const { data: addresses = [] } = await supabaseAdmin
     .from("addresses")
     .select("id, label, street, city, province, postal_code, phone, is_default, is_active, delivery_instructions")
-    .eq("customer_id", params.id)
+    .eq("customer_id", id)
     .order("is_default", { ascending: false })
 
   // Fetch orders with items
@@ -37,7 +47,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
     .select(
       "id, order_number, status, payment_status, total, created_at, order_items:order_items(id, product_name, variant_name, quantity, unit_price, total_price)"
     )
-    .eq("customer_id", params.id)
+    .eq("customer_id", id)
     .order("created_at", { ascending: false })
 
   async function updateCustomer(formData: FormData) {
@@ -50,13 +60,13 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
     const { error } = await supabaseAdmin
       .from("customers")
       .update({ name, phone })
-      .eq("id", params.id)
+      .eq("id", id)
 
     if (error) {
       throw new Error(error.message)
     }
 
-    redirect(`/admin/customers/${params.id}`)
+    redirect(`/admin/customers/${id}`)
   }
 
   return (
@@ -196,9 +206,9 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
                       Total: Rs {order.total}
                     </div>
                     {/* Order items */}
-                    {(order.order_items as any[])?.length > 0 && (
+                    {(order.order_items as unknown as OrderItemRow[])?.length > 0 && (
                       <div className="mt-3 space-y-1 text-sm text-neutral-600">
-                        {(order.order_items as any[]).map((item: any) => (
+                        {(order.order_items as unknown as OrderItemRow[]).map((item) => (
                           <div key={item.id} className="flex justify-between">
                             <span>
                               {item.quantity}× {item.product_name}

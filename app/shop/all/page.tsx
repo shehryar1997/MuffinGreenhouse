@@ -11,11 +11,12 @@ export const metadata: Metadata = {
 }
 
 interface ShopAllPageProps {
-  searchParams: { page?: string }
+  searchParams: Promise<{ page?: string }>
 }
 
 export default async function ShopAllPage({ searchParams }: ShopAllPageProps) {
-  const requestedPage = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1)
+  const { page } = await searchParams
+  const requestedPage = Math.max(1, parseInt(page ?? "1", 10) || 1)
   const { products, totalCount } = await getPaginatedProducts(requestedPage, PRODUCTS_PER_PAGE)
   const totalPages = Math.max(1, Math.ceil(totalCount / PRODUCTS_PER_PAGE))
 

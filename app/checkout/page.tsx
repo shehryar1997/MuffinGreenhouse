@@ -10,6 +10,8 @@ import { formatPrice } from "@/lib/utils"
 import { toast } from "sonner"
 import { redirect, useRouter } from "next/navigation"
 import { trackBeginCheckout } from "@/lib/analytics"
+import { calculateDeliveryFee as computeDeliveryFee, KARACHI_DELIVERY_FEE } from "@/lib/delivery-fee"
+import { PAYMENT_SUMMARY_KEY_PREFIX } from "@/lib/checkout-summary"
 import { Package, Truck, Check, AlertCircle, Loader2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
 import Link from "next/link"
@@ -87,9 +89,11 @@ export default function CheckoutPage() {
   const subtotal = cart.subtotal
   const total = useMemo(() => deliveryType === "pickup" ? subtotal : subtotal + deliveryFee, [subtotal, deliveryFee, deliveryType])
 
-  // Fire GA4 begin_checkout event when cart is loaded
+  // Fire GA4 begin_checkout once, when the cart has loaded with items
+  const beginCheckoutTracked = useRef(false)
   useEffect(() => {
-    if (itemCount > 0) {
+    if (itemCount > 0 && !beginCheckoutTracked.current) {
+      beginCheckoutTracked.current = true
       trackBeginCheckout({
         value: cart.subtotal,
         currency: "PKR",
@@ -100,7 +104,7 @@ export default function CheckoutPage() {
         })),
       })
     }
-  }, [itemCount])
+  }, [itemCount, cart.items, cart.subtotal])
 
   const validateEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase())
   const validatePhone = (phone: string): boolean => phone.replace(/\D/g, "").length >= 10
@@ -143,8 +147,8 @@ export default function CheckoutPage() {
     await checkCustomerEmail(formData.email)
   }
 
-  const fetchProductDimensions = useCallback(async (productIds: string[], signal?: AbortSignal) => {
-    if (productIds.length === 0) return
+  const fetchProductDimensions = useCallback(async (productIds: string[], signal?: AbortSignal): Promise<Record<string, ProductDimensions>> => {
+    if (productIds.length === 0) return {}
     try {
       const response = await fetch("/api/product-dimensions", {
         method: "POST",
@@ -153,12 +157,13 @@ export default function CheckoutPage() {
         signal,
       })
       if (!response.ok) throw new Error("Failed to fetch product dimensions")
-      const dimensions = await response.json() as Record<string, ProductDimensions>
+      const { dimensions } = await response.json() as { dimensions: Record<string, ProductDimensions> }
       setProductDimensions(dimensions)
+      return dimensions
     } catch (err) {
       // Ignore abort errors
-      if (err instanceof Error && err.name === "AbortError") return
-      console.error("Error fetching product dimensions:", err)
+      if (!(err instanceof Error && err.name === "AbortError")) console.error("Error fetching product dimensions:", err)
+      return {}
     }
   }, [])
 
@@ -170,7 +175,7 @@ export default function CheckoutPage() {
       return
     }
     if (formData.city === "Karachi") {
-      setDeliveryFee(400)
+      setDeliveryFee(KARACHI_DELIVERY_FEE)
       setDeliveryFeeError(null)
       setIsCalculatingDeliveryFee(false)
       return
@@ -179,38 +184,12 @@ export default function CheckoutPage() {
     setDeliveryFeeError(null)
     try {
       const productIds = cart.items.map(item => item.product.id)
-      if (Object.keys(productDimensions).length === 0) await fetchProductDimensions(productIds)
-      // Sum one chargeable weight per item and total the whole cart, so an
-      // item with usable data and an item without both count toward the
-      // shipment instead of the second one silently contributing nothing.
-      let totalWeight = 0
-      cart.items.forEach(item => {
-        const dim = productDimensions[item.product.id]
-        const quantity = item.quantity
-        const categorySlug = dim?.categorySlug?.toLowerCase() || ""
-
-        if (categorySlug === "equipment" || categorySlug.includes("equipment")) {
-          // Equipment is charged by actual weight; assume 1kg/unit if it
-          // hasn't been recorded.
-          totalWeight += (dim?.weightKg || 1) * quantity
-          return
-        }
-
-        const hasFullBoxDimensions = !!(dim?.boxHeightCm && dim?.boxWidthCm && dim?.boxBreadthCm)
-        if (hasFullBoxDimensions) {
-          const volumetricWeight = (dim!.boxHeightCm! * dim!.boxWidthCm! * dim!.boxBreadthCm!) / 5000
-          const actualWeight = dim?.weightKg || 0
-          // Courier convention: charge whichever is greater, volumetric or actual.
-          totalWeight += Math.max(volumetricWeight, actualWeight) * quantity
-        } else {
-          // Box dimensions are missing or incomplete for this product - fall
-          // back to its recorded actual weight if we at least have that,
-          // otherwise assume a 1kg parcel per unit rather than contributing
-          // zero weight (which would silently drop this item from the fee).
-          totalWeight += (dim?.weightKg || 1) * quantity
-        }
+      const dimensions = Object.keys(productDimensions).length > 0 ? productDimensions : await fetchProductDimensions(productIds)
+      const calculatedFee = computeDeliveryFee({
+        deliveryType,
+        city: formData.city,
+        items: cart.items.map((item) => ({ dim: dimensions[item.product.id], quantity: item.quantity })),
       })
-      const calculatedFee = totalWeight <= 0.5 ? 600 : totalWeight <= 1 ? 800 : totalWeight <= 3 ? 1000 : totalWeight <= 5 ? 1400 : totalWeight <= 10 ? 1800 : 2200
       setDeliveryFee(calculatedFee)
     } catch (err) {
       console.error("Delivery fee calculation error:", err)
@@ -222,6 +201,8 @@ export default function CheckoutPage() {
   }, [cart.items, formData.city, deliveryType, productDimensions, fetchProductDimensions])
 
   useEffect(() => {
+    // Data-fetching effect: calculateDeliveryFee flags "loading" before it awaits the network.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (currentStep === 1 && deliveryType === "delivery" && formData.city) calculateDeliveryFee()
   }, [formData.city, deliveryType, cart.items, currentStep, calculateDeliveryFee])
 
@@ -318,6 +299,15 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to place order")
+      }
+
+      // The payment page needs the order summary (name, email, items). Keep it
+      // out of the URL -- URLs end up in history, server logs and analytics --
+      // and hand it over through sessionStorage instead.
+      try {
+        sessionStorage.setItem(PAYMENT_SUMMARY_KEY_PREFIX + result.summary.orderNumber, JSON.stringify(result.summary))
+      } catch {
+        // Storage unavailable (private mode etc.): the pay page falls back to a "check your email" state.
       }
 
       setOrderPlaced(true)

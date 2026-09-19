@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
 import { checkRateLimit } from "@/lib/rate-limit"
 import * as Sentry from "@sentry/nextjs"
+import { safeEqual } from "@/lib/safe-compare"
+import { isAdminRequest } from "@/lib/admin-auth"
 
 // From email address
 const FROM_EMAIL = "Muffin Plants <support@muffinplants.com>"
@@ -32,6 +34,12 @@ export async function POST(request: NextRequest) {
     return rateLimitResponse
   }
 
+  // This endpoint sends mail as support@ -- only a logged-in admin may use it
+  // (the /admin/email page is the only caller), on top of the shared password.
+  if (!(await isAdminRequest())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const body = (await request.json()) as EmailRequest
     const { password, to, subject, inReplyTo, message } = body
@@ -45,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate password
-    if (!process.env.SEND_PASSWORD || password !== process.env.SEND_PASSWORD) {
+    if (!process.env.SEND_PASSWORD || !(await safeEqual(password, process.env.SEND_PASSWORD))) {
       return NextResponse.json(
         { error: "Incorrect password" },
         { status: 401 }
@@ -86,18 +94,18 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
+      Sentry.captureException(error)
       return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
+        { error: "Failed to send email" },
+        { status: 502 }
       )
     }
 
     return NextResponse.json({ success: true, id: data?.id })
   } catch (err) {
     Sentry.captureException(err)
-    const message = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
-      { error: message },
+      { error: "Failed to send email" },
       { status: 500 }
     )
   }

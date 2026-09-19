@@ -7,7 +7,7 @@ import { SearchProvider } from "@/components/providers/search-provider"
 import { WishlistProvider } from "@/components/providers/wishlist-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { SiteChrome } from "@/components/layout/site-chrome"
-import { generateOrganizationSchema } from "@/lib/structured-data"
+import { generateOrganizationSchema, serializeJsonLd } from "@/lib/structured-data"
 import "./globals.css"
 
 const playfair = Playfair_Display({
@@ -63,7 +63,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#12160E" media="(prefers-color-scheme: dark)" />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema, null, 2) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(organizationSchema) }}
         />
       </head>
       <body className={`${playfair.variable} ${inter.variable} ${jetbrains.variable} font-sans`}>

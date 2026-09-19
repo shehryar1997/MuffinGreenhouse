@@ -8,7 +8,8 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 // the product's current values, never a stale cached version.
 export const dynamic = "force-dynamic"
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
+export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const [lookups, { data: product }] = await Promise.all([
     getFormLookups(),
     supabaseAdmin
@@ -16,7 +17,7 @@ export default async function EditProductPage({ params }: { params: { id: string
       .select(
         "*, images:product_images(url, alt_text), variants:product_variants(name, sku, price, stock_count)"
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .maybeSingle(),
   ])
 
@@ -24,8 +25,8 @@ export default async function EditProductPage({ params }: { params: { id: string
     notFound()
   }
 
-  const updateWithId = updateProduct.bind(null, params.id)
-  const deleteWithId = deleteProduct.bind(null, params.id)
+  const updateWithId = updateProduct.bind(null, id)
+  const deleteWithId = deleteProduct.bind(null, id)
 
   return (
     <div>

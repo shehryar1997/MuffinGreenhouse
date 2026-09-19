@@ -14,6 +14,8 @@ export function formatPrice(price: number, currency: string = "PKR"): string {
   }).format(price)
 }
 
+// `any[]` (not `unknown[]`) so callbacks with specific parameter types are assignable.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<T extends (...args: any[]) => void>(
   fn: T,
   delay: number
@@ -25,6 +27,7 @@ export function debounce<T extends (...args: any[]) => void>(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounceWithAbort<T extends (...args: any[]) => void>(
   fn: (signal: AbortSignal, ...args: Parameters<T>) => void,
   delay: number

@@ -1,18 +1,29 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { supabaseAdmin } from '@/supabase/admin-client'
 import { sendBookingReceivedEmail } from '@/lib/email/send-booking-received'
 
-interface CheckoutConfirmRequest {
-  orderId: string
-  customerEmail: string
-  customerName: string
-  orderNumber: string
+// The browser only says WHICH order it is confirming. Recipient, name, items
+// and total are all read back from the database -- otherwise anyone could POST
+// arbitrary content to an arbitrary address from our support@ sender.
+// (orderId is a random UUID, so an order number alone can't trigger this.)
+const confirmSchema = z.object({
+  orderId: z.string().uuid(),
+  orderNumber: z.string().trim().min(1).max(40),
+})
+
+interface OrderForConfirmation {
+  id: string
+  order_number: string
+  status: string
+  payment_status: string
   total: number
-  items: Array<{ productId: string; productName: string; quantity: number; price: number }>
-  deliveryType: 'delivery' | 'pickup'
-  deliveryFee: number
-  subtotal: number
+  delivery_type: 'delivery' | 'pickup'
+  created_at: string
+  customer: { email: string; name: string | null } | null
+  order_items: Array<{ product_name: string; quantity: number; unit_price: number }>
 }
 
 export async function POST(request: NextRequest) {
@@ -20,54 +31,76 @@ export async function POST(request: NextRequest) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const body = (await request.json()) as CheckoutConfirmRequest
-    const { customerEmail, customerName, orderNumber, total, items, deliveryType, deliveryFee, subtotal } = body
-
-    if (!customerEmail) {
-      return NextResponse.json({ error: 'Customer email is required' }, { status: 400 })
+    let raw: unknown
+    try {
+      raw = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    // ponytail: call create_order RPC with pending status
-    // This assumes the order was already created during checkout-submit and we're just confirming it
-    // If order doesn't exist, create it now
-    const { data: existingOrder } = await supabaseAdmin
+    const parsed = confirmSchema.safeParse(raw)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Order reference is required' }, { status: 400 })
+    }
+    const { orderId, orderNumber } = parsed.data
+
+    const { data, error } = await supabaseAdmin
       .from('orders')
-      .select('id, order_number, status, payment_status')
+      .select(
+        'id, order_number, status, payment_status, total, delivery_type, created_at, customer:customers(email, name), order_items(product_name, quantity, unit_price)'
+      )
+      .eq('id', orderId)
       .eq('order_number', orderNumber)
       .maybeSingle()
 
-    let orderId = existingOrder?.id
-
-    if (!existingOrder) {
-      // Order doesn't exist yet - this shouldn't happen in normal flow but handle gracefully
+    if (error) {
+      console.error('Checkout confirm lookup error:', error)
+      return NextResponse.json({ error: 'Failed to confirm booking' }, { status: 500 })
+    }
+    if (!data) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Send booking received email
-    try {
-      await sendBookingReceivedEmail({
-        toEmail: customerEmail,
-        customerName,
-        orderNumber,
-        total,
-        items,
-        deliveryType,
-        paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-        whatsappNumber: '+923095360009',
-      })
-    } catch (emailError) {
-      console.error('Failed to send booking received email:', emailError)
-      // Don't fail the order if email fails
+    const order = data as unknown as OrderForConfirmation
+
+    // Only a still-open, unpaid booking can be "confirmed".
+    if (order.status !== 'pending' || order.payment_status !== 'pending') {
+      return NextResponse.json({ error: 'This order can no longer be confirmed' }, { status: 409 })
+    }
+
+    // Send booking received email (to the address stored on the order)
+    if (order.customer?.email) {
+      try {
+        await sendBookingReceivedEmail({
+          toEmail: order.customer.email,
+          customerName: order.customer.name ?? undefined,
+          orderNumber: order.order_number,
+          total: Number(order.total),
+          items: (order.order_items ?? []).map((item) => ({
+            productName: item.product_name,
+            quantity: item.quantity,
+            price: Number(item.unit_price),
+          })),
+          deliveryType: order.delivery_type,
+          // Matches the 24h expiry applied by /api/cron/expire-pending-orders.
+          paymentDeadline: new Date(new Date(order.created_at).getTime() + 24 * 60 * 60 * 1000),
+          whatsappNumber: '+923095360009',
+        })
+      } catch (emailError) {
+        console.error('Failed to send booking received email:', emailError)
+        // Don't fail the order if email fails
+      }
     }
 
     return NextResponse.json({
       success: true,
-      orderId,
-      orderNumber,
+      orderId: order.id,
+      orderNumber: order.order_number,
       message: 'Booking confirmed successfully',
     })
   } catch (err) {
     console.error('Checkout confirm error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Failed to confirm booking' }, { status: 500 })
   }
 }

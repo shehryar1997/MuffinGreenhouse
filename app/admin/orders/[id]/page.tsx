@@ -8,10 +8,12 @@ import { MarkShippedDialog } from "./mark-shipped-dialog"
 export const dynamic = "force-dynamic"
 
 interface OrderDetailPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
+  const { id } = await params
+
   const { data: order } = await supabaseAdmin
     .from("orders")
     .select(
@@ -22,7 +24,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
        address:addresses(label, street, city, province, phone),
        order_items:order_items(id, product_name, variant_name, quantity, unit_price, total_price)`
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .maybeSingle()
 
   if (!order) {

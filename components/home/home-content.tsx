@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import dynamic from "next/dynamic"
 import { motion } from "framer-motion"
 import Image from "next/image"
@@ -271,7 +271,6 @@ function AnimatedBadge({ prefersReducedMotion }: { prefersReducedMotion: boolean
 }
 
 export default function HomeContent({ products }: { products: Product[] }) {
-  const [selectedMood, setSelectedMood] = useState("soft")
   const prefersReducedMotion = useReducedMotion()
   useEffect(() => {}, [])
 

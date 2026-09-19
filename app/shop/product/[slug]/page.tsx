@@ -5,8 +5,9 @@ import { ProductDetailClient } from "./product-detail-client"
 
 export const revalidate = 300
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const product = await getProductBySlug(params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const product = await getProductBySlug(slug)
   
   if (!product) {
     return { title: "Product Not Found - Muffin Greenhouse" }
@@ -19,11 +20,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 interface ProductDetailPageProps {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
-  const product = await getProductBySlug(params.slug)
+  const { slug } = await params
+  const product = await getProductBySlug(slug)
 
   if (!product) {
     notFound()

@@ -5,7 +5,7 @@ import { ProductCard } from "@/components/ui/product-card"
 import { ProductFilters, FilterSidebar } from "@/components/shop/product-filters"
 import { Pagination } from "@/components/shop/pagination"
 import type { Product } from "@/types"
-import { generateShopAllBreadcrumb } from "@/lib/structured-data"
+import { generateShopAllBreadcrumb, serializeJsonLd } from "@/lib/structured-data"
 
 interface ShopAllClientProps {
   products: Product[]
@@ -68,7 +68,7 @@ export function ShopAllClient({ products, currentPage, totalPages }: ShopAllClie
             </div>
             <script
               type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema, null, 2) }}
+              dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbSchema) }}
             />
           </>
         )

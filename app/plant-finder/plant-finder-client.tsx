@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +21,7 @@ export function PlantFinderClient() {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [matches, setMatches] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [, setIsLoading] = useState(false)
 
   // Fetch products on mount with abort capability
   useEffect(() => {

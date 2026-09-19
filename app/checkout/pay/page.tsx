@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useMemo, useState, useSyncExternalStore } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { trackPurchase } from '@/lib/analytics'
@@ -8,18 +8,7 @@ import { formatPrice } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CheckCircle, Loader2, MessageCircle, Clock, AlertCircle, Copy, Check } from 'lucide-react'
 import { siteConfig } from '@/config/nav.config'
-
-interface PaymentDetails {
-  orderId: string
-  orderNumber: string
-  total: number
-  customerEmail: string
-  customerName: string
-  items: Array<{ productId: string; productName: string; quantity: number; price: number }>
-  deliveryType: 'delivery' | 'pickup'
-  deliveryFee: number
-  subtotal: number
-}
+import { PAYMENT_SUMMARY_KEY_PREFIX, type PaymentSummary } from '@/lib/checkout-summary'
 
 const PAYMENT_ACCOUNTS = {
   hbl: { title: 'HBL Bank Transfer', icon: '🏦', details: [
@@ -46,36 +35,41 @@ export default function CheckoutPayPage() {
   )
 }
 
+const noopSubscribe = () => () => {}
+
 function CheckoutPayContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(null)
-  const [loading, setLoading] = useState(true)
+  const orderNumber = searchParams.get('orderNumber')
+
+  // The order summary is handed over by /checkout through sessionStorage (never
+  // the URL, which would leak name/email into history, logs and analytics).
+  // 'loading' covers the server render / hydration pass, where storage isn't readable.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false)
+  const storedSummary = useSyncExternalStore(
+    noopSubscribe,
+    () => {
+      try {
+        return orderNumber ? sessionStorage.getItem(PAYMENT_SUMMARY_KEY_PREFIX + orderNumber) : null
+      } catch {
+        return null
+      }
+    },
+    () => null
+  )
+  const paymentDetails = useMemo<PaymentSummary | null>(() => {
+    if (!storedSummary) return null
+    try {
+      const parsed = JSON.parse(storedSummary) as PaymentSummary
+      return parsed.orderNumber === orderNumber ? parsed : null
+    } catch {
+      return null
+    }
+  }, [storedSummary, orderNumber])
+  const loading = !hydrated
   const [confirming, setConfirming] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
-
-  useEffect(() => {
-    const orderId = searchParams.get('orderId')
-    const orderNumber = searchParams.get('orderNumber')
-    const total = searchParams.get('total')
-    const customerEmail = searchParams.get('customerEmail')
-    const customerName = searchParams.get('customerName')
-    const itemsJson = searchParams.get('items')
-    const deliveryType = searchParams.get('deliveryType')
-    const deliveryFee = searchParams.get('deliveryFee')
-    const subtotal = searchParams.get('subtotal')
-
-    if (orderId && orderNumber && total && customerEmail) {
-      let items: PaymentDetails['items'] = []
-      try { if (itemsJson) items = JSON.parse(decodeURIComponent(itemsJson)) } catch {}
-      setPaymentDetails({ orderId, orderNumber, total: parseFloat(total), customerEmail: decodeURIComponent(customerEmail), customerName: customerName ? decodeURIComponent(customerName) : '', items, deliveryType: (deliveryType as 'delivery' | 'pickup') || 'delivery', deliveryFee: deliveryFee ? parseFloat(deliveryFee) : 0, subtotal: subtotal ? parseFloat(subtotal) : parseFloat(total) })
-    } else {
-      toast.error('Missing order information')
-      setTimeout(() => window.location.href = '/checkout', 2000)
-    }
-    setLoading(false)
-  }, [searchParams])
 
   const handleCopy = async (value: string, fieldId: string) => {
     try { await navigator.clipboard.writeText(value); setCopiedField(fieldId); setTimeout(() => setCopiedField(null), 2000); toast.success('Copied') } catch { toast.error('Failed to copy') }
@@ -85,7 +79,7 @@ function CheckoutPayContent() {
     if (!paymentDetails) return
     setConfirming(true)
     try {
-      const res = await fetch('/api/checkout-confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...paymentDetails }) })
+      const res = await fetch('/api/checkout-confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: paymentDetails.orderId, orderNumber: paymentDetails.orderNumber }) })
       if (!res.ok) { const err = await res.json().catch(() => ({ error: 'Unknown' })); throw new Error(err.error || 'Failed') }
       
       // Fire GA4 purchase event after successful booking
@@ -111,7 +105,21 @@ function CheckoutPayContent() {
   }
 
   if (loading) return <div className='min-h-screen flex items-center justify-center bg-forest-50'><Loader2 className='w-8 h-8 animate-spin' /></div>
-  if (!paymentDetails) return <div className='min-h-screen flex items-center justify-center bg-forest-50'><AlertCircle className='w-12 h-12 text-amber-500' /><p>Invalid order</p></div>
+  if (!paymentDetails) {
+    return (
+      <div className='min-h-screen flex items-center justify-center bg-forest-50 px-4'>
+        <div className='max-w-md text-center'>
+          <AlertCircle className='w-12 h-12 text-amber-500 mx-auto mb-4' />
+          <h1 className='text-xl font-serif text-forest-900 mb-2'>We couldn&apos;t load your order details</h1>
+          <p className='text-forest-600 mb-6'>
+            {orderNumber ? <>Order #{orderNumber} was placed, but its payment details are only available in the browser tab where you checked out. </> : null}
+            Please check your confirmation email, or message us on WhatsApp at {siteConfig.whatsappNumber} and we&apos;ll help right away.
+          </p>
+          <Button variant='outline' onClick={() => router.push('/')}>Back to home</Button>
+        </div>
+      </div>
+    )
+  }
 
   if (confirmed) {
     return (

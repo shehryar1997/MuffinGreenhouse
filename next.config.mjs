@@ -32,9 +32,18 @@ const nextConfig = {
     // Next.js dev mode (HMR / fast refresh) evaluates code via eval(), which
     // a strict script-src without 'unsafe-eval' blocks outright — that would
     // break `next dev` in the browser. Only lock this down in production.
+    // Google Analytics (<GoogleAnalytics /> in app/layout.tsx) loads gtag.js from
+    // googletagmanager.com and reports to google-analytics.com; without these
+    // allowances the CSP below silently blocks it. Only added when a GA ID is set.
+    const gaEnabled = Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID)
+    const gaScript = gaEnabled ? ' https://www.googletagmanager.com' : ''
+    const gaConnect = gaEnabled
+      ? ' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com'
+      : ''
+    const gaImg = gaEnabled ? ' https://www.google-analytics.com https://www.googletagmanager.com' : ''
     const scriptSrc = process.env.NODE_ENV === 'production'
-      ? "script-src 'self' 'unsafe-inline';"
-      : "script-src 'self' 'unsafe-inline' 'unsafe-eval';"
+      ? `script-src 'self' 'unsafe-inline'${gaScript};`
+      : `script-src 'self' 'unsafe-inline' 'unsafe-eval'${gaScript};`
     // Client components (cart-provider session check, wishlist, account,
     // checkout saved-address lookup) call Supabase directly from the browser
     // via @supabase/ssr's browser client — a cross-origin fetch. `connect-src
@@ -50,14 +59,14 @@ const nextConfig = {
     } catch {
       // Malformed DSN: Sentry won't initialise either, so nothing to allow.
     }
-    const connectSrc = `connect-src 'self'${supabaseUrl ? ` ${supabaseUrl}` : ''}${sentryOrigin ? ` ${sentryOrigin}` : ''};`
+    const connectSrc = `connect-src 'self'${supabaseUrl ? ` ${supabaseUrl}` : ''}${sentryOrigin ? ` ${sentryOrigin}` : ''}${gaConnect};`
     return [
       {
         source: '/:path*',
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `default-src 'self'; img-src 'self' data: https://images.unsplash.com https://res.cloudinary.com https://ik.imagekit.io https://images.pexels.com https://pub-81f46d28c378411d9acc02aef58b2bee.r2.dev https://images.muffinplants.com; ${scriptSrc} style-src 'self' 'unsafe-inline'; font-src 'self'; ${connectSrc} frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;`,
+            value: `default-src 'self'; img-src 'self' data: https://images.unsplash.com https://res.cloudinary.com https://ik.imagekit.io https://images.pexels.com https://pub-81f46d28c378411d9acc02aef58b2bee.r2.dev https://images.muffinplants.com${gaImg}; ${scriptSrc} style-src 'self' 'unsafe-inline'; font-src 'self'; ${connectSrc} frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:;`,
           },
           {
             key: 'X-Frame-Options',

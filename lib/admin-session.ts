@@ -1,11 +1,13 @@
-// Edge-compatible (Web Crypto works in both middleware and Server Actions,
-// unlike Node's crypto.createHmac which isn't available in Edge middleware).
+// Web Crypto based, so it works in the proxy, Server Actions and route handlers
+// alike (no dependency on Node's crypto.createHmac).
 export const COOKIE_NAME = "admin_session"
+
+import { safeEqual } from "@/lib/safe-compare"
 
 const SESSION_SECRET = process.env.SESSION_SECRET
 if (!SESSION_SECRET && process.env.NODE_ENV !== "test") {
   console.warn(
-    "SESSION_SECRET is not set. Admin sessions will be invalid. Add SESSION_SECRET to .env.local (any random string)."
+    "SESSION_SECRET is not set. Admin login is disabled until it is set (any long random string)."
   )
 }
 
@@ -15,24 +17,19 @@ const SESSION_EXPIRY_HOURS = 24 // Cookie expiry matches session expiry
 // HMAC helpers (Edge‑compatible Web Crypto)
 // ----------------------------------------------------------------------
 
+// A predictable fallback key is only ever used by `next dev`. Anywhere else a
+// missing SESSION_SECRET must fail closed -- a known signing key would let
+// anyone forge an admin session cookie.
+const DEV_FALLBACK_SECRET = "dev-fallback-session-secret-do-not-use-in-production"
+
 async function importKey(): Promise<CryptoKey> {
-  if (!SESSION_SECRET) {
-    // Fallback for development without SESSION_SECRET: use a predictable key.
-    // In production, SESSION_SECRET must be set.
-    const fallback = "dev-fallback-session-secret-do-not-use-in-production"
-    const encoder = new TextEncoder()
-    return crypto.subtle.importKey(
-      "raw",
-      encoder.encode(fallback),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign", "verify"]
-    )
+  const secret = SESSION_SECRET || (process.env.NODE_ENV === "development" ? DEV_FALLBACK_SECRET : undefined)
+  if (!secret) {
+    throw new Error("SESSION_SECRET is not set")
   }
-  const encoder = new TextEncoder()
   return crypto.subtle.importKey(
     "raw",
-    encoder.encode(SESSION_SECRET),
+    new TextEncoder().encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign", "verify"]
@@ -87,8 +84,10 @@ async function decodeSessionToken(token: string): Promise<{ sessionId: string; e
 // Public API
 // ----------------------------------------------------------------------
 
-export async function verifyPassword(candidate: string): Promise<boolean> {
-  return candidate === process.env.ADMIN_PASSWORD
+export async function verifyPassword(candidate: string | null | undefined): Promise<boolean> {
+  const expected = process.env.ADMIN_PASSWORD
+  if (!expected) return false // never let an unset password match anything
+  return safeEqual(candidate, expected)
 }
 
 /**
@@ -106,8 +105,13 @@ export async function getSessionCookieValue(): Promise<string> {
  */
 export async function isValidSessionCookie(value: string | undefined): Promise<boolean> {
   if (!value) return false
-  const decoded = await decodeSessionToken(value)
-  if (!decoded) return false
-  // Check expiry (allow 1 minute grace for clock skew)
-  return decoded.expiresAt > Date.now() - 60_000
+  try {
+    const decoded = await decodeSessionToken(value)
+    if (!decoded) return false
+    // Check expiry (allow 1 minute grace for clock skew)
+    return decoded.expiresAt > Date.now() - 60_000
+  } catch {
+    // Malformed cookie (bad base64, missing SESSION_SECRET, ...) is simply "not logged in".
+    return false
+  }
 }

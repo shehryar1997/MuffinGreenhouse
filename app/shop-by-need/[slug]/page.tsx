@@ -35,9 +35,10 @@ const useCaseMetadata: Record<string, { title: string; description: string }> = 
   },
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const meta = useCaseMetadata[params.slug] || {
-    title: `${params.slug.charAt(0).toUpperCase() + params.slug.slice(1).replace(/-/g, " ")} Plants - Muffin Greenhouse`,
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const meta = useCaseMetadata[slug] || {
+    title: `${slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ")} Plants - Muffin Greenhouse`,
     description: "Shop plants curated for your needs. Delivery available in Karachi.",
   }
   return {
@@ -47,12 +48,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 interface ShopByNeedPageProps {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 export default async function ShopByNeedPage({ params }: ShopByNeedPageProps) {
-  const useCase = useCases[params.slug]
-  const products = await getProductsByUseCase(params.slug)
+  const { slug } = await params
+  const useCase = useCases[slug]
+  const products = await getProductsByUseCase(slug)
 
   if (!useCase) return notFound()
 

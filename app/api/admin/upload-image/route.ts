@@ -15,8 +15,9 @@ const MAX_EDGE_PX = 2000
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024
 
 export async function POST(request: Request) {
-  // Middleware only gates /admin/*, not /api/admin/*, so check the session here.
-  const session = cookies().get(COOKIE_NAME)?.value
+  // proxy.ts only gates /admin/*, not /api/admin/*, so check the session here.
+  const cookieStore = await cookies()
+  const session = cookieStore.get(COOKIE_NAME)?.value
   if (!(await isValidSessionCookie(session))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }

@@ -6,7 +6,7 @@ import { ChevronDown, Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
-import { pakistanCities, searchCities } from "@/data/pakistan-cities"
+import { searchCities } from "@/data/pakistan-cities"
 
 export interface CitySelectProps {
   value: string
@@ -42,13 +42,14 @@ export function CitySelect({
     if (!open) setOpen(true)
   }
 
-  React.useEffect(() => {
-    if (!open) setSearchQuery("")
-    else setTimeout(() => inputRef.current?.focus(), 0)
-  }, [open])
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (nextOpen) setTimeout(() => inputRef.current?.focus(), 0)
+    else setSearchQuery("")
+  }
 
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+    <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <PopoverPrimitive.Trigger asChild>
         <button
           type="button"

@@ -3,8 +3,9 @@ import { getEventBySlug } from "@/lib/data/events"
 import { notFound } from "next/navigation"
 import EventDetailClient from "./event-detail-client"
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const event = getEventBySlug(params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const event = getEventBySlug(slug)
   if (!event) {
     return { title: "Event Not Found - Muffin Greenhouse" }
   }
@@ -14,8 +15,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default function EventDetailPage({ params }: { params: { slug: string } }) {
-  const event = getEventBySlug(params.slug)
+export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const event = getEventBySlug(slug)
   if (!event) {
     notFound()
   }

@@ -53,9 +53,10 @@ const categoryMetadata: Record<string, { title: string; description: string }> =
   },
 }
 
-export async function generateMetadata({ params }: { params: { category: string } }): Promise<Metadata> {
-  const meta = categoryMetadata[params.category] || {
-    title: `${params.category.charAt(0).toUpperCase() + params.category.slice(1).replace(/-/g, " ")} - Muffin Greenhouse`,
+export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
+  const { category } = await params
+  const meta = categoryMetadata[category] || {
+    title: `${category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, " ")} - Muffin Greenhouse`,
     description: "Browse our collection of quality plants for Karachi.",
   }
   return {
@@ -65,21 +66,23 @@ export async function generateMetadata({ params }: { params: { category: string 
 }
 
 interface ShopCategoryPageProps {
-  params: { category: string }
-  searchParams: { page?: string }
+  params: Promise<{ category: string }>
+  searchParams: Promise<{ page?: string }>
 }
 
 export default async function ShopCategoryPage({ params, searchParams }: ShopCategoryPageProps) {
-  const requestedPage = Math.max(1, parseInt(searchParams.page ?? "1", 10) || 1)
-  const { products, totalCount } = await getPaginatedProductsByCategory(params.category, requestedPage, PRODUCTS_PER_PAGE)
+  const { category } = await params
+  const { page } = await searchParams
+  const requestedPage = Math.max(1, parseInt(page ?? "1", 10) || 1)
+  const { products, totalCount } = await getPaginatedProductsByCategory(category, requestedPage, PRODUCTS_PER_PAGE)
   const totalPages = Math.max(1, Math.ceil(totalCount / PRODUCTS_PER_PAGE))
 
   if (requestedPage > totalPages) {
-    redirect(totalPages > 1 ? `/shop/${params.category}?page=${totalPages}` : `/shop/${params.category}`)
+    redirect(totalPages > 1 ? `/shop/${category}?page=${totalPages}` : `/shop/${category}`)
   }
 
-  const categoryDisplayMeta = categoryMeta[params.category] || {
-    title: params.category.charAt(0).toUpperCase() + params.category.slice(1).replace(/-/g, " "),
+  const categoryDisplayMeta = categoryMeta[category] || {
+    title: category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, " "),
     description: "Browse our collection.",
     tagline: "Quality plants for Karachi.",
   }
@@ -87,7 +90,7 @@ export default async function ShopCategoryPage({ params, searchParams }: ShopCat
     <ShopCategoryClient
       products={products}
       meta={categoryDisplayMeta}
-      categorySlug={params.category}
+      categorySlug={category}
       currentPage={requestedPage}
       totalPages={totalPages}
     />

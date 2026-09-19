@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,7 @@ import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
 import { toast } from "sonner"
 import { Product } from "@/types"
-import { generateProductSchema } from "@/lib/structured-data"
+import { generateProductSchema, serializeJsonLd } from "@/lib/structured-data"
 import { isPlantProduct } from "@/lib/product-categories"
 
 interface ProductDetailClientProps {
@@ -20,7 +20,7 @@ interface ProductDetailClientProps {
 export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [selectedVariant, setSelectedVariant] = useState(product?.variants[0] || null)
   const [selectedImage, setSelectedImage] = useState(0)
-  const [quantity, setQuantity] = useState(1)
+  const [requestedQuantity, setQuantity] = useState(1)
   const { addItem, toggleCart } = useCart()
 
   const productSchema = generateProductSchema(product)
@@ -37,11 +37,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const currentCompareAt = product.compareAtPrice
   const currentStockCount = selectedVariant?.stockCount ?? product.stockCount
 
-  // Re-clamp quantity when switching variants, so a quantity chosen for a
-  // higher-stock variant can't silently carry over past a lower-stock one.
-  useEffect(() => {
-    setQuantity((q) => Math.min(Math.max(1, q), Math.max(1, currentStockCount)))
-  }, [currentStockCount])
+  // Derived (not synced via an effect): a quantity chosen for a higher-stock
+  // variant can't carry over past a lower-stock one.
+  const quantity = Math.min(Math.max(1, requestedQuantity), Math.max(1, currentStockCount))
 
   return (
     <div className="bg-cream-100 min-h-screen pt-28 pb-8">
@@ -167,7 +165,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       </div>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema, null, 2) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(productSchema) }}
       />
     </div>
   )

@@ -139,8 +139,17 @@ export function generateShopAllBreadcrumb(pageNumber?: number) {
 }
 
 /**
+ * Serialises JSON-LD for use inside a <script> tag. Escapes "<" so that text
+ * from the database (product names/descriptions) can never contain a literal
+ * "</script>" and break out of the tag.
+ */
+export function serializeJsonLd(data: unknown): string {
+  return JSON.stringify(data, null, 2).replace(/</g, "\\u003c")
+}
+
+/**
  * Renders JSON-LD script tag as a string
  */
-export function renderJsonLdScript(data: any): string {
-  return `<script type="application/ld+json">${JSON.stringify(data, null, 2)}</script>`
+export function renderJsonLdScript(data: unknown): string {
+  return `<script type="application/ld+json">${serializeJsonLd(data)}</script>`
 }

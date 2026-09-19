@@ -4,20 +4,17 @@ import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, ShoppingBag, Menu, X, User, Star, Sparkles, ChevronRight, ArrowLeft } from "lucide-react"
-import { mainNav, shopMegaMenuSections, shopByNeedCategories } from "@/config/nav.config"
+import { Search, ShoppingBag, Menu, User, Star, Sparkles } from "lucide-react"
+import { mainNav, shopMegaMenuSections } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
-import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [shopMenuOpen, setShopMenuOpen] = useState(false)
-  const [expandedSection, setExpandedSection] = useState<string | null>(null)
   const shopMenuTimeout = useRef<NodeJS.Timeout | null>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
-  const firstFocusableRef = useRef<HTMLButtonElement>(null)
   const { toggleCart, itemCount } = useCart()
   const { openSearch } = useSearch()
 
@@ -91,10 +88,6 @@ export function Header() {
       document.body.style.overflow = ""
     }
   }, [mobileMenuOpen])
-
-  const toggleSection = (sectionId: string) => {
-    setExpandedSection(expandedSection === sectionId ? null : sectionId)
-  }
 
   return (
     <>

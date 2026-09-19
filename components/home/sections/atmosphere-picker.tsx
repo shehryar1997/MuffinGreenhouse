@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Product } from "@/types"
 import { moodThemes, Mood } from "@/lib/mood-utils"
-import { FadeIn, KineticHeading, AnimatedHeading } from "@/components/home/shared/animations"
+import { FadeIn, AnimatedHeading } from "@/components/home/shared/animations"
 import { MoodPlantsGrid } from "@/components/home/shared/mood-plants-grid"
 
 interface AtmospherePickerProps {
@@ -41,7 +41,6 @@ export function AtmospherePicker({ products }: AtmospherePickerProps) {
             {(["soft", "bright", "moody"] as Mood[]).map((m) => {
               const mTheme = moodThemes[m]
               const isSelected = selectedMood === m
-              const currentTheme = theme
               return (
                 <button
                   key={m}

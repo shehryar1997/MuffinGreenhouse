@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { siteConfig, footerNav } from "@/config/nav.config"
+import { siteConfig } from "@/config/nav.config"
 
 export function Footer() {
   return (

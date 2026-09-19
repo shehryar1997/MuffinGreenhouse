@@ -260,7 +260,7 @@ export function ProductForm({
       ref={formRef}
       action={action}
       onChange={(e) => {
-        const name = (e.target as HTMLInputElement).name
+        const { name } = e.target as unknown as { name?: string }
         if (name) touched.current.add(name)
       }}
       className="space-y-8 bg-white rounded-lg border p-6"

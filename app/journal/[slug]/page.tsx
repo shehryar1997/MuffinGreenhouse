@@ -3,8 +3,9 @@ import { notFound } from "next/navigation"
 import { getJournalPostBySlug } from "@/lib/data/journal"
 import { JournalPostClient } from "./journal-post-client"
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const post = getJournalPostBySlug(params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const post = getJournalPostBySlug(slug)
   if (!post) {
     return { title: "Post Not Found - Muffin Greenhouse" }
   }
@@ -14,8 +15,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default function JournalPostPage({ params }: { params: { slug: string } }) {
-  const post = getJournalPostBySlug(params.slug)
+export default async function JournalPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const post = getJournalPostBySlug(slug)
   
   if (!post) return notFound()
   

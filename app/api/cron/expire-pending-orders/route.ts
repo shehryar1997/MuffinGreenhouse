@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/supabase/admin-client'
 import { sendOrderCancelledEmail } from '@/lib/email/send-order-cancelled'
+import { safeEqual } from '@/lib/safe-compare'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
   }
 
-  if (!authHeader || authHeader !== 'Bearer ' + expectedSecret) {
+  if (!(await safeEqual(authHeader, 'Bearer ' + expectedSecret))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -24,7 +25,8 @@ export async function GET(request: NextRequest) {
 
     const { data: expiredOrders, error: fetchError } = await supabaseAdmin
       .from('orders')
-      .select('id, order_number, customer_email, customer_name, status, payment_status, created_at')
+      // `orders` has no customer_email/customer_name columns -- they live on the linked customer.
+      .select('id, order_number, status, payment_status, created_at, customer:customers(email, name)')
       .eq('status', 'pending')
       .eq('payment_status', 'pending')
       .lt('created_at', twentyFourHoursAgo)
@@ -42,6 +44,7 @@ export async function GET(request: NextRequest) {
     const failedEmails: string[] = []
 
     for (const order of expiredOrders) {
+      const customer = order.customer as unknown as { email: string; name: string | null } | null
       // Update order to cancelled
       const { error: updateError } = await supabaseAdmin
         .from('orders')
@@ -56,11 +59,11 @@ export async function GET(request: NextRequest) {
       cancelledOrders.push(order.order_number)
 
       // Send cancellation email
-      if (order.customer_email) {
+      if (customer?.email) {
         try {
           await sendOrderCancelledEmail({
-            toEmail: order.customer_email,
-            customerName: order.customer_name,
+            toEmail: customer.email,
+            customerName: customer.name ?? undefined,
             orderNumber: order.order_number,
           })
         } catch (emailError) {
