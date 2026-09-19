@@ -341,3 +341,151 @@ export async function getPlantOfTheDay(): Promise<Product> {
 
   return mapSupabaseProductToProduct(fallback as unknown as SupabaseProduct)
 }
+
+// ============================================================================
+// Search Functions (using PostgreSQL full-text search)
+// ============================================================================
+
+export interface SearchProductsParams {
+  query?: string
+  categorySlug?: string
+  useCaseSlugs?: string[]
+  moodSlugs?: string[]
+  lightLevels?: ('low' | 'medium' | 'bright' | 'full_sun')[]
+  difficulties?: ('beginner' | 'intermediate' | 'expert')[]
+  minPrice?: number
+  maxPrice?: number
+  isPetSafe?: boolean
+  isNewArrival?: boolean
+  sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'name'
+  page?: number
+  pageSize?: number
+}
+
+export async function searchProducts(params: SearchProductsParams): Promise<PaginatedProducts> {
+  const {
+    query = '',
+    categorySlug,
+    useCaseSlugs,
+    moodSlugs,
+    lightLevels,
+    difficulties,
+    minPrice,
+    maxPrice,
+    isPetSafe,
+    isNewArrival,
+    sortBy = 'relevance',
+    page = 1,
+    pageSize = PRODUCTS_PER_PAGE,
+  } = params
+
+  // Call the search_products SQL function
+  const { data, error } = await supabase.rpc('search_products', {
+    search_query: query || null,
+    category_slug: categorySlug || null,
+    use_case_slugs: useCaseSlugs?.length ? useCaseSlugs : null,
+    mood_slugs: moodSlugs?.length ? moodSlugs : null,
+    light_levels: lightLevels?.length ? lightLevels : null,
+    difficulties: difficulties?.length ? difficulties : null,
+    min_price: minPrice || null,
+    max_price: maxPrice || null,
+    is_pet_safe: isPetSafe ?? null,
+    is_new_arrival: isNewArrival ?? null,
+    sort_by: sortBy,
+    page_size: pageSize,
+    page_offset: (page - 1) * pageSize,
+  })
+
+  if (error) {
+    console.error('Error searching products:', error)
+    return { products: [], totalCount: 0 }
+  }
+
+  if (!data || data.length === 0) {
+    return { products: [], totalCount: 0 }
+  }
+
+  // Extract product IDs from search results
+  interface SearchResultRow {
+    id: string
+    total_count?: number
+    [key: string]: unknown
+  }
+  const productIds = data.map((row: SearchResultRow) => row.id)
+  const totalCount = data[0]?.total_count ?? 0
+
+  // Fetch full product data for these IDs
+  const { data: fullProducts, error: fetchError } = await supabase
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .in('id', productIds)
+    .not('published_at', 'is', null)
+    .order('sort_order', { foreignTable: 'product_images', ascending: true })
+    .order('sort_order', { foreignTable: 'product_variants', ascending: true })
+
+  if (fetchError) {
+    console.error('Error fetching searched products:', fetchError)
+    return { products: [], totalCount: 0 }
+  }
+
+  // Map to Product type
+  const products = (fullProducts ?? []).map((row) =>
+    mapSupabaseProductToProduct(row as unknown as SupabaseProduct)
+  )
+
+  return { products, totalCount }
+}
+
+/**
+ * Lightweight search for suggestions (returns minimal fields).
+ * Used by search drawer when typing.
+ */
+export async function searchProductsSuggestions(query: string): Promise<Array<{
+  id: string
+  name: string
+  slug: string
+  price: number
+  primary_image: string | null
+}>> {
+  if (!query || query.length < 2) {
+    return []
+  }
+
+  const { data, error } = await supabase.rpc('search_products', {
+    search_query: query,
+    category_slug: null,
+    use_case_slugs: null,
+    mood_slugs: null,
+    light_levels: null,
+    difficulties: null,
+    min_price: null,
+    max_price: null,
+    is_pet_safe: null,
+    is_new_arrival: null,
+    sort_by: 'relevance',
+    page_size: 6,
+    page_offset: 0,
+  })
+
+  if (error) {
+    console.error('Error searching suggestions:', error)
+    return []
+  }
+
+  // Map to minimal shape for suggestions
+  interface SuggestionRow {
+    id: string
+    name: string
+    slug: string
+    price: number
+    primary_image: string | null
+    [key: string]: unknown
+  }
+  return (data ?? []).map((row: SuggestionRow) => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    price: row.price,
+    primary_image: row.primary_image,
+  }))
+}

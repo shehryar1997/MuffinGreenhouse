@@ -21,8 +21,9 @@ export default defineConfig({
     : 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+    /* Base URL to use in actions like `await page.goto('/')`. Pass PLAYWRIGHT_BASE_URL to test a
+       deployed preview/production URL instead of spinning up a local server (see webServer below). */
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
@@ -57,8 +58,9 @@ export default defineConfig({
     }]),
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
+  /* Run your local dev server before starting the tests -- skipped entirely when PLAYWRIGHT_BASE_URL
+     points at a deployed URL, so this never launches/owns port 3000 in that mode. */
+  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
     // CI has already run `npm run build`, so serve that: `next dev` compiles
     // every route on first hit, which is far too slow for a cold CI runner.
     command: process.env.CI ? 'npm run start' : 'npm run dev',

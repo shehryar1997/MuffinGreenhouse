@@ -1,6 +1,7 @@
 "use client"
 
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, KeyboardEvent } from "react"
+import { useRouter } from "next/navigation"
 import { Drawer } from "vaul"
 import { X, Search, ArrowRight } from "lucide-react"
 import Image from "next/image"
@@ -9,9 +10,10 @@ import { useSearch } from "@/components/providers/search-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { formatPrice } from "@/lib/utils"
-import { Product } from "@/types"
+import { sanitizeSearchTerm } from "@/lib/search-term"
 
 export function SearchDrawer() {
+  const router = useRouter()
   const { isOpen, closeSearch, query, setQuery, results } = useSearch()
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -31,6 +33,22 @@ export function SearchDrawer() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    navigateToSearchPage()
+  }
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && query.trim()) {
+      e.preventDefault()
+      navigateToSearchPage()
+    }
+  }
+
+  const navigateToSearchPage = () => {
+    const sanitizedQuery = sanitizeSearchTerm(query)
+    if (sanitizedQuery) {
+      router.push(`/search?q=${encodeURIComponent(sanitizedQuery)}`)
+      handleClose()
+    }
   }
 
   return (
@@ -57,6 +75,7 @@ export function SearchDrawer() {
                 placeholder="Search plants by name..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="pl-12 h-14 text-base border-border bg-card focus-visible:ring-ring"
                 aria-label="Search products"
               />
@@ -73,12 +92,21 @@ export function SearchDrawer() {
 }
 
 interface SearchResultsProps {
-  results: Product[]
+  results: Array<{
+    id: string
+    name: string
+    slug: string
+    price: number
+    primary_image: string | null
+    category_name: string
+  }>
   query: string
   onClose: () => void
 }
 
 function SearchResults({ results, query, onClose }: SearchResultsProps) {
+  const router = useRouter()
+  
   if (query.trim() === "") {
     return (
       <div className="p-8 text-center">
@@ -115,6 +143,14 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
     )
   }
 
+  const handleSeeAllResults = () => {
+    const sanitizedQuery = sanitizeSearchTerm(query)
+    if (sanitizedQuery) {
+      router.push(`/search?q=${encodeURIComponent(sanitizedQuery)}`)
+      onClose()
+    }
+  }
+
   return (
     <div className="p-6">
       <p className="font-mono text-xs text-muted-foreground mb-4">
@@ -130,8 +166,8 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
           >
             <div className="relative w-20 h-20 bg-muted shrink-0 rounded-md overflow-hidden">
               <Image
-                src={product.images[0]?.url || "/placeholder-plant.png"}
-                alt={product.images[0]?.alt || product.name}
+                src={product.primary_image || "/placeholder-plant.png"}
+                alt={product.name}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform"
               />
@@ -141,7 +177,7 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
                 {product.name}
               </h3>
               <p className="font-mono text-xs text-muted-foreground mt-1">
-                {product.category.name}
+                {/* Category name not available in suggestions */}
               </p>
               <p className="font-mono text-sm text-foreground mt-2">
                 {formatPrice(product.price)}
@@ -155,14 +191,11 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
       </div>
       <div className="mt-6 pt-6 border-t border-border text-center">
         <Button
-          asChild
+          onClick={handleSeeAllResults}
           variant="outline"
           className="border-foreground hover:bg-foreground hover:text-background"
-          onClick={onClose}
         >
-          <Link href="/shop/all">
-            View All Plants <ArrowRight className="w-3 h-3 ml-2" />
-          </Link>
+          See all {results.length} results <ArrowRight className="w-3 h-3 ml-2" />
         </Button>
       </div>
     </div>

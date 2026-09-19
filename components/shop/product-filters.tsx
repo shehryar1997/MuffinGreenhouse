@@ -28,7 +28,7 @@ export interface FilterStateHelpers {
   /** Top of the price slider: the priciest product on the page, rounded up (was a fixed 250,000). */
   maxPrice: number
   hasActiveFilters: boolean
-  updateFilter: (key: keyof FilterParams, value: string | number | [number, number] | undefined) => void
+  updateFilter: (key: keyof FilterState, value: string | number | [number, number] | undefined) => void
   clearFilters: () => void
   activeFilterChips: React.ReactNode[]
 }
@@ -88,23 +88,12 @@ export function ProductFilters({ products, children, initialFilters, priceBounds
 
   const debouncedUpdateUrl = useMemo(() => debounce(updateUrl, 300), [updateUrl])
 
-  const updateFilter = useCallback((key: keyof FilterParams, value: string | number | [number, number] | undefined) => {
+  const updateFilter = useCallback((key: keyof FilterState, value: string | number | [number, number] | undefined) => {
     setFilters(prev => {
       const newFilters = { ...prev }
-      
+
       if (key === 'min' || key === 'max') {
-        if (value === undefined) {
-          delete newFilters[key]
-        } else {
-          newFilters[key] = value as number
-        }
-        // Update priceRange for UI consistency
-        newFilters.priceRange = [
-          newFilters.min !== undefined ? newFilters.min : 0,
-          newFilters.max !== undefined ? newFilters.max : MAX_PRICE
-        ]
-      } else if (key === 'min' || key === 'max') {
-        if (value === '' || value === undefined) {
+        if (value === undefined || value === '') {
           delete newFilters[key]
         } else {
           newFilters[key] = value as number
@@ -123,7 +112,7 @@ export function ProductFilters({ products, children, initialFilters, priceBounds
         if (value === '' || value === undefined) {
           delete newFilters[key]
         } else {
-          newFilters[key] = value as string
+          ;(newFilters as Record<string, unknown>)[key] = value
         }
       }
       
@@ -277,7 +266,7 @@ type FilterSidebarProps = {
   filters: FilterState
   maxPrice?: number
   hasActiveFilters: boolean
-  updateFilter: (key: keyof FilterParams, value: string | number | [number, number] | undefined) => void
+  updateFilter: (key: keyof FilterState, value: string | number | [number, number] | undefined) => void
   clearFilters: () => void
   showClearButtonText?: string
   hidePlantFilters?: boolean
@@ -295,10 +284,12 @@ export function FilterSidebar({
   // On phones the filters used to sit fully open above the first product (~550 px), pushing every product
   // below the fold. They now collapse behind a button; from lg up they stay open as before.
   const [open, setOpen] = useState(false)
-  const upper = Math.min(filters.priceRange[1], maxPrice)
+  const priceRange = filters.priceRange ?? [0, maxPrice]
+  const lower = Math.max(0, priceRange[0])
+  const upper = Math.min(priceRange[1], maxPrice)
   const activeCount =
-    [filters.searchQuery, filters.lighting, filters.petFriendly, filters.watering].filter(Boolean).length +
-    (filters.priceRange[0] > 0 || filters.priceRange[1] < maxPrice ? 1 : 0)
+    [filters.light, filters.water, filters.pets, filters.stock].filter(Boolean).length +
+    (lower > 0 || upper < maxPrice ? 1 : 0)
 
   return (
     <aside className="w-full lg:w-64 lg:flex-shrink-0">

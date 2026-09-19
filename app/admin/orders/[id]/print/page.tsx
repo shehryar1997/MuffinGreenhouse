@@ -1,9 +1,7 @@
-"use client"
-
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
-import { Printer } from "lucide-react"
+import { PrintButton } from "./print-button"
 
 export const dynamic = "force-dynamic"
 
@@ -37,7 +35,7 @@ export default async function OrderPrintPage({ params }: OrderPrintPageProps) {
 
   return (
     <div className="min-h-screen bg-white p-8">
-      <style jsx global>{`
+      <style>{`
         @media print {
           .print-hide {
             display: none !important;
@@ -54,19 +52,13 @@ export default async function OrderPrintPage({ params }: OrderPrintPageProps) {
 
       {/* Print controls */}
       <div className="print-hide mb-6 flex items-center justify-between">
-        <Link 
+        <Link
           href={`/admin/orders/${order.id}`}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900"
         >
           ← Back to Order
         </Link>
-        <button
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#E85D2C] text-white rounded-lg hover:bg-[#E85D2C]/90"
-        >
-          <Printer className="h-4 w-4" />
-          Print Packing Slip
-        </button>
+        <PrintButton />
       </div>
 
       {/* Packing slip content */}

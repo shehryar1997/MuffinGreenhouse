@@ -46,7 +46,7 @@ export function ShopAllClient({ products, currentPage, totalPages, totalCount, f
                   <div className="flex-1">
                     <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <p className="font-mono text-sm text-forest.500">
+                        <p className="font-mono text-sm text-forest-500">
                           Showing {products.length} of {totalCount} plant{totalCount !== 1 ? "s" : ""}
                         </p>
                         {activeFilterChips.length > 0 && (

@@ -92,7 +92,7 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
                         </div>
                       )}
                     </div>
-                    {products.length === 0 ? (
+                    {products.length === 0 && !hasActiveFilters ? (
                       // A category with no stock yet is not a filter problem: say so and offer a way forward.
                       <div className="text-center py-20 bg-white rounded-lg border border-forest-200">
                         <p className="text-forest-800 text-lg mb-2">Nothing in {meta.title} just yet.</p>

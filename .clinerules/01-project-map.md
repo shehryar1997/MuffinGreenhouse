@@ -34,6 +34,8 @@ Do not regenerate the full map unless explicitly asked to.
 `app/events/events-grid.tsx` — Client component for event cards with hover animations — EventCard, EventsGrid — @/types, framer-motion
 `app/events/[slug]/page.tsx` — Event detail wrapper — N/A — N/A
 `app/events/[slug]/event-detail-client.tsx` — Event detail content [LARGE] — N/A — N/A
+ `app/search/page.tsx` — Search results page — Server Component — ./search-page-client, @/lib/data/products, @/lib/search-term, @/config/nav.config
+ `app/search/search-page-client.tsx` — Search results client component — SearchPageClient — @/components/ui/*, @/components/shop/pagination, framer-motion
 `app/journal/page.tsx` — Journal/blog listing — Server Component — @/data/mock-products, ./journal-grid
 `app/journal/journal-grid.tsx` — Client component for journal cards with hover animations — JournalGrid — @/types, framer-motion
 `app/journal/[slug]/page.tsx` — Journal post page — N/A — N/A
@@ -121,6 +123,8 @@ Do not regenerate the full map unless explicitly asked to.
 `lib/email/send-order-shipped.ts` — Order shipped email sender with courier tracking number — sendOrderShippedEmail — resend
 
 ### /types
+ `lib/data/products.ts` — Product data access layer with search functions — getAllProducts, getProductBySlug, getProductsByCategory, searchProducts, searchProductsSuggestions, PRODUCTS_PER_PAGE — @/types, @/supabase/client, ./adapters, @/lib/product-categories, @/components/shop/product-filters [LARGE]
+ `lib/search-term.ts` — Search query sanitization — sanitizeSearchTerm — N/A
 `types/index.ts` — Core TypeScript types — Category, Product, ProductImage, CareInfo, ProductVariant, Review, CartItem, Cart, User, Address, Order, MyPlant, Event, JournalPost, NavItem, etc. — Includes shipping box dimensions (boxHeightCm, boxWidthCm, boxBreadthCm) — N/A
 
 ## Shared dependencies

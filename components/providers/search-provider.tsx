@@ -1,20 +1,27 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from "react"
-import { Product } from "@/types"
-import { getAllProducts } from "@/lib/data/products"
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from "react"
+import { searchProductsSuggestions } from "@/lib/data/products"
 import { debounceWithAbort } from "@/lib/utils"
+import { sanitizeSearchTerm } from "@/lib/search-term"
 
 interface SearchState {
   isOpen: boolean
   query: string
-  results: Product[]
+  results: Array<{
+    id: string
+    name: string
+    slug: string
+    price: number
+    primary_image: string | null
+    category_name: string
+  }>
 }
 
 interface SearchContextType {
   isOpen: boolean
   query: string
-  results: Product[]
+  results: SearchState['results']
   openSearch: () => void
   closeSearch: () => void
   setQuery: (query: string) => void
@@ -29,21 +36,6 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     query: "",
     results: [],
   })
-  const [products, setProducts] = useState<Product[]>([])
-
-  // Fetch products once on mount
-  useEffect(() => {
-    async function loadProducts() {
-      try {
-        const allProducts = await getAllProducts()
-        setProducts(allProducts)
-      } catch {
-        // Silently fail - empty results until products load
-        setProducts([])
-      }
-    }
-    loadProducts()
-  }, [])
 
   const openSearch = useCallback(() => {
     setState((prev) => ({ ...prev, isOpen: true }))
@@ -56,27 +48,47 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   // Abort controllers ref for search filtering
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  // Debounced filter function with abort capability
-  const debouncedFilter = useMemo(() => 
-    debounceWithAbort((signal: AbortSignal, trimmedQuery: string) => {
+  // Debounced search function with abort capability
+  const debouncedSearch = useMemo(() => 
+    debounceWithAbort(async (signal: AbortSignal, query: string) => {
       // Skip if signal is already aborted
       if (signal.aborted) return
       
-      const results = products.filter((product) =>
-        product.name.toLowerCase().includes(trimmedQuery)
-      )
-      
-      // Only update state if not aborted
-      if (!signal.aborted) {
-        setState((prev) => ({ ...prev, results }))
+      const sanitizedQuery = sanitizeSearchTerm(query)
+      if (sanitizedQuery.length < 2) {
+        if (!signal.aborted) {
+          setState((prev) => ({ ...prev, results: [] }))
+        }
+        return
       }
-    }, 300),
-  [products])
+      
+      try {
+        const suggestions = await searchProductsSuggestions(sanitizedQuery)
+        // Only update state if not aborted
+        if (!signal.aborted) {
+          setState((prev) => ({ 
+            ...prev, 
+            results: suggestions.map(s => ({
+              id: s.id,
+              name: s.name,
+              slug: s.slug,
+              price: s.price,
+              primary_image: s.primary_image,
+              category_name: '' // Will be populated if needed
+            }))
+          }))
+        }
+      } catch {
+        // Silently fail - empty results on error
+        if (!signal.aborted) {
+          setState((prev) => ({ ...prev, results: [] }))
+        }
+      }
+    }, 250), // 250ms debounce as specified
+  [])
 
   const setQuery = useCallback((query: string) => {
-    const trimmedQuery = query.trim().toLowerCase()
-
-    if (trimmedQuery === "") {
+    if (query.trim() === "") {
       // Clear any pending search
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
@@ -94,9 +106,9 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       abortControllerRef.current.abort()
     }
 
-    // Trigger debounced filtering with abort capability
-    abortControllerRef.current = debouncedFilter(trimmedQuery)
-  }, [debouncedFilter])
+    // Trigger debounced search with abort capability
+    abortControllerRef.current = debouncedSearch(query)
+  }, [debouncedSearch])
 
   const clearSearch = useCallback(() => {
     // Abort any pending search request
