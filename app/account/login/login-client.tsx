@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Leaf } from "lucide-react"
+import { Leaf, Eye, EyeOff } from "lucide-react"
 import { loginWithPassword } from "./actions"
 
 export function LoginPageClient() {
@@ -23,6 +23,7 @@ function LoginForm() {
 
   const [emailOrPhone, setEmailOrPhone] = useState(prefillEmail || "")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -59,6 +60,7 @@ function LoginForm() {
             </label>
             <Input
               id="email-or-phone"
+              name="username"
               type="text"
               value={emailOrPhone}
               onChange={(e) => setEmailOrPhone(e.target.value)}
@@ -66,6 +68,7 @@ function LoginForm() {
               className="w-full"
               disabled={isLoading}
               required
+              autoComplete="username"
             />
           </div>
 
@@ -73,16 +76,29 @@ function LoginForm() {
             <label htmlFor="password" className="block text-sm font-medium text-forest-700 mb-1">
               Password
             </label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full"
-              disabled={isLoading}
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full pr-10"
+                disabled={isLoading}
+                required
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-600"
+                aria-pressed={showPassword}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           {error && (

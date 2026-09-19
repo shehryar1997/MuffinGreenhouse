@@ -26,11 +26,6 @@ interface VerificationData {
   attempts: number
 }
 
-function CollapseError({ error }: { error?: string }) {
-  if (!error) return null
-  return <p className="mt-1 text-sm text-destructive">{error}</p>
-}
-
 export default function RegisterPage() {
   const router = useRouter()
   const [step, setStep] = React.useState<Step>("register")
@@ -178,8 +173,8 @@ export default function RegisterPage() {
               Join Muffin Nursery for a personalized plant shopping experience
             </p>
           ) : (
-            <p className="mt-2 text-forest-600">
-              We&apos;ve sent a 6-digit code to your email�check your inbox (and spam folder, just in case).
+            <p className="mt-2 text-forest-600" id="verify-instructions">
+              We&apos;ve sent a 6-digit code to your email — check your inbox (and spam folder, just in case).
             </p>
           )}
         </div>
@@ -187,49 +182,97 @@ export default function RegisterPage() {
         {step === "register" ? (
           <form onSubmit={onRegister} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-forest-800">Full Name</label>
-              <Input value={name} onChange={onChange(setName, "name")} placeholder="e.g., Sarah Khan" className={inputClass(fieldErrors.name)} />
-              <CollapseError error={fieldErrors.name} />
+              <label htmlFor="name" className="block text-sm font-medium text-forest-800">Full Name</label>
+              <Input
+                id="name"
+                name="name"
+                value={name} onChange={onChange(setName, "name")} placeholder="e.g., Sarah Khan" className={inputClass(fieldErrors.name)}
+                autoComplete="name"
+                aria-invalid={!!fieldErrors.name}
+                aria-describedby={fieldErrors.name ? "name-error" : undefined}
+              />
+              {fieldErrors.name && <p id="name-error" className="mt-1 text-sm text-destructive">{fieldErrors.name}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-forest-800">Email</label>
-              <Input type="email" value={email} onChange={onChange(setEmail, "email")} placeholder="sarah@example.com" className={inputClass(fieldErrors.email)} />
-              <CollapseError error={fieldErrors.email} />
+              <label htmlFor="email" className="block text-sm font-medium text-forest-800">Email</label>
+              <Input
+                id="email"
+                name="email"
+                type="email" value={email} onChange={onChange(setEmail, "email")} placeholder="sarah@example.com" className={inputClass(fieldErrors.email)}
+                autoComplete="email"
+                inputMode="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                aria-invalid={!!fieldErrors.email}
+                aria-describedby={fieldErrors.email ? "email-error" : undefined}
+              />
+              {fieldErrors.email && <p id="email-error" className="mt-1 text-sm text-destructive">{fieldErrors.email}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-forest-800">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-forest-800">Password</label>
               <div className="relative">
-                <Input type={showPassword ? "text" : "password"} value={password} onChange={onChange(setPassword, "password")} placeholder="At least 8 characters" className={inputClass(fieldErrors.password)} />
-                <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-600">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"} value={password} onChange={onChange(setPassword, "password")} placeholder="At least 8 characters" className={cn(inputClass(fieldErrors.password), "pr-10")}
+                  autoComplete="new-password"
+                  aria-invalid={!!fieldErrors.password}
+                  aria-describedby={fieldErrors.password ? "password-error" : undefined}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((s) => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-600"
+                  aria-pressed={showPassword}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <CollapseError error={fieldErrors.password} />
+              {fieldErrors.password && <p id="password-error" className="mt-1 text-sm text-destructive">{fieldErrors.password}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-forest-800">Phone Number</label>
-              <Input type="tel" value={phone} onChange={handlePhone} placeholder="03001234567" className={inputClass(fieldErrors.phone)} />
-              <CollapseError error={fieldErrors.phone} />
-              <p className="mt-1 text-xs text-forest-500">Used for contact/delivery purposes</p>
+              <label htmlFor="phone" className="block text-sm font-medium text-forest-800">Phone Number</label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel" value={phone} onChange={handlePhone} placeholder="03001234567" className={inputClass(fieldErrors.phone)}
+                autoComplete="tel"
+                inputMode="tel"
+                aria-invalid={!!fieldErrors.phone}
+                aria-describedby={fieldErrors.phone ? "phone-error" : "phone-hint"}
+              />
+              {fieldErrors.phone && <p id="phone-error" className="mt-1 text-sm text-destructive">{fieldErrors.phone}</p>}
+              <p id="phone-hint" className="mt-1 text-xs text-forest-500">Used for contact/delivery purposes</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-forest-800">Street Address</label>
-              <Input value={street} onChange={onChange(setStreet, "street")} placeholder="123 Green Street" className={inputClass(fieldErrors.street)} />
-              <CollapseError error={fieldErrors.street} />
+              <label htmlFor="street" className="block text-sm font-medium text-forest-800">Street Address</label>
+              <Input
+                id="street"
+                name="street"
+                value={street} onChange={onChange(setStreet, "street")} placeholder="123 Green Street" className={inputClass(fieldErrors.street)}
+                autoComplete="street-address"
+                aria-invalid={!!fieldErrors.street}
+                aria-describedby={fieldErrors.street ? "street-error" : undefined}
+              />
+              {fieldErrors.street && <p id="street-error" className="mt-1 text-sm text-destructive">{fieldErrors.street}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-forest-800">City</label>
+              <label id="city-label" className="block text-sm font-medium text-forest-800">City</label>
               <div className="mt-1">
-                <CitySelect 
-                  value={city} 
-                  onChange={(v) => { setCity(v); setFieldErrors((p) => ({ ...p, city: "" })); }} 
-                  placeholder="Select your city" 
-                  error={!!fieldErrors.city} 
+                <CitySelect
+                  id="city"
+                  value={city}
+                  onChange={(v) => { setCity(v); setFieldErrors((p) => ({ ...p, city: "" })); }}
+                  placeholder="Select your city"
+                  error={!!fieldErrors.city}
+                  aria-labelledby="city-label"
+                  aria-describedby={fieldErrors.city ? "city-error" : undefined}
                 />
               </div>
-              {fieldErrors.city && <p className="mt-1 text-sm text-destructive">{fieldErrors.city}</p>}
+              {fieldErrors.city && <p id="city-error" className="mt-1 text-sm text-destructive">{fieldErrors.city}</p>}
             </div>
-            {formError && <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{formError}</div>}
+            {formError && <div role="alert" className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{formError}</div>}
             <Button type="submit" disabled={isLoading} className="w-full bg-clay-500 hover:bg-clay-600">
               {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Account"}
             </Button>
@@ -241,24 +284,29 @@ export default function RegisterPage() {
           <div className="space-y-6">
             <form onSubmit={onVerify} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-forest-800">Verification Code</label>
-                <Input 
-                  type="text" 
-                  inputMode="numeric" 
-                  maxLength={6} 
-                  value={otpCode} 
-                  onChange={(e) => { 
-                    const v = e.target.value.replace(/\D/g, ""); 
-                    if (v.length <= 6) setOtpCode(v); 
-                    if (formError) setFormError(""); 
-                  }} 
-                  placeholder="000000" 
-                  disabled={isBlocked} 
-                  className={cn("mt-1 text-center text-2xl tracking-[0.5em]", isBlocked && "opacity-50")} 
+                <label htmlFor="otp-code" className="block text-sm font-medium text-forest-800">Verification Code</label>
+                <Input
+                  id="otp-code"
+                  name="otp-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "");
+                    if (v.length <= 6) setOtpCode(v);
+                    if (formError) setFormError("");
+                  }}
+                  placeholder="000000"
+                  disabled={isBlocked}
+                  className={cn("mt-1 text-center text-2xl tracking-[0.5em]", isBlocked && "opacity-50")}
+                  aria-invalid={!!formError || isBlocked}
+                  aria-describedby={formError ? "otp-error" : isBlocked ? "otp-blocked" : "verify-instructions"}
                 />
-                {isBlocked && <p className="mt-2 text-sm text-destructive">Too many failed attempts. Please request a new code.</p>}
+                {isBlocked && <p id="otp-blocked" className="mt-2 text-sm text-destructive">Too many failed attempts. Please request a new code.</p>}
+                {formError && <p id="otp-error" role="alert" className="mt-2 text-sm text-destructive">{formError}</p>}
               </div>
-              {formError && <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{formError}</div>}
               <Button type="submit" disabled={otpCode.length !== 6 || isLoading || isBlocked} className="w-full bg-clay-500 hover:bg-clay-600">
                 {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Verifying...</> : "Verify"}
               </Button>

@@ -407,23 +407,64 @@ export default function CheckoutPage() {
                     {/* Email */}
                     <div className="mb-4">
                       <label htmlFor="email" className="block text-sm font-medium text-forest-700 mb-1">Email Address <span className="text-red-500">*</span></label>
-                      <Input id="email" type="email" value={formData.email} onChange={(e) => handleFieldChange("email", e.target.value)} onBlur={() => handleFieldBlur("email")} placeholder="your@email.com" disabled={!!signedInCustomer} className={errors.email && touched.email ? "border-red-300" : ""} />
-                      {errors.email && touched.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleFieldChange("email", e.target.value)}
+                        onBlur={() => handleFieldBlur("email")}
+                        placeholder="your@email.com"
+                        disabled={!!signedInCustomer}
+                        className={errors.email && touched.email ? "border-red-300" : ""}
+                        autoComplete="email"
+                        inputMode="email"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        aria-invalid={!!(errors.email && touched.email)}
+                        aria-describedby={errors.email && touched.email ? "checkout-email-error" : undefined}
+                      />
+                      {errors.email && touched.email && <p id="checkout-email-error" className="mt-1 text-sm text-red-600">{errors.email}</p>}
                       {isCheckingEmail && <p className="mt-1 text-sm text-forest-500">Checking email...</p>}
                     </div>
 
                     {/* Full Name */}
                     <div className="mb-4">
                       <label htmlFor="fullName" className="block text-sm font-medium text-forest-700 mb-1">Full Name <span className="text-red-500">*</span></label>
-                      <Input id="fullName" type="text" value={formData.fullName} onChange={(e) => handleFieldChange("fullName", e.target.value)} onBlur={() => handleFieldBlur("fullName")} placeholder="Enter your full name" className={errors.fullName && touched.fullName ? "border-red-300" : ""} />
-                      {errors.fullName && touched.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
+                      <Input
+                        id="fullName"
+                        name="name"
+                        type="text"
+                        value={formData.fullName}
+                        onChange={(e) => handleFieldChange("fullName", e.target.value)}
+                        onBlur={() => handleFieldBlur("fullName")}
+                        placeholder="Enter your full name"
+                        className={errors.fullName && touched.fullName ? "border-red-300" : ""}
+                        autoComplete="name"
+                        aria-invalid={!!(errors.fullName && touched.fullName)}
+                        aria-describedby={errors.fullName && touched.fullName ? "checkout-name-error" : undefined}
+                      />
+                      {errors.fullName && touched.fullName && <p id="checkout-name-error" className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
                     </div>
 
                     {/* Contact Number */}
                     <div className="mb-4">
                       <label htmlFor="contactNumber" className="block text-sm font-medium text-forest-700 mb-1">Contact Number <span className="text-red-500">*</span></label>
-                      <Input id="contactNumber" type="tel" value={formData.contactNumber} onChange={(e) => handleFieldChange("contactNumber", e.target.value)} onBlur={() => handleFieldBlur("contactNumber")} placeholder="03XX-XXXXXXX" className={errors.contactNumber && touched.contactNumber ? "border-red-300" : ""} />
-                      {errors.contactNumber && touched.contactNumber && <p className="mt-1 text-sm text-red-600">{errors.contactNumber}</p>}
+                      <Input
+                        id="contactNumber"
+                        name="contact"
+                        type="tel"
+                        value={formData.contactNumber}
+                        onChange={(e) => handleFieldChange("contactNumber", e.target.value)}
+                        onBlur={() => handleFieldBlur("contactNumber")}
+                        placeholder="03XX-XXXXXXX"
+                        className={errors.contactNumber && touched.contactNumber ? "border-red-300" : ""}
+                        autoComplete="tel"
+                        inputMode="tel"
+                        aria-invalid={!!(errors.contactNumber && touched.contactNumber)}
+                        aria-describedby={errors.contactNumber && touched.contactNumber ? "checkout-phone-error" : undefined}
+                      />
+                      {errors.contactNumber && touched.contactNumber && <p id="checkout-phone-error" className="mt-1 text-sm text-red-600">{errors.contactNumber}</p>}
                     </div>
 
                     {/* Saved Addresses */}
@@ -455,15 +496,28 @@ export default function CheckoutPage() {
                     {/* City */}
                     <div className="mb-4">
                       <label htmlFor="city" className="block text-sm font-medium text-forest-700 mb-1">City <span className="text-red-500">*</span></label>
-                      <CitySelect value={formData.city} onChange={(value) => { handleFieldChange("city", value); setTouched(prev => ({ ...prev, city: true })); setErrors(prev => ({ ...prev, city: validateField("city", value) })) }} error={errors.city && touched.city ? true : false} className={errors.city && touched.city ? "border-red-300" : ""} />
-                      {errors.city && touched.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
+                      {/* id links the button to the <label htmlFor="city"> above (it pointed at nothing before) */}
+                      <CitySelect id="city" aria-describedby={errors.city && touched.city ? "checkout-city-error" : undefined} value={formData.city} onChange={(value) => { handleFieldChange("city", value); setTouched(prev => ({ ...prev, city: true })); setErrors(prev => ({ ...prev, city: validateField("city", value) })) }} error={errors.city && touched.city ? true : false} className={errors.city && touched.city ? "border-red-300" : ""} />
+                      {errors.city && touched.city && <p id="checkout-city-error" className="mt-1 text-sm text-red-600">{errors.city}</p>}
                     </div>
 
                     {/* Full Address */}
                     <div className="mb-4">
                       <label htmlFor="fullAddress" className="block text-sm font-medium text-forest-700 mb-1">Delivery Address <span className="text-red-500">*</span></label>
-                      <textarea id="fullAddress" rows={3} value={formData.fullAddress} onChange={(e) => handleFieldChange("fullAddress", e.target.value)} onBlur={() => handleFieldBlur("fullAddress")} placeholder="Enter your complete address" className={`w-full px-3 py-2 border rounded-md ${errors.fullAddress && touched.fullAddress ? "border-red-300" : "border-forest-200"}`} />
-                      {errors.fullAddress && touched.fullAddress && <p className="mt-1 text-sm text-red-600">{errors.fullAddress}</p>}
+                      <textarea
+                        id="fullAddress"
+                        name="street-address"
+                        rows={3}
+                        value={formData.fullAddress}
+                        onChange={(e) => handleFieldChange("fullAddress", e.target.value)}
+                        onBlur={() => handleFieldBlur("fullAddress")}
+                        placeholder="Enter your complete address"
+                        className={`w-full px-3 py-2 border rounded-md ${errors.fullAddress && touched.fullAddress ? "border-red-300" : "border-forest-200"}`}
+                        autoComplete="street-address"
+                        aria-invalid={!!(errors.fullAddress && touched.fullAddress)}
+                        aria-describedby={errors.fullAddress && touched.fullAddress ? "checkout-address-error" : undefined}
+                      />
+                      {errors.fullAddress && touched.fullAddress && <p id="checkout-address-error" className="mt-1 text-sm text-red-600">{errors.fullAddress}</p>}
                     </div>
 
                     {/* Delivery Options */}

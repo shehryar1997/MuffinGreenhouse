@@ -97,6 +97,7 @@ export default async function AdminLoginPage({
                   type="password"
                   required
                   autoFocus
+                  autoComplete="current-password"
                   className="w-full px-4 py-3 rounded-xl border border-neutral-200 bg-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D2C]/20 focus:border-[#E85D2C] transition-all duration-200 pl-11"
                   placeholder="Enter your password"
                 />

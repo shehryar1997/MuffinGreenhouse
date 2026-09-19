@@ -132,16 +132,16 @@ export default function EventDetailClient({ event }: { event: Event }) {
               ) : (
                 <form onSubmit={handleReserve} className="space-y-3">
                   <div>
-                    <label className="font-mono text-[10px] text-[#1A1A1A]/60 uppercase tracking-wider block mb-1.5">Full Name *</label>
-                    <input type="text" required className="w-full px-3 py-2.5 bg-[#FAF7F2] border border-[#1A1A1A]/10 rounded-lg text-sm text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus:outline-none focus:border-[#D4F542]" placeholder="Your name" />
+                    <label htmlFor="reserve-name" className="font-mono text-[10px] text-[#1A1A1A]/60 uppercase tracking-wider block mb-1.5">Full Name *</label>
+                    <input id="reserve-name" name="name" type="text" required autoComplete="name" className="w-full px-3 py-2.5 bg-[#FAF7F2] border border-[#1A1A1A]/10 rounded-lg text-sm text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus:outline-none focus:border-[#D4F542]" placeholder="Your name" />
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] text-[#1A1A1A]/60 uppercase tracking-wider block mb-1.5">WhatsApp *</label>
-                    <input type="tel" required className="w-full px-3 py-2.5 bg-[#FAF7F2] border border-[#1A1A1A]/10 rounded-lg text-sm text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus:outline-none focus:border-[#D4F542]" placeholder="03XX-XXXXXXX" />
+                    <label htmlFor="reserve-phone" className="font-mono text-[10px] text-[#1A1A1A]/60 uppercase tracking-wider block mb-1.5">WhatsApp *</label>
+                    <input id="reserve-phone" name="phone" type="tel" required autoComplete="tel" inputMode="tel" className="w-full px-3 py-2.5 bg-[#FAF7F2] border border-[#1A1A1A]/10 rounded-lg text-sm text-[#1A1A1A] placeholder:text-[#1A1A1A]/40 focus:outline-none focus:border-[#D4F542]" placeholder="03XX-XXXXXXX" />
                   </div>
                   <div>
-                    <label className="font-mono text-[10px] text-[#1A1A1A]/60 uppercase tracking-wider block mb-1.5">Guests</label>
-                    <select className="w-full px-3 py-2.5 bg-[#FAF7F2] border border-[#1A1A1A]/10 rounded-lg text-sm text-[#1A1A1A] focus:outline-none focus:border-[#D4F542]">
+                    <label htmlFor="reserve-guests" className="font-mono text-[10px] text-[#1A1A1A]/60 uppercase tracking-wider block mb-1.5">Guests</label>
+                    <select id="reserve-guests" name="guests" className="w-full px-3 py-2.5 bg-[#FAF7F2] border border-[#1A1A1A]/10 rounded-lg text-sm text-[#1A1A1A] focus:outline-none focus:border-[#D4F542]">
                       {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} {n===1?"person":"people"}</option>)}
                     </select>
                   </div>

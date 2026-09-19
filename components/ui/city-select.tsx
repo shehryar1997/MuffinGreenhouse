@@ -14,6 +14,9 @@ export interface CitySelectProps {
   placeholder?: string
   className?: string
   error?: boolean
+  id?: string
+  "aria-labelledby"?: string
+  "aria-describedby"?: string
 }
 
 export function CitySelect({
@@ -22,6 +25,9 @@ export function CitySelect({
   placeholder = "Select a city...",
   className,
   error,
+  id,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
 }: CitySelectProps) {
   const [open, setOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -52,7 +58,10 @@ export function CitySelect({
     <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <PopoverPrimitive.Trigger asChild>
         <button
+          id={id}
           type="button"
+          aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
           className={cn(
             "flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm",
             "bg-cream-100 ring-offset-background",
