@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation"
+import { AdminDashboardPage } from "./dashboard-page"
 
-// Admin root redirects to products (dashboard)
+export const dynamic = "force-dynamic"
+
 export default function AdminPage() {
-  redirect("/admin/products")
+  return <AdminDashboardPage />
 }
