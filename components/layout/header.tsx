@@ -4,10 +4,11 @@ import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, ShoppingBag, Menu, User, Star, Sparkles, X } from "lucide-react"
+import { Heart, Search, ShoppingBag, Menu, User, Star, Sparkles, X } from "lucide-react"
 import { mainNav, shopMegaMenuSections } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
+import { useWishlist } from "@/components/providers/wishlist-provider"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export function Header() {
@@ -18,6 +19,7 @@ export function Header() {
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const { toggleCart, itemCount } = useCart()
   const { openSearch } = useSearch()
+  const { count: wishlistCount } = useWishlist()
 
   const handleShopMenuEnter = () => {
     if (shopMenuTimeout.current) {
@@ -290,6 +292,20 @@ export function Header() {
               <span className="hidden 2xl:inline">Account</span>
             </Link>
 
+            {/* Desktop: Wishlist */}
+            <Link
+              href="/wishlist"
+              className="hidden lg:flex p-2 hover:bg-muted rounded-full transition-colors relative"
+              aria-label={`Wishlist with ${wishlistCount} saved plants`}
+            >
+              <Heart className="w-5 h-5 text-foreground" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-0.5 bg-clay-500 text-white text-[11px] font-mono font-semibold rounded-full flex items-center justify-center">
+                  {wishlistCount > 9 ? "9+" : wishlistCount}
+                </span>
+              )}
+            </Link>
+
             {/* Desktop: Search */}
             <button 
               onClick={openSearch} 
@@ -444,6 +460,7 @@ export function Header() {
                 ))}
                 <div className="flex gap-6 font-mono text-xs uppercase tracking-widest">
                   <Link href="/account" onClick={() => setMobileMenuOpen(false)} className="py-2 text-forest-800 hover:text-clay-600">Account</Link>
+                  <Link href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="py-2 text-forest-800 hover:text-clay-600">Wishlist</Link>
                   <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="py-2 text-forest-800 hover:text-clay-600">Contact</Link>
                 </div>
               </div>

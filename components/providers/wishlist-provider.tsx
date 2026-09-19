@@ -8,6 +8,7 @@ interface WishlistContextType {
   isWishlisted: (productId: string) => boolean
   toggleWishlist: (productId: string) => Promise<{ ok: boolean; signedIn: boolean }>
   isLoading: boolean
+  count: number
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined)
@@ -117,7 +118,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <WishlistContext.Provider
-      value={{ isSignedIn: !!customerId, isWishlisted, toggleWishlist, isLoading }}
+      value={{ isSignedIn: !!customerId, isWishlisted, toggleWishlist, isLoading, count: productIds.size }}
     >
       {children}
     </WishlistContext.Provider>
