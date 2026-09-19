@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { Trash2, AlertTriangle } from "lucide-react"
 import type { CustomerActionResult } from "./actions"
 
 export function DeleteCustomerButton({
@@ -21,7 +22,7 @@ export function DeleteCustomerButton({
     if (isPending) return
     if (
       !confirm(
-        `Permanently delete the profile for ${email}?\n\nThis removes their account, login, saved addresses and wishlist. It can't be undone.`
+        `Permanently delete the profile for ${email}?\n\nThis removes their account, login, saved addresses and wishlist. It cannot be undone.`
       )
     ) {
       return
@@ -47,11 +48,27 @@ export function DeleteCustomerButton({
 
   return (
     <span className="inline-flex flex-col items-end">
-      <button type="button" onClick={handleClick} disabled={isPending} className="text-sm text-red-600 hover:underline disabled:opacity-50">
-        {isPending ? "Deleting…" : label}
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={isPending}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+      >
+        {isPending ? (
+          <>
+            <div className="w-3.5 h-3.5 border-2 border-red-600/30 border-t-red-600 rounded-full animate-spin" />
+            Deleting...
+          </>
+        ) : (
+          <>
+            <Trash2 className="h-3.5 w-3.5" />
+            {label}
+          </>
+        )}
       </button>
       {error && (
-        <span role="alert" className="mt-1 max-w-xs text-right text-xs text-red-600">
+        <span role="alert" className="mt-1 max-w-xs text-right text-xs text-red-600 flex items-center gap-1">
+          <AlertTriangle className="h-3 w-3" />
           {error}
         </span>
       )}

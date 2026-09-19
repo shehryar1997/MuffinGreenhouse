@@ -1,13 +1,11 @@
 import Link from "next/link"
-import { Search } from "lucide-react"
+import { Search, Plus, Package, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { sanitizeSearchTerm } from "@/lib/search-term"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { DeleteProductButton } from "./delete-product-button"
 import { deleteProduct } from "./actions"
 
-// Force fresh data on every load — same class of stale-admin-data bug
-// found on the customers/orders pages, fixed here too for consistency.
 export const dynamic = "force-dynamic"
 
 type StockFilter = "out_of_stock" | "unpublished" | "published"
@@ -29,13 +27,22 @@ interface ProductRow {
   weight_kg: number | null
 }
 
-function listHref(params: { q?: string; filter?: string; category?: string }): string {
-  const search = new URLSearchParams()
-  if (params.q) search.set("q", params.q)
-  if (params.filter) search.set("filter", params.filter)
-  if (params.category) search.set("category", params.category)
-  const qs = search.toString()
-  return qs ? `/admin/products?${qs}` : "/admin/products"
+type StatusType = "success" | "warning" | "danger" | "default" | "info"
+
+function StatusBadge({ children, status }: { children: React.ReactNode; status?: StatusType }) {
+  const styles: Record<StatusType, string> = {
+    success: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    warning: "bg-amber-50 text-amber-700 border-amber-200",
+    danger: "bg-red-50 text-red-700 border-red-200",
+    info: "bg-sky-50 text-sky-700 border-sky-200",
+    default: "bg-slate-50 text-slate-600 border-slate-200",
+  }
+  
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${styles[status || "default"]}`}>
+      {children}
+    </span>
+  )
 }
 
 function SummaryCard({
@@ -43,31 +50,50 @@ function SummaryCard({
   value,
   href,
   active,
-  tone = "default",
+  status = "default",
+  icon: Icon,
 }: {
   label: string
   value: number
   href?: string
   active?: boolean
-  tone?: "default" | "warn" | "danger"
+  status?: StatusType
+  icon?: React.ElementType
 }) {
-  const toneClass = tone === "danger" ? "text-red-600" : tone === "warn" ? "text-amber-600" : "text-neutral-900"
-  const body = (
-    <>
-      <p className="text-xs uppercase tracking-wide text-neutral-500">{label}</p>
-      <p className={`text-2xl font-semibold mt-1 ${toneClass}`}>{value}</p>
-    </>
+  const statusColors: Record<StatusType, string> = {
+    success: "text-emerald-600",
+    warning: "text-amber-600",
+    danger: "text-red-500",
+    info: "text-sky-600",
+    default: "text-neutral-900",
+  }
+  
+  const activeBorder = active ? "ring-2 ring-[#E85D2C] bg-[#E85D2C]/5" : "border border-neutral-200"
+  
+  const content = (
+    <div className={`p-5 rounded-2xl bg-white shadow-sm hover:shadow-md transition-all duration-200 ${activeBorder}`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{label}</p>
+          <p className={`text-3xl font-bold mt-2 ${statusColors[status]}`}>{value}</p>
+        </div>
+        {Icon && (
+          <div className={`p-2 rounded-xl ${status === "danger" ? "bg-red-50" : status === "warning" ? "bg-amber-50" : "bg-emerald-50"}`}>
+            <Icon className={`h-5 w-5 ${status === "danger" ? "text-red-500" : status === "warning" ? "text-amber-500" : "text-emerald-500"}`} />
+          </div>
+        )}
+      </div>
+    </div>
   )
-  const base = "rounded-lg border bg-white p-4 block"
-  if (!href) return <div className={base}>{body}</div>
-  return (
-    <Link
-      href={href}
-      className={`${base} hover:border-[#E85D2C] ${active ? "border-[#E85D2C] ring-1 ring-[#E85D2C]" : ""}`}
-    >
-      {body}
-    </Link>
-  )
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {content}
+      </Link>
+    )
+  }
+  return content
 }
 
 export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
@@ -85,185 +111,257 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   ])
 
   if (error) {
-    return <p className="text-red-600">Error loading products: {error.message}</p>
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 font-medium">Error loading products</p>
+          <p className="text-neutral-500 text-sm mt-1">{error.message}</p>
+        </div>
+      </div>
+    )
   }
 
   const allProducts = (data ?? []) as ProductRow[]
 
-  // ---- Summary (always over the whole catalogue, whatever filter is active) ----
   const publishedCount = allProducts.filter((p) => p.published_at).length
   const unpublishedCount = allProducts.length - publishedCount
   const outOfStockCount = allProducts.filter((p) => p.stock_status === "out_of_stock").length
-  // Tools & Equipment are delivered at 120 PKR/kg, so a missing weight means under-charged delivery.
-  const missingWeightCount = allProducts.filter(
+
+  const categories = (categoryRows ?? [] as { name: string }[]).map((r) => r.name)
+  const needsWeight = allProducts.filter(
     (p) => isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
   ).length
 
-  const categoryNames = (categoryRows ?? []).map((c) => c.name as string)
-  for (const p of allProducts) {
-    if (p.category_name && !categoryNames.includes(p.category_name)) categoryNames.push(p.category_name)
+  let products = allProducts
+  if (query) {
+    products = products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.sku.toLowerCase().includes(query)
+    )
   }
-  const publishedByCategory = new Map<string, number>()
-  for (const p of allProducts) {
-    if (p.published_at && p.category_name) {
-      publishedByCategory.set(p.category_name, (publishedByCategory.get(p.category_name) ?? 0) + 1)
-    }
+  if (filter === "out_of_stock") {
+    products = products.filter((p) => p.stock_status === "out_of_stock")
+  } else if (filter === "unpublished") {
+    products = products.filter((p) => !p.published_at)
+  } else if (filter === "published") {
+    products = products.filter((p) => p.published_at)
+  }
+  if (categoryFilter) {
+    products = products.filter((p) => p.category_name === categoryFilter)
   }
 
-  // ---- Filtered list ----
-  const products = allProducts.filter((p) => {
-    if (query && !(p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query))) return false
-    if (filter === "out_of_stock" && p.stock_status !== "out_of_stock") return false
-    if (filter === "unpublished" && p.published_at) return false
-    if (filter === "published" && !p.published_at) return false
-    if (categoryFilter && p.category_name !== categoryFilter) return false
-    return true
-  })
-  const filtersActive = !!(filter || categoryFilter || query)
+  const uniqueCategories = [...new Set(categories)]
+  const filtersActive = filter || query || categoryFilter
+  const listHref = (params: { q?: string; filter?: string; category?: string }) => {
+    const search = new URLSearchParams()
+    if (params.q) search.set("q", params.q)
+    if (params.filter) search.set("filter", params.filter)
+    if (params.category) search.set("category", params.category)
+    const qs = search.toString()
+    return qs ? `/admin/products?${qs}` : "/admin/products"
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif">
-          Products ({products.length}
-          {filtersActive ? ` of ${allProducts.length}` : ""})
-        </h1>
-        <Link href="/admin/products/new" className="bg-[#E85D2C] text-white rounded px-4 py-2 text-sm font-medium">
-          + Add product
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-serif font-bold text-neutral-900">Products</h1>
+          <p className="text-neutral-500 mt-1">Manage your store catalog</p>
+        </div>
+        <Link
+          href="/admin/products/new"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E85D2C] text-white rounded-xl font-medium text-sm hover:bg-[#d45124] transition-colors shadow-lg shadow-orange-500/25"
+        >
+          <Plus className="h-4 w-4" />
+          Add Product
         </Link>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <SummaryCard label="Total in database" value={allProducts.length} href={listHref({})} active={!filter && !categoryFilter} />
-        <SummaryCard label="Published on website" value={publishedCount} href={listHref({ filter: "published" })} active={filter === "published"} />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <SummaryCard
-          label="In database, not published"
-          value={unpublishedCount}
-          href={listHref({ filter: "unpublished" })}
-          active={filter === "unpublished"}
-          tone={unpublishedCount > 0 ? "warn" : "default"}
+          label="Total Products"
+          value={allProducts.length}
+          href={listHref({ q: query })}
+          active={!filter && !categoryFilter}
+          status="info"
+          icon={Package}
         />
         <SummaryCard
-          label="Out of stock"
+          label="Published"
+          value={publishedCount}
+          href={listHref({ q: query, filter: "published" })}
+          active={filter === "published"}
+          status="success"
+          icon={Eye}
+        />
+        <SummaryCard
+          label="Draft"
+          value={unpublishedCount}
+          href={listHref({ q: query, filter: "unpublished" })}
+          active={filter === "unpublished"}
+          status="warning"
+          icon={EyeOff}
+        />
+        <SummaryCard
+          label="Out of Stock"
           value={outOfStockCount}
-          href={listHref({ filter: "out_of_stock" })}
+          href={listHref({ q: query, filter: "out_of_stock" })}
           active={filter === "out_of_stock"}
-          tone={outOfStockCount > 0 ? "danger" : "default"}
+          status={needsWeight > 0 ? "danger" : "default"}
+          icon={AlertCircle}
         />
       </div>
 
-      <div className="bg-white rounded-lg border p-4 mb-6">
-        <p className="text-xs uppercase tracking-wide text-neutral-500 mb-2">Published on the website, by category</p>
-        <div className="flex flex-wrap gap-2">
-          {categoryNames.map((name) => {
-            const count = publishedByCategory.get(name) ?? 0
-            const active = categoryFilter === name
-            return (
-              <Link
-                key={name}
-                href={listHref({ category: active ? undefined : name })}
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm hover:border-[#E85D2C] ${
-                  active ? "border-[#E85D2C] bg-orange-50" : "bg-white"
-                }`}
-              >
-                {name}
-                <span className={`font-semibold ${count === 0 ? "text-neutral-400" : "text-neutral-900"}`}>{count}</span>
-              </Link>
-            )
-          })}
-        </div>
-        {missingWeightCount > 0 && (
-          <p className="mt-3 text-xs text-amber-700">
-            {missingWeightCount} Tools &amp; Equipment product{missingWeightCount > 1 ? "s have" : " has"} no weight recorded — delivery
-            for {missingWeightCount > 1 ? "them" : "it"} is estimated at 1 kg per unit until you add one (look for “Add weight” below).
-          </p>
+      {/* Search and Filters */}
+      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-4">
+        <form className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+            <input
+              type="search"
+              name="q"
+              placeholder="Search by name or SKU..."
+              defaultValue={query}
+              className="w-full h-11 pl-10 pr-4 rounded-xl border border-neutral-200 bg-neutral-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D2C]/20 focus:bg-white transition-all"
+            />
+          </div>
+          <div className="flex gap-2">
+            <select
+              name="category"
+              defaultValue={categoryFilter || ""}
+              className="h-11 px-4 rounded-xl border border-neutral-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D2C]/20"
+            >
+              <option value="">All Categories</option>
+              {uniqueCategories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <button type="submit" className="px-5 h-11 bg-neutral-900 text-white rounded-xl font-medium text-sm hover:bg-neutral-800 transition-colors">
+              Filter
+            </button>
+          </div>
+        </form>
+
+        {filtersActive && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-neutral-600">
+            <span>Showing:</span>
+            {filter && <span className="px-2 py-1 rounded-lg bg-neutral-100">{filter.replace("_", " ")}</span>}
+            {categoryFilter && <span className="px-2 py-1 rounded-lg bg-neutral-100">{categoryFilter}</span>}
+            {query && <span className="px-2 py-1 rounded-lg bg-neutral-100">matching "{query}"</span>}
+            <Link href="/admin/products" className="text-[#E85D2C] hover:underline ml-auto">
+              Clear all
+            </Link>
+          </div>
         )}
       </div>
 
-      {/* Search Bar */}
-      <form className="mb-6" action="/admin/products" method="GET">
-        {filter && <input type="hidden" name="filter" value={filter} />}
-        {categoryFilter && <input type="hidden" name="category" value={categoryFilter} />}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
-          <input
-            type="search"
-            name="q"
-            placeholder="Search by name or SKU..."
-            defaultValue={query}
-            className="w-full h-10 pl-10 pr-4 rounded-md border border-neutral-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D2C] focus:ring-offset-1"
-          />
-        </div>
-      </form>
-      {filtersActive && (
-        <p className="mb-4 text-sm text-neutral-600">
-          Showing
-          {filter ? ` ${filter.replace("_", " ")}` : ""}
-          {categoryFilter ? ` in ${categoryFilter}` : ""}
-          {query ? ` matching “${query}”` : ""} ·{" "}
-          <Link href="/admin/products" className="text-[#E85D2C] hover:underline">
-            Clear filters
-          </Link>
-        </p>
-      )}
-
-      <div className="bg-white rounded-lg border overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">SKU</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Price</th>
-              <th className="px-4 py-3">Stock</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => {
-              const needsWeight = isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
-              return (
-                <tr key={p.id} className="border-t align-top">
-                  <td className="px-4 py-3">{p.name}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{p.sku}</td>
-                  <td className="px-4 py-3">
-                    {p.category_name}
-                    {needsWeight && (
-                      <Link
-                        href={`/admin/products/${p.id}/edit`}
-                        className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
-                      >
-                        Add weight
-                      </Link>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">Rs {p.price}</td>
-                  <td className="px-4 py-3">
-                    {p.stock_count} ({p.stock_status})
-                  </td>
-                  <td className="px-4 py-3">{p.published_at ? "Published" : "Draft"}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-start justify-end gap-4">
-                      <Link href={`/admin/products/${p.id}/edit`} className="text-[#E85D2C] hover:underline">
-                        Edit
-                      </Link>
-                      <DeleteProductButton productName={p.name} action={deleteProduct.bind(null, p.id)} label="Delete" />
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-            {products.length === 0 && (
+      {/* Products Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-neutral-50/80 border-b border-neutral-200">
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
-                  {filtersActive ? "No products match these filters." : "No products yet."}
-                </td>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Product</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Price</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Stock</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-right"></th>
               </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {products.map((p) => {
+                const needsWeightFlag = isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
+                const isLowStock = p.stock_count !== null && p.stock_count > 0 && p.stock_count <= 5
+                
+                return (
+                  <tr key={p.id} className="hover:bg-neutral-50/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 flex items-center justify-center text-neutral-400 group-hover:from-[#E85D2C]/10 group-hover:to-[#E85D2C]/5 group-hover:text-[#E85D2C] transition-all">
+                          <Package className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-neutral-900">{p.name}</p>
+                          <p className="text-xs text-neutral-400 font-mono">{p.sku}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-neutral-600">{p.category_name}</span>
+                      {needsWeightFlag && (
+                        <Link
+                          href={`/admin/products/${p.id}/edit`}
+                          className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium hover:bg-amber-200 transition-colors"
+                        >
+                          <AlertCircle className="h-3 w-3" />
+                          Add weight
+                        </Link>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-medium text-neutral-900">Rs {p.price.toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {isLowStock ? (
+                        <StatusBadge status="warning">
+                          {p.stock_count} left
+                        </StatusBadge>
+                      ) : p.stock_count === 0 ? (
+                        <StatusBadge status="danger">
+                          Out of stock
+                        </StatusBadge>
+                      ) : (
+                        <span className="text-sm text-neutral-600">{p.stock_count} in stock</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {p.published_at ? (
+                        <StatusBadge status="success">
+                          <Eye className="h-3 w-3" />
+                          Published
+                        </StatusBadge>
+                      ) : (
+                        <StatusBadge status="default">
+                          <EyeOff className="h-3 w-3" />
+                          Draft
+                        </StatusBadge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Link 
+                          href={`/admin/products/${p.id}/edit`}
+                          className="px-3 py-1.5 text-sm font-medium text-[#E85D2C] hover:bg-[#E85D2C]/10 rounded-lg transition-colors"
+                        >
+                          Edit
+                        </Link>
+                        <DeleteProductButton productName={p.name} action={deleteProduct.bind(null, p.id)} label="Delete" />
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        {products.length === 0 && (
+          <div className="py-16 text-center">
+            <Package className="h-12 w-12 text-neutral-300 mx-auto mb-4" />
+            <p className="text-neutral-500 font-medium">
+              {filtersActive ? "No products match these filters" : "No products yet"}
+            </p>
+            {!filtersActive && (
+              <Link href="/admin/products/new" className="text-[#E85D2C] hover:underline mt-2 inline-block">
+                Add your first product
+              </Link>
             )}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -6,8 +6,8 @@ import { ShopAllClient } from "./shop-all-client"
 export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: "All Plants & Supplies - Muffin Greenhouse",
-  description: "Browse our full collection of locally grown indoor plants, pots, fertilizers, and tools. Home delivery available in Karachi and across Pakistan.",
+  title: "All Plants - Muffin Greenhouse",
+  description: "Browse our full collection of locally grown indoor plants. Home delivery available in Karachi and across Pakistan.",
 }
 
 interface ShopAllPageProps {

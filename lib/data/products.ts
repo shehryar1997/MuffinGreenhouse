@@ -3,7 +3,7 @@ import { Product } from "@/types"
 import { supabase } from "@/supabase/client"
 import { mapSupabaseProductToProduct } from "./adapters"
 import { SupabaseProduct } from "@/supabase/client"
-import { isPlantProduct } from "@/lib/product-categories"
+import { isPlantProduct, NON_PLANT_CATEGORY_NAMES, NON_PLANT_CATEGORY_SLUGS } from "@/lib/product-categories"
 
 // Re-export static category/use-case display config (not product data)
 export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
@@ -57,6 +57,12 @@ export interface PaginatedProducts {
   totalCount: number
 }
 
+// PostgREST `not.in` drops NULL rows, so each filter also keeps rows with no category.
+// Names are quoted because "Other Equipment" / "Planting Media" contain spaces.
+const NOT_NON_PLANT_SLUG = `category_slug.is.null,category_slug.not.in.(${NON_PLANT_CATEGORY_SLUGS.join(",")})`
+const NOT_NON_PLANT_NAME = `category_name.is.null,category_name.not.in.(${NON_PLANT_CATEGORY_NAMES.map((n) => `"${n}"`).join(",")})`
+
+/** Plants only: "All Plants" excludes the Tools & Equipment categories (they have their own pages). */
 export async function getPaginatedProducts(page: number, pageSize: number = PRODUCTS_PER_PAGE): Promise<PaginatedProducts> {
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
@@ -65,6 +71,8 @@ export async function getPaginatedProducts(page: number, pageSize: number = PROD
     .from("products")
     .select(PRODUCT_SELECT, { count: "exact" })
     .not("published_at", "is", null)
+    .or(NOT_NON_PLANT_SLUG)
+    .or(NOT_NON_PLANT_NAME)
     .order("sort_order", { foreignTable: "product_images", ascending: true })
     .order("sort_order", { foreignTable: "product_variants", ascending: true })
     .range(from, to)

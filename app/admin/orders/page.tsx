@@ -1,29 +1,61 @@
 import Link from "next/link"
+import { 
+  ShoppingCart, 
+  Package, 
+  Truck, 
+  CheckCircle2, 
+  XCircle, 
+  Clock,
+  CreditCard,
+  ArrowRight
+} from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 
-// Force fresh data on every load — orders and payment status change often
-// and admin should never see a stale list.
 export const dynamic = "force-dynamic"
 
-function statusBadgeClass(status: string): string {
-  const colors: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    confirmed: "bg-blue-100 text-blue-800",
-    processing: "bg-purple-100 text-purple-800",
-    shipped: "bg-blue-100 text-blue-800",
-    delivered: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800",
-  }
-  return colors[status] || "bg-neutral-100 text-neutral-600"
+const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType; bg: string }> = {
+  pending: { label: "Pending", color: "text-amber-600", bg: "bg-amber-50", icon: Clock },
+  confirmed: { label: "Confirmed", color: "text-sky-600", bg: "bg-sky-50", icon: CheckCircle2 },
+  processing: { label: "Processing", color: "text-violet-600", bg: "bg-violet-50", icon: Package },
+  shipped: { label: "Shipped", color: "text-blue-600", bg: "bg-blue-50", icon: Truck },
+  delivered: { label: "Delivered", color: "text-emerald-600", bg: "bg-emerald-50", icon: CheckCircle2 },
+  cancelled: { label: "Cancelled", color: "text-red-500", bg: "bg-red-50", icon: XCircle },
 }
 
-function paymentBadgeClass(status: string): string {
-  const colors: Record<string, string> = {
-    paid: "bg-green-100 text-green-800",
-    failed: "bg-red-100 text-red-800",
-    refunded: "bg-neutral-100 text-neutral-600",
-  }
-  return colors[status] || "bg-yellow-100 text-yellow-800"
+const paymentConfig: Record<string, { label: string; color: string; bg: string }> = {
+  pending: { label: "Pending", color: "text-amber-600", bg: "bg-amber-50" },
+  paid: { label: "Paid", color: "text-emerald-600", bg: "bg-emerald-50" },
+  failed: { label: "Failed", color: "text-red-500", bg: "bg-red-50" },
+  refunded: { label: "Refunded", color: "text-slate-500", bg: "bg-slate-50" },
+}
+
+function StatCard({ 
+  label, 
+  value, 
+  icon: Icon, 
+  color,
+  description 
+}: { 
+  label: string
+  value: number | string
+  icon: React.ElementType
+  color: string
+  description?: string
+}) {
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-200 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{label}</p>
+          <p className="text-3xl font-bold text-neutral-900 mt-2">{value}</p>
+          {description && <p className="text-xs text-neutral-400 mt-1">{description}</p>}
+        </div>
+        <div className={`p-2.5 rounded-xl ${color}`}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default async function AdminOrdersPage() {
@@ -35,105 +67,141 @@ export default async function AdminOrdersPage() {
     .order("created_at", { ascending: false })
 
   if (error) {
-    return <p className="text-red-600">Error loading orders: {error.message}</p>
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 font-medium">Error loading orders</p>
+          <p className="text-neutral-500 text-sm mt-1">{error.message}</p>
+        </div>
+      </div>
+    )
   }
 
   const orderData = orders ?? []
 
-  // ---- Summary ----
-  // "Shipped" counts every order that has gone out (shipped or since delivered).
   const shippedCount = orderData.filter((o) => o.status === "shipped" || o.status === "delivered").length
   const cancelledCount = orderData.filter((o) => o.status === "cancelled").length
-  // Revenue = money actually received: paid orders that were not cancelled afterwards.
   const revenue = orderData
     .filter((o) => o.payment_status === "paid" && o.status !== "cancelled")
     .reduce((sum, o) => sum + Number(o.total ?? 0), 0)
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif">Orders ({orderData.length})</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-serif font-bold text-neutral-900">Orders</h1>
+        <p className="text-neutral-500 mt-1">Manage customer orders and track shipments</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-neutral-500">Total orders</p>
-          <p className="text-2xl font-semibold mt-1">{orderData.length}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-neutral-500">Orders shipped</p>
-          <p className="text-2xl font-semibold mt-1 text-blue-700">{shippedCount}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-neutral-500">Orders cancelled</p>
-          <p className="text-2xl font-semibold mt-1 text-red-600">{cancelledCount}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-neutral-500">Revenue</p>
-          <p className="text-2xl font-semibold mt-1 text-green-700">Rs {revenue.toLocaleString("en-PK")}</p>
-          <p className="text-[11px] text-neutral-500 mt-1">Paid orders, excluding cancelled</p>
-        </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Orders"
+          value={orderData.length}
+          icon={ShoppingCart}
+          color="bg-neutral-900"
+          description="All time orders"
+        />
+        <StatCard
+          label="Shipped"
+          value={shippedCount}
+          icon={Package}
+          color="bg-blue-500"
+          description="Shipped or delivered"
+        />
+        <StatCard
+          label="Cancelled"
+          value={cancelledCount}
+          icon={XCircle}
+          color="bg-red-500"
+        />
+        <StatCard
+          label="Revenue"
+          value={`Rs ${revenue.toLocaleString("en-PK")}`}
+          icon={CreditCard}
+          color="bg-emerald-500"
+          description="Paid orders only"
+        />
       </div>
 
-      <div className="bg-white rounded-lg border overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
-            <tr>
-              <th className="px-4 py-3">Order #</th>
-              <th className="px-4 py-3">Customer</th>
-              <th className="px-4 py-3">Delivery</th>
-              <th className="px-4 py-3">Total</th>
-              <th className="px-4 py-3">Payment</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Tracking #</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {orderData.map((o) => {
-              const customer = o.customer as unknown as { name: string | null; email: string } | null
-              return (
-                <tr key={o.id} className="border-t hover:bg-neutral-50">
-                  <td className="px-4 py-3 font-mono text-xs">{o.order_number}</td>
-                  <td className="px-4 py-3">
-                    {customer ? (customer.name || customer.email) : "-"}
-                  </td>
-                  <td className="px-4 py-3 capitalize">{o.delivery_type}</td>
-                  <td className="px-4 py-3">Rs {o.total}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${paymentBadgeClass(o.payment_status)}`}>
-                      {o.payment_status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(o.status)}`}>
-                      {o.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-neutral-600">
-                    {o.tracking_number ? `${o.courier || "Courier"}: ${o.tracking_number}` : "-"}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600">
-                    {o.created_at ? new Date(o.created_at).toLocaleDateString() : "-"}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/admin/orders/${o.id}`} className="text-[#E85D2C] hover:underline">
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              )
-            })}
-            {orderData.length === 0 && (
+      {/* Orders Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-neutral-50/80 border-b border-neutral-200">
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-neutral-500">
-                  No orders yet.
-                </td>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Order</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Total</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Payment</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-4 text-right"></th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {orderData.map((o) => {
+                const customer = o.customer as unknown as { name: string | null; email: string } | null
+                const status = statusConfig[o.status] || statusConfig.pending
+                const StatusIcon = status.icon
+                const payment = paymentConfig[o.payment_status] || paymentConfig.pending
+
+                return (
+                  <tr key={o.id} className="hover:bg-neutral-50/50 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neutral-100 to-neutral-50 flex items-center justify-center text-neutral-500">
+                          <ShoppingCart className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-neutral-900">{o.order_number}</p>
+                          <p className="text-xs text-neutral-400 capitalize">{o.delivery_type} • {o.courier || "No courier"}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-neutral-700">{customer?.name || customer?.email || "—"}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-neutral-900">Rs {o.total.toLocaleString()}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${payment.bg} ${payment.color}`}>
+                        {payment.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.bg} ${status.color}`}>
+                        <StatusIcon className="h-3 w-3" />
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-neutral-500">
+                      {new Date(o.created_at).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link 
+                        href={`/admin/orders/${o.id}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-[#E85D2C] hover:bg-[#E85D2C]/10 rounded-lg transition-colors"
+                      >
+                        View
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        {orderData.length === 0 && (
+          <div className="py-16 text-center">
+            <ShoppingCart className="h-12 w-12 text-neutral-300 mx-auto mb-4" />
+            <p className="text-neutral-500 font-medium">No orders yet</p>
+            <p className="text-neutral-400 text-sm mt-1">Orders will appear here when customers place them</p>
+          </div>
+        )}
       </div>
     </div>
   )
