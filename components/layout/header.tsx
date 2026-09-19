@@ -9,6 +9,7 @@ import { mainNav, shopMegaMenuSections } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -34,13 +35,13 @@ export function Header() {
   return (
     <>
     <motion.header
-      className="fixed top-0 left-0 right-0 z-50 bg-[#FAF7F2]/95 backdrop-blur-sm"
+      className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="container mx-auto px-6 lg:px-12">
-        <div className="flex items-center justify-between h-20 border-b border-forest-200/50">
+        <div className="flex items-center justify-between h-20 border-b border-border">
           {/* Logo */}
           <Link href="/" className="flex flex-col items-center gap-0.5">
             <Image
@@ -51,7 +52,7 @@ export function Header() {
               className="h-10 w-auto object-contain"
               priority
             />
-            <span className="font-serif text-sm text-[#1A1A1A] leading-none">Muffin Plants</span>
+            <span className="font-serif text-sm text-foreground leading-none">Muffin Plants</span>
           </Link>
 
           {/* Navigation */}
@@ -66,7 +67,7 @@ export function Header() {
                 >
                   <Link 
                     href={item.href} 
-                    className="font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-[#1A1A1A] transition-colors py-2 inline-block"
+                    className="font-mono text-xs tracking-widest uppercase text-muted-foreground hover:text-foreground transition-colors py-2 inline-block"
                   >
                     {item.label}
                   </Link>
@@ -94,7 +95,7 @@ export function Header() {
                           className="fixed inset-x-0 top-20 z-50"
                         >
                           <div 
-                            className="bg-[#FAF7F2] border border-forest-200/50 shadow-2xl rounded-lg overflow-hidden"
+                            className="bg-background border border-border shadow-2xl rounded-lg overflow-hidden"
                             onMouseEnter={handleShopMenuEnter}
                             onMouseLeave={handleShopMenuLeave}
                           >
@@ -103,7 +104,7 @@ export function Header() {
                                 {shopMegaMenuSections.map((section) => (
                                   <div key={section.id} className="space-y-5">
                                     <div className="flex items-center gap-2 border-b border-forest-200/50 pb-3">
-                                      <h3 className="font-serif text-lg text-forest-900">
+                                      <h3 className="font-serif text-lg text-foreground">
                                         {section.title}
                                       </h3>
                                     </div>
@@ -193,6 +194,9 @@ export function Header() {
               <span className="text-[#E85A3C] font-semibold sm:hidden" aria-hidden="true">&#8594;</span>
               <span className="text-[#E85A3C] font-semibold hidden sm:inline" aria-hidden="true">&#8594;</span>
             </button>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
 
             {/* Cart */}
             <button onClick={() => toggleCart(true)} className="flex items-center gap-2">

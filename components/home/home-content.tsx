@@ -216,9 +216,9 @@ function ParallaxMonstera() {
     return (
       <FadeIn delay={0.2}>
         <div className="relative">
-          <div className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-[#FAF7F2]" style={{ borderBottom: 'none' }}>
+          <div className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-background" style={{ borderBottom: 'none' }}>
             <Image src="https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80" alt="Monstera plant" fill className="object-cover" priority />
-            <div className="absolute bottom-0 left-0 right-0 h-3 bg-[#D4F542]" />
+            <div className="absolute bottom-0 left-0 right-0 h-3 bg-secondary" />
           </div>
         </div>
       </FadeIn>
@@ -229,7 +229,7 @@ function ParallaxMonstera() {
     <FadeIn delay={0.2}>
       <div ref={containerRef as React.RefObject<HTMLDivElement>} className="relative">
         <div
-          className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-[#FAF7F2]"
+          className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-background"
           style={{ borderBottom: 'none' }}
         >
           <div
@@ -247,7 +247,7 @@ function ParallaxMonstera() {
               priority
             />
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-3 bg-[#D4F542] z-10" />
+          <div className="absolute bottom-0 left-0 right-0 h-3 bg-secondary z-10" />
         </div>
       </div>
     </FadeIn>
@@ -257,15 +257,15 @@ function ParallaxMonstera() {
 function AnimatedBadge({ prefersReducedMotion }: { prefersReducedMotion: boolean }) {
   if (prefersReducedMotion) {
     return (
-      <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-[#D4F542] flex items-center justify-center">
-        <span className="font-mono text-xs">M / G</span>
+      <div className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-secondary flex items-center justify-center">
+        <span className="font-mono text-xs text-secondary-foreground">M / G</span>
       </div>
     )
   }
 
   return (
-    <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ duration: 0.8, type: "spring" }} className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-[#D4F542] flex items-center justify-center">
-      <span className="font-mono text-xs">M / G</span>
+    <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ duration: 0.8, type: "spring" }} className="w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-secondary flex items-center justify-center">
+      <span className="font-mono text-xs text-secondary-foreground">M / G</span>
     </motion.div>
   )
 }
@@ -276,7 +276,7 @@ export default function HomeContent({ products }: { products: Product[] }) {
   useEffect(() => {}, [])
 
   return (
-    <div className="bg-[#FAF7F2]">
+    <div className="bg-background">
       {/* Hero */}
       <section className="min-h-screen">
         <div className="container mx-auto px-6 lg:px-12 pt-8 pb-20">
@@ -286,9 +286,9 @@ export default function HomeContent({ products }: { products: Product[] }) {
 
           <FadeIn>
             <div className="flex items-center gap-4 mb-8">
-              <span className="font-mono text-xs text-[#E85A3C]">001</span>
-              <span className="w-8 h-px bg-forest-300"></span>
-              <span className="font-mono text-xs tracking-widest text-forest-600">A DIFFERENT KIND OF PLANT SHOP</span>
+              <span className="font-mono text-xs text-primary">001</span>
+              <span className="w-8 h-px bg-border"></span>
+              <span className="font-mono text-xs tracking-widest text-muted-foreground">A DIFFERENT KIND OF PLANT SHOP</span>
             </div>
           </FadeIn>
 
@@ -299,16 +299,16 @@ export default function HomeContent({ products }: { products: Product[] }) {
                   <AnimatedHeading
                     lines={["Good", "plants.", "Good", "energy."]}
                     className={[
-                      "text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]",
-                      "text-[clamp(3rem,12vw,8rem)] text-[#1A1A1A]",
-                      "text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]",
-                      "text-[clamp(3rem,12vw,8rem)] text-[#E85A3C]",
+                      "text-[clamp(3rem,12vw,8rem)] text-foreground",
+                      "text-[clamp(3rem,12vw,8rem)] text-foreground",
+                      "text-[clamp(3rem,12vw,8rem)] text-primary",
+                      "text-[clamp(3rem,12vw,8rem)] text-primary",
                     ]}
                   />
                 </h1>
                 <div className="mt-8 flex items-start gap-4">
-                  <p className="text-forest-600 text-lg max-w-xs">Green things worth collecting - sourced globally, acclimated for<br />Pakistan.</p>
-                  <div className="rotate-90"><ArrowRight className="w-5 h-5 text-[#E85A3C]" /></div>
+                  <p className="text-muted-foreground text-lg max-w-xs">Green things worth collecting - sourced globally, acclimated for<br />Pakistan.</p>
+                  <div className="rotate-90"><ArrowRight className="w-5 h-5 text-primary" /></div>
                 </div>
               </div>
             </KineticHeading>
@@ -319,25 +319,25 @@ export default function HomeContent({ products }: { products: Product[] }) {
       </section>
 
       {/* Marquee */}
-      <section className="bg-[#1A1A1A] py-5 overflow-hidden">
+      <section className="bg-foreground py-5 overflow-hidden">
         <motion.div className="flex whitespace-nowrap" animate={{ x: ['0%', '-50%'] }} transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}>
           {[...Array(4)].map((_, i) => (
             <div key={i} className="flex items-center gap-12 px-12">
-              <span className="text-white font-medium text-sm tracking-wide">Curated for the modern collector</span>
-              <span className="text-[#D4F542] text-lg">&#10022;</span>
-              <span className="text-white font-medium text-sm tracking-wide">Rare plants for one of a kind spaces</span>
-              <span className="text-[#D4F542] text-lg">&#10022;</span>
-              <span className="text-white font-medium text-sm tracking-wide">We are here for every leaf, long after purchase</span>
-              <span className="text-[#D4F542] text-lg">&#10022;</span>
-              <span className="text-white font-medium text-sm tracking-wide">Hand-picked before they ever reach you</span>
-              <span className="text-[#D4F542] text-lg">&#10022;</span>
+              <span className="text-background font-medium text-sm tracking-wide">Curated for the modern collector</span>
+              <span className="text-secondary text-lg">&#10022;</span>
+              <span className="text-background font-medium text-sm tracking-wide">Rare plants for one of a kind spaces</span>
+              <span className="text-secondary text-lg">&#10022;</span>
+              <span className="text-background font-medium text-sm tracking-wide">We are here for every leaf, long after purchase</span>
+              <span className="text-secondary text-lg">&#10022;</span>
+              <span className="text-background font-medium text-sm tracking-wide">Hand-picked before they ever reach you</span>
+              <span className="text-secondary text-lg">&#10022;</span>
             </div>
           ))}
         </motion.div>
       </section>
 
       {/* Section 002 */}
-      <section className="py-24 lg:py-32 bg-[#FAF7F2]">
+      <section className="py-24 lg:py-32 bg-background">
         <div className="container mx-auto px-6 lg:px-12">
           <FadeIn>
             <div className="mb-16">
@@ -352,18 +352,18 @@ export default function HomeContent({ products }: { products: Product[] }) {
                 <AnimatedHeading
                   lines={["Less", "guesswork.", "More", "green."]}
                   className={[
-                    "text-[clamp(2.5rem,10vw,5rem)] text-[#1A1A1A]",
-                    "text-[clamp(2.5rem,10vw,5rem)] text-[#1A1A1A]",
-                    "text-[clamp(2.5rem,10vw,5rem)] text-[#A5C930]",
-                    "text-[clamp(2.5rem,10vw,5rem)] text-[#A5C930]",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-foreground",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-foreground",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-sprout-400",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-sprout-400",
                   ]}
                 />
               </h2>
             </KineticHeading>
             <FadeIn delay={0.2}>
               <div className="lg:pt-4">
-                <p className="text-forest-600 text-lg mb-8 max-w-sm">Tell us about your light, your space, your habits, and we&apos;ll match you with a plant built to thrive there.</p>
-                <Link href="/plant-finder" className="inline-flex items-center gap-3 font-mono text-xs tracking-widest uppercase border-b border-forest-300 pb-2 hover:text-[#E85A3C] hover:border-[#E85A3C] transition-colors group">
+                <p className="text-muted-foreground text-lg mb-8 max-w-sm">Tell us about your light, your space, your habits, and we&apos;ll match you with a plant built to thrive there.</p>
+                <Link href="/plant-finder" className="inline-flex items-center gap-3 font-mono text-xs tracking-widest uppercase border-b border-border pb-2 hover:text-primary hover:border-primary transition-colors group">
                   Find Your Match
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -374,20 +374,20 @@ export default function HomeContent({ products }: { products: Product[] }) {
       </section>
 
       {/* Three Steps */}
-      <section className="py-16 border-t border-forest-200/50">
+      <section className="py-16 border-t border-border/50">
         <div className="container mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-3 gap-12">
             {[{num:"01",title:"Choose your light",desc:"Sun, shade, or somewhere in between. Tell us how your space lives."},{num:"02",title:"Meet your plant",desc:"Matched from our current rarities, not a generic list."},{num:"03",title:"Keep it alive",desc:"Considered care, from someone who stays with you after."}].map((step,i)=> (
               <FadeIn key={i} delay={i*0.1}>
-                <div className="border-t border-forest-300 pt-6">
-                  <span className="font-mono text-xs text-[#E85A3C]">{step.num}</span>
+                <div className="border-t border-border pt-6">
+                  <span className="font-mono text-xs text-primary">{step.num}</span>
                   <h3 className="font-serif text-xl mt-4 mb-2">{step.title}</h3>
-                  <p className="text-forest-500 text-sm">{step.desc}</p>
+                  <p className="text-muted-foreground text-sm">{step.desc}</p>
                 </div>
               </FadeIn>
             ))}
           </div>
-          
+
           {/* Light Filter Teaser - positioned below the three-step row */}
           <LightFilterTeaser products={products} />
         </div>

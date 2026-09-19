@@ -59,7 +59,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#F7F3EA" />
+        <meta name="theme-color" content="#F7F3EA" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#12160E" media="(prefers-color-scheme: dark)" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema, null, 2) }}

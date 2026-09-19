@@ -9,7 +9,7 @@
 
 @layer base {
   :root {
-    /* Design System Colors */
+    /* Design System Colors - Brand Tokens */
     --cream: #FAF7F2;
     --lime: #D4F542;
     --orange: #E85A3C;
@@ -17,14 +17,14 @@
     --blue: #7EC8E3;
     --coral: #E85A3C;
     
-    /* CSS Variables mapped to design tokens */
-    --background: 43 33% 94%;
+    /* shadcn/ui Theme Tokens - Light Mode */
+    --background: 45 33% 96%;
     --foreground: 0 0% 10%;
     
-    --card: 43 33% 94%;
+    --card: 45 33% 96%;
     --card-foreground: 0 0% 10%;
     
-    --popover: 43 33% 94%;
+    --popover: 45 33% 96%;
     --popover-foreground: 0 0% 10%;
     
     --primary: 15 80% 56%;
@@ -33,8 +33,8 @@
     --secondary: 75 90% 60%;
     --secondary-foreground: 0 0% 10%;
     
-    --muted: 30 10% 85%;
-    --muted-foreground: 30 5% 40%;
+    --muted: 40 20% 92%;
+    --muted-foreground: 30 10% 45%;
     
     --accent: 15 80% 56%;
     --accent-foreground: 0 0% 100%;
@@ -42,8 +42,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 30 10% 75%;
-    --input: 30 10% 85%;
+    --border: 40 15% 85%;
+    --input: 40 15% 85%;
     --ring: 15 80% 56%;
     
     --radius: 0.5rem;
@@ -53,14 +53,51 @@
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   }
+  
+  .dark {
+    /* Dark Mode - Deep forest green background with adjusted lime accent */
+    --background: 90 12% 8%;
+    --foreground: 45 20% 96%;
+    
+    --card: 90 10% 12%;
+    --card-foreground: 45 20% 96%;
+    
+    --popover: 90 10% 12%;
+    --popover-foreground: 45 20% 96%;
+    
+    --primary: 15 80% 60%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Muted lime for dark mode - still visible but not harsh */
+    --secondary: 75 70% 45%;
+    --secondary-foreground: 0 0% 10%;
+    
+    --muted: 90 8% 18%;
+    --muted-foreground: 90 10% 60%;
+    
+    --accent: 15 80% 60%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 62% 56%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 90 8% 25%;
+    --input: 90 8% 25%;
+    --ring: 15 80% 60%;
+  }
 }
 
 @layer base {
   * { @apply border-border; }
   html { scroll-behavior: smooth; }
   body { 
-    @apply bg-[#FAF7F2] text-foreground antialiased;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Dark mode adjustments for brand colors */
+  .dark body {
+    @apply bg-background;
   }
   h1, h2, h3, h4 { 
     @apply font-serif tracking-tight; 
@@ -105,13 +142,35 @@
     clip: rect(0, 0, 0, 0); 
   }
   
-  /* Custom colors */
+  /* Custom colors with dark mode variants */
   .text-lime { color: #D4F542; }
+  .dark .text-lime { color: #B8D035; }
+  
   .text-orange { color: #E85A3C; }
+  .dark .text-orange { color: #ED7E5C; }
+  
   .text-cream { color: #FAF7F2; }
+  .dark .text-cream { color: #ECF1E7; }
+  
   .text-dark { color: #1A1A1A; }
+  .dark .text-dark { color: #ECF1E7; }
+  
   .bg-lime { background-color: #D4F542; }
+  .dark .bg-lime { background-color: #9CB528; }
+  
   .bg-orange { background-color: #E85A3C; }
+  .dark .bg-orange { background-color: #ED7E5C; }
+  
   .bg-cream { background-color: #FAF7F2; }
+  .dark .bg-cream { background-color: #1F2419; }
+  
   .bg-dark { background-color: #1A1A1A; }
+  .dark .bg-dark { background-color: #ECF1E7; }
+  
+  /* Brand-aware dark mode utilities */
+  .bg-brand-cream { background-color: #FAF7F2; }
+  .dark .bg-brand-cream { background-color: #181E13; }
+  
+  .text-brand-dark { color: #1A1A1A; }
+  .dark .text-brand-dark { color: #FAF7F2; }
 }

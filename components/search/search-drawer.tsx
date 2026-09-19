@@ -36,27 +36,27 @@ export function SearchDrawer() {
   return (
     <Drawer.Root open={isOpen} onOpenChange={(open) => !open && handleClose()} direction="top">
       <Drawer.Portal>
-        <Drawer.Overlay className="fixed inset-0 bg-[#1A1A1A]/40 backdrop-blur-sm z-50" onClick={handleClose} />
-        <Drawer.Content className="fixed inset-x-0 top-0 z-50 bg-[#FAF7F2] flex flex-col max-h-[85vh]">
-          <div className="flex items-center justify-between p-6 border-b border-forest-200">
+        <Drawer.Overlay className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={handleClose} />
+        <Drawer.Content className="fixed inset-x-0 top-0 z-50 bg-background flex flex-col max-h-[85vh]">
+          <div className="flex items-center justify-between p-6 border-b border-border">
             <div className="flex items-center gap-3">
-              <span className="font-mono text-xs text-[#E85A3C]">SEARCH</span>
+              <span className="font-mono text-xs text-primary">SEARCH</span>
             </div>
-            <button onClick={handleClose} className="p-2 hover:bg-forest-100 rounded-full transition-colors" aria-label="Close search">
-              <X className="w-5 h-5 text-forest-700" />
+            <button onClick={handleClose} className="p-2 hover:bg-muted rounded-full transition-colors" aria-label="Close search">
+              <X className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
 
-          <div className="p-6 border-b border-forest-200">
+          <div className="p-6 border-b border-border">
             <form onSubmit={handleSearchSubmit} className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-forest-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 ref={inputRef}
                 type="search"
                 placeholder="Search plants by name..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="pl-12 h-14 text-base border-forest-200 bg-white focus-visible:ring-clay-500"
+                className="pl-12 h-14 text-base border-border bg-card focus-visible:ring-ring"
                 aria-label="Search products"
               />
             </form>
@@ -81,10 +81,10 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
   if (query.trim() === "") {
     return (
       <div className="p-8 text-center">
-        <p className="font-serif text-lg text-forest-500">
+        <p className="font-serif text-lg text-muted-foreground">
           Start typing to search for plants
         </p>
-        <p className="font-mono text-xs text-forest-400 mt-2">
+        <p className="font-mono text-xs text-muted-foreground/70 mt-2">
           Try &quot;Monstera&quot;, &quot;Snake Plant&quot;, or &quot;Pothos&quot;
         </p>
       </div>
@@ -94,16 +94,16 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
   if (results.length === 0) {
     return (
       <div className="p-8 text-center">
-        <p className="font-serif text-lg text-forest-600 mb-2">
+        <p className="font-serif text-lg text-foreground mb-2">
           No plants found matching &ldquo;{query}&rdquo;
         </p>
-        <p className="font-mono text-xs text-forest-400">
+        <p className="font-mono text-xs text-muted-foreground">
           Try different search terms or browse all plants
         </p>
-        <Button 
-          asChild 
-          variant="outline" 
-          className="mt-6 border-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white"
+        <Button
+          asChild
+          variant="outline"
+          className="mt-6 border-foreground hover:bg-foreground hover:text-background"
           onClick={onClose}
         >
           <Link href="/shop/all">
@@ -116,7 +116,7 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
 
   return (
     <div className="p-6">
-      <p className="font-mono text-xs text-forest-500 mb-4">
+      <p className="font-mono text-xs text-muted-foreground mb-4">
         {results.length} {results.length === 1 ? "result" : "results"} for &ldquo;{query}&rdquo;
       </p>
       <div className="space-y-4">
@@ -125,9 +125,9 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
             key={product.id}
             href={`/shop/product/${product.slug}`}
             onClick={onClose}
-            className="flex gap-4 p-3 -mx-3 hover:bg-forest-100 rounded-lg transition-colors group"
+            className="flex gap-4 p-3 -mx-3 hover:bg-muted rounded-lg transition-colors group"
           >
-            <div className="relative w-20 h-20 bg-forest-100 shrink-0 rounded-md overflow-hidden">
+            <div className="relative w-20 h-20 bg-muted shrink-0 rounded-md overflow-hidden">
               <Image
                 src={product.images[0]?.url || "/placeholder-plant.png"}
                 alt={product.images[0]?.alt || product.name}
@@ -136,27 +136,27 @@ function SearchResults({ results, query, onClose }: SearchResultsProps) {
               />
             </div>
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <h3 className="font-serif text-base text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors line-clamp-1">
+              <h3 className="font-serif text-base text-foreground group-hover:text-primary transition-colors line-clamp-1">
                 {product.name}
               </h3>
-              <p className="font-mono text-xs text-forest-500 mt-1">
+              <p className="font-mono text-xs text-muted-foreground mt-1">
                 {product.category.name}
               </p>
-              <p className="font-mono text-sm text-forest-700 mt-2">
+              <p className="font-mono text-sm text-foreground mt-2">
                 {formatPrice(product.price)}
               </p>
             </div>
             <div className="flex items-center">
-              <ArrowRight className="w-4 h-4 text-forest-400 group-hover:text-[#E85A3C] transition-colors" />
+              <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
             </div>
           </Link>
         ))}
       </div>
-      <div className="mt-6 pt-6 border-t border-forest-200 text-center">
+      <div className="mt-6 pt-6 border-t border-border text-center">
         <Button
           asChild
           variant="outline"
-          className="border-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white"
+          className="border-foreground hover:bg-foreground hover:text-background"
           onClick={onClose}
         >
           <Link href="/shop/all">
