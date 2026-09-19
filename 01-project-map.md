@@ -1,5 +1,6 @@
 ## Testing & CI
 `tests/smoke.spec.ts` — Playwright smoke tests for critical paths — test, expect — ./setup, playwright
+`tests/audit-regressions.spec.ts` — Audit/regression guard tests — test, expect — @playwright/test
 `tests/setup.ts` — Test utilities and fixtures — test, expect — @playwright/test
 `playwright.config.ts` — Playwright configuration — defineConfig, devices — @playwright/test, package.json scripts
 `.github/workflows/ci.yml` — GitHub Actions CI pipeline — N/A — package.json scripts, tests/*
