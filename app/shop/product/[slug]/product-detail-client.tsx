@@ -11,6 +11,7 @@ import { useCart } from "@/components/providers/cart-provider"
 import { toast } from "sonner"
 import { Product } from "@/types"
 import { generateProductSchema } from "@/lib/structured-data"
+import { isPlantProduct } from "@/lib/product-categories"
 
 interface ProductDetailClientProps {
   product: Product
@@ -23,6 +24,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const { addItem, toggleCart } = useCart()
 
   const productSchema = generateProductSchema(product)
+  // Tools & Equipment (pots, fertilizer, media...) have no plant care info to show.
+  const isPlant = isPlantProduct(product)
 
   const handleAddToCart = () => {
     addItem(product, selectedVariant || undefined, quantity)
@@ -54,7 +57,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 {product.isNewArrival && <Badge variant="secondary">New</Badge>}
                 {product.stockStatus === "low_stock" && <Badge variant="lowStock">Low Stock</Badge>}
-                {product.isPetSafe && <Badge variant="outline">Pet Safe</Badge>}
+                {isPlant && product.isPetSafe && <Badge variant="outline">Pet Safe</Badge>}
               </div>
             </div>
             <div className="flex gap-2">
@@ -111,7 +114,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <Button size="lg" variant="outline"><Share2 className="w-5 h-5" /></Button>
             </div>
 
-            {/* Care Requirements */}
+            {/* Care Requirements (plants only) */}
+            {isPlant && (
             <div className="border-t border-forest-200 pt-6">
               <h3 className="font-serif text-xl mb-4">Care Requirements</h3>
               <div className="grid grid-cols-2 gap-3">
@@ -157,6 +161,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>

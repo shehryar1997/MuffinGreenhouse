@@ -7,6 +7,7 @@ import { motion } from "framer-motion"
 import { ShoppingBag, Heart, Eye } from "lucide-react"
 import { Product } from "@/types"
 import { formatPrice } from "@/lib/utils"
+import { isPlantProduct } from "@/lib/product-categories"
 import { cn } from "@/lib/utils"
 import { Badge } from "./badge"
 import { Button } from "./button"
@@ -114,7 +115,7 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {product.isNewArrival && <Badge variant="secondary">New</Badge>}
             {stockBadge}
-            {product.isPetSafe && <Badge variant="outline">Pet Safe</Badge>}
+            {isPlantProduct(product) && product.isPetSafe && <Badge variant="outline">Pet Safe</Badge>}
           </div>
         </div>
 

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
 import { Search } from "lucide-react"
 import type { Product } from "@/types"
+import { isPlantProduct } from "@/lib/product-categories"
 
 export const MAX_PRICE = 250000
 
@@ -47,6 +48,8 @@ export function ProductFilters({ products, children }: ProductFiltersProps) {
         if (!matchesSearch) return false
       }
       if (p.price < filters.priceRange[0] || p.price > filters.priceRange[1]) return false
+      // Equipment rows carry placeholder care values; never let them match a care filter.
+      if ((filters.lighting || filters.petFriendly || filters.watering) && !isPlantProduct(p)) return false
       if (filters.lighting && p.lightRequirement !== filters.lighting) return false
       if (filters.petFriendly) {
         const isPetSafe = filters.petFriendly === "yes"

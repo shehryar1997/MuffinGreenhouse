@@ -1,5 +1,6 @@
 // ponytail: Shared rule-based matching engine
 import type { Product } from "@/types"
+import { isPlantProduct } from "@/lib/product-categories"
 
 // Plant Finder Quiz Logic
 // ========================
@@ -18,6 +19,7 @@ interface PlantFinderAnswers {
  */
 export function findMatchingPlants(products: Product[], answers: PlantFinderAnswers): Product[] {
   return products.filter((p) => {
+    if (!isPlantProduct(p)) return false
     const lightMatch =
       !answers.light ||
       p.lightRequirement === answers.light ||

@@ -1,43 +1,18 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import sharp from "sharp"
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
+import { PutObjectCommand } from "@aws-sdk/client-s3"
 import { COOKIE_NAME, isValidSessionCookie } from "@/lib/admin-session"
+import { PUBLIC_BASE_URL, getR2Client } from "@/lib/r2"
 
 // sharp is a native module -- needs the Node runtime, not Edge.
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const PUBLIC_BASE_URL = "https://images.muffinplants.com"
 const MAX_EDGE_PX = 2000
 // Vercel rejects request bodies over ~4.5MB before this handler ever runs, so
 // the form downscales client-side first. This cap only guards other hosts/callers.
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024
-
-function getR2Client() {
-  const accountId = process.env.R2_ACCOUNT_ID
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
-  const bucket = process.env.R2_BUCKET_NAME
-  const missing = [
-    !accountId && "R2_ACCOUNT_ID",
-    !accessKeyId && "R2_ACCESS_KEY_ID",
-    !secretAccessKey && "R2_SECRET_ACCESS_KEY",
-    !bucket && "R2_BUCKET_NAME",
-  ].filter(Boolean)
-  if (missing.length > 0) {
-    throw new Error(`R2 is not configured on the server. Missing env var(s): ${missing.join(", ")}`)
-  }
-  const client = new S3Client({
-    region: "auto",
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: { accessKeyId: accessKeyId!, secretAccessKey: secretAccessKey! },
-    // R2 doesn't need the SDK's default CRC32 checksum headers.
-    requestChecksumCalculation: "WHEN_REQUIRED",
-    responseChecksumValidation: "WHEN_REQUIRED",
-  })
-  return { client, bucket: bucket! }
-}
 
 export async function POST(request: Request) {
   // Middleware only gates /admin/*, not /api/admin/*, so check the session here.

@@ -1,7 +1,8 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Camera, Loader2 } from "lucide-react"
+import { Camera, ImageIcon, Loader2 } from "lucide-react"
+import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { findProductsByName, type PrefillProduct } from "./actions"
 
 const inputClass = "w-full border rounded px-3 py-2 text-sm"
@@ -88,9 +89,20 @@ const PREFILL_VALUE_FIELDS = [
 const PREFILL_CHECK_FIELDS = ["is_new_arrival", "is_pet_safe"] as const
 const PREFILL_TAG_FIELDS = ["use_case_tags", "mood_tags"] as const
 
-type ImageRowState = { id: string; url: string; alt_text: string }
+type ImageRowState = { id: string; url: string; alt_text: string; uploading: boolean; error: string | null }
 let imageRowSeq = 0
-const newImageRow = (url = "", alt_text = ""): ImageRowState => ({ id: `img-${++imageRowSeq}`, url, alt_text })
+const newImageRow = (url = "", alt_text = ""): ImageRowState => ({
+  id: `img-${++imageRowSeq}`,
+  url,
+  alt_text,
+  uploading: false,
+  error: null,
+})
+
+// Caps how many uploads a single gallery pick can queue, and how many run at once
+// (decoding several 12MP phone photos in parallel can exhaust mobile memory).
+const MAX_FILES_PER_PICK = 10
+const UPLOAD_CONCURRENCY = 2
 
 type PrefillNote = { source: string; sku: string; filled: number; kept: string[] }
 
@@ -106,10 +118,12 @@ export function ProductForm({
   const [images, setImages] = useState<ImageRowState[]>(() =>
     product?.images?.length ? product.images.map((i) => newImageRow(i.url, i.alt_text)) : [newImageRow()]
   )
-  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set())
+  const [pickNotice, setPickNotice] = useState<string | null>(null)
   const [variants, setVariants] = useState(product?.variants ?? [])
   const [categoryName, setCategoryName] = useState(product?.category_name ?? "")
   const isOtherEquipment = categoryName === "Other Equipment"
+  // Tools & Equipment (Fertilizer, Other Equipment, Pots, Planting Media) have no plant care info.
+  const isPlantCategory = !isNonPlantCategoryName(categoryName)
 
   // --- Autofill from an existing product by name (new products only) ---
   const formRef = useRef<HTMLFormElement>(null)
@@ -193,13 +207,52 @@ export function ProductForm({
     }
   }
 
-  function setRowUploading(id: string, busy: boolean) {
-    setUploadingIds((prev) => {
-      const next = new Set(prev)
-      if (busy) next.add(id)
-      else next.delete(id)
-      return next
-    })
+  const uploadingCount = images.filter((r) => r.uploading).length
+
+  function updateRow(id: string, patch: Partial<ImageRowState>) {
+    setImages((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  }
+
+  // Uploads one file into an existing row. On failure the row stays (with its
+  // error shown) so nothing is lost silently; the user can retry or remove it.
+  async function uploadIntoRow(id: string, file: File) {
+    updateRow(id, { uploading: true, error: null })
+    try {
+      updateRow(id, { url: await uploadImage(file), uploading: false })
+    } catch (err) {
+      updateRow(id, { uploading: false, error: err instanceof Error ? err.message : "Upload failed." })
+    }
+  }
+
+  // Replace the picture in one specific row (per-row Camera / Gallery buttons).
+  function replaceRowImage(id: string, files: File[]) {
+    if (files[0]) void uploadIntoRow(id, files[0])
+  }
+
+  // Add one or more photos as new rows (bottom Add photo / Add from gallery
+  // buttons). Empty rows are filled first so a fresh form doesn't keep a stray blank row.
+  function addImages(files: File[]) {
+    setPickNotice(null)
+    if (files.length === 0) return
+    if (files.length > MAX_FILES_PER_PICK) {
+      setPickNotice(`Only the first ${MAX_FILES_PER_PICK} photos were added — pick the rest in another batch.`)
+    }
+    const batch = files.slice(0, MAX_FILES_PER_PICK)
+    const blankIds = images.filter((r) => !r.url && !r.uploading).map((r) => r.id)
+    const reused = blankIds.slice(0, batch.length)
+    const fresh = Array.from({ length: batch.length - reused.length }, () => newImageRow())
+    const targetIds = [...reused, ...fresh.map((r) => r.id)]
+
+    setImages((rows) => [
+      ...rows.map((r) => (reused.includes(r.id) ? { ...r, uploading: true, error: null } : r)),
+      ...fresh.map((r) => ({ ...r, uploading: true })),
+    ])
+
+    const queue = batch.map((file, i) => ({ file, id: targetIds[i] }))
+    const worker = async () => {
+      for (let job = queue.shift(); job; job = queue.shift()) await uploadIntoRow(job.id, job.file)
+    }
+    for (let n = 0; n < Math.min(UPLOAD_CONCURRENCY, batch.length); n++) void worker()
   }
 
   return (
@@ -336,30 +389,39 @@ export function ProductForm({
       </section>
 
       <section className="space-y-4">
-        <h2 className="font-semibold text-lg border-b pb-2">Plant Attributes</h2>
+        <h2 className="font-semibold text-lg border-b pb-2">{isPlantCategory ? "Plant Attributes" : "Attributes"}</h2>
+        {!isPlantCategory && (
+          <p className="text-xs text-neutral-500">
+            Care requirements (light, water, humidity, etc.) don&apos;t apply to {categoryName}, so they&apos;re hidden here and won&apos;t
+            appear on the website.
+          </p>
+        )}
         <div className="grid grid-cols-4 gap-4">
-          <Field label="Difficulty">
-            <select name="difficulty" defaultValue={product?.difficulty ?? "beginner"} className={inputClass}>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="expert">Expert</option>
-            </select>
-          </Field>
-          <Field label="Light Requirement">
-            <select name="light_requirement" defaultValue={product?.light_requirement ?? "medium"} required className={inputClass}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="bright">Bright</option>
-              <option value="full_sun">Full Sun</option>
-            </select>
-          </Field>
-          <Field label="Water Requirement">
-            <select name="water_requirement" defaultValue={product?.water_requirement ?? "medium"} className={inputClass}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </Field>
+          {/* Hidden (not unmounted) for Tools & Equipment so values survive a category switch; the server clears them on save. */}
+          <div className={isPlantCategory ? "contents" : "hidden"}>
+            <Field label="Difficulty">
+              <select name="difficulty" defaultValue={product?.difficulty ?? "beginner"} className={inputClass}>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="expert">Expert</option>
+              </select>
+            </Field>
+            <Field label="Light Requirement">
+              <select name="light_requirement" defaultValue={product?.light_requirement ?? "medium"} required className={inputClass}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="bright">Bright</option>
+                <option value="full_sun">Full Sun</option>
+              </select>
+            </Field>
+            <Field label="Water Requirement">
+              <select name="water_requirement" defaultValue={product?.water_requirement ?? "medium"} className={inputClass}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </Field>
+          </div>
           <Field label="Size">
             <select name="size" defaultValue={product?.size ?? "medium"} className={inputClass}>
               <option value="small">Small</option>
@@ -370,7 +432,9 @@ export function ProductForm({
         </div>
         <div className="flex gap-6 flex-wrap">
           <Checkbox name="is_new_arrival" label="New Arrival?" defaultChecked={product?.is_new_arrival} />
-          <Checkbox name="is_pet_safe" label="Pet Safe?" defaultChecked={product?.is_pet_safe} />
+          <div className={isPlantCategory ? "contents" : "hidden"}>
+            <Checkbox name="is_pet_safe" label="Pet Safe?" defaultChecked={product?.is_pet_safe} />
+          </div>
           <Checkbox name="is_featured" label="Featured?" defaultChecked={product?.is_featured} />
           <Checkbox name="published" label="Published?" defaultChecked={!!product?.published_at} />
         </div>
@@ -402,7 +466,7 @@ export function ProductForm({
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className={isPlantCategory ? "space-y-4" : "hidden"}>
         <h2 className="font-semibold text-lg border-b pb-2">Care Info</h2>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Light Summary (short)">
@@ -455,24 +519,26 @@ export function ProductForm({
       <section className="space-y-4">
         <h2 className="font-semibold text-lg border-b pb-2">Images</h2>
         <p className="text-xs text-neutral-500">
-          Use the camera button to take or choose a photo (converted to AVIF and stored in Cloudflare R2), or paste an image URL
-          yourself. First row is the primary photo.
+          Take a photo or pick from your gallery (converted to AVIF and stored in Cloudflare R2), or paste an image URL yourself.
+          First row is the primary photo. Replaced or removed photos are deleted from storage when you save.
         </p>
         {images.map((img) => (
           <ImageRow
             key={img.id}
-            initialUrl={img.url}
-            initialAlt={img.alt_text}
-            onUploadingChange={(busy) => setRowUploading(img.id, busy)}
-            onRemove={() => {
-              setRowUploading(img.id, false)
-              setImages((rows) => rows.filter((r) => r.id !== img.id))
-            }}
+            row={img}
+            onUrlChange={(url) => updateRow(img.id, { url })}
+            onPickFiles={(files) => replaceRowImage(img.id, files)}
+            onRemove={() => setImages((rows) => rows.filter((r) => r.id !== img.id))}
           />
         ))}
-        <button type="button" onClick={() => setImages((rows) => [...rows, newImageRow()])} className="text-sm text-[#E85D2C]">
-          + Add image
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <PickButton icon={<Camera className="h-4 w-4" />} label="Add photo" capture onFiles={addImages} />
+          <PickButton icon={<ImageIcon className="h-4 w-4" />} label="Add from gallery" multiple onFiles={addImages} />
+          <button type="button" onClick={() => setImages((rows) => [...rows, newImageRow()])} className="text-sm text-[#E85D2C]">
+            + Add URL manually
+          </button>
+        </div>
+        {pickNotice && <p className="text-xs text-neutral-600">{pickNotice}</p>}
       </section>
 
       <section className="space-y-4">
@@ -504,10 +570,14 @@ export function ProductForm({
       <div className="pt-4 border-t flex justify-end">
         <button
           type="submit"
-          disabled={uploadingIds.size > 0}
+          disabled={uploadingCount > 0}
           className="bg-[#E85D2C] text-white rounded px-6 py-3 font-medium disabled:opacity-50"
         >
-          {uploadingIds.size > 0 ? "Uploading image…" : product ? "Save changes" : "Create product"}
+          {uploadingCount > 0
+            ? `Uploading ${uploadingCount} image${uploadingCount > 1 ? "s" : ""}…`
+            : product
+              ? "Save changes"
+              : "Create product"}
         </button>
       </div>
     </form>
@@ -558,74 +628,100 @@ async function downscaleForUpload(file: File): Promise<Blob> {
   }
 }
 
+/** Uploads one image and returns its public URL; throws an Error with a user-readable message. */
+async function uploadImage(file: File): Promise<string> {
+  const body = await downscaleForUpload(file)
+  const fd = new FormData()
+  fd.append("file", body, file.name)
+  const res = await fetch("/api/admin/upload-image", { method: "POST", body: fd })
+  const data: { url?: string; error?: string } | null = await res.json().catch(() => null)
+  if (!res.ok || !data?.url) {
+    if (res.status === 401) throw new Error("Your admin session has expired. Log in again, then retry.")
+    if (res.status === 413) throw new Error("That image is too large to upload. Try a smaller photo.")
+    throw new Error(data?.error ?? `Upload failed (HTTP ${res.status}).`)
+  }
+  return data.url
+}
+
+// A file picker styled as a button. `capture` opens the camera directly on phones
+// (a normal file dialog on desktop); without it, phones offer the gallery/files.
+function PickButton({
+  icon,
+  label,
+  capture,
+  multiple,
+  disabled,
+  onFiles,
+}: {
+  icon: React.ReactNode
+  label: string
+  capture?: boolean
+  multiple?: boolean
+  disabled?: boolean
+  onFiles: (files: File[]) => void
+}) {
+  return (
+    <label
+      className={`shrink-0 inline-flex items-center gap-1.5 border rounded px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-[#E85D2C] ${
+        disabled ? "opacity-60 cursor-wait" : "cursor-pointer hover:border-[#E85D2C]"
+      }`}
+    >
+      {icon}
+      {label}
+      {/* No name attribute: the file itself must not be submitted with the form. */}
+      <input
+        type="file"
+        accept="image/*"
+        capture={capture ? "environment" : undefined}
+        multiple={multiple}
+        disabled={disabled}
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? [])
+          e.target.value = "" // allow re-selecting the same file
+          onFiles(files)
+        }}
+        className="sr-only"
+      />
+    </label>
+  )
+}
+
 function ImageRow({
-  initialUrl,
-  initialAlt,
-  onUploadingChange,
+  row,
+  onUrlChange,
+  onPickFiles,
   onRemove,
 }: {
-  initialUrl: string
-  initialAlt: string
-  onUploadingChange: (busy: boolean) => void
+  row: ImageRowState
+  onUrlChange: (url: string) => void
+  onPickFiles: (files: File[]) => void
   onRemove: () => void
 }) {
   // image_url stays a plain editable text input: pasting a URL by hand works
-  // exactly as before; the camera button just fills it in.
-  const [url, setUrl] = useState(initialUrl)
-  const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // exactly as before; the Camera / Gallery buttons just fill it in.
+  const { url, uploading, error } = row
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = "" // allow re-selecting the same file
-    if (!file) return
-    setUploading(true)
-    onUploadingChange(true)
-    setError(null)
-    try {
-      const body = await downscaleForUpload(file)
-      const fd = new FormData()
-      fd.append("file", body, file.name)
-      const res = await fetch("/api/admin/upload-image", { method: "POST", body: fd })
-      const data: { url?: string; error?: string } | null = await res.json().catch(() => null)
-      if (!res.ok || !data?.url) {
-        if (res.status === 401) throw new Error("Your admin session has expired. Log in again, then retry.")
-        if (res.status === 413) throw new Error("That image is too large to upload. Try a smaller photo.")
-        throw new Error(data?.error ?? `Upload failed (HTTP ${res.status}).`)
-      }
-      setUrl(data.url)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed.")
-    } finally {
-      setUploading(false)
-      onUploadingChange(false)
-    }
-  }
-
-  const showPreview = /^https?:\/\//i.test(url) && brokenUrl !== url
+  const isHttp = /^https?:\/\//i.test(url)
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-3 items-start">
+      <div className="flex flex-wrap gap-3 items-start">
         <input
           name="image_url"
           value={url}
-          onChange={(e) => setUrl(e.target.value)}
+          onChange={(e) => onUrlChange(e.target.value)}
           placeholder="https://images.muffinplants.com/..."
-          className={`${inputClass} flex-1`}
+          className={`${inputClass} flex-[2_1_16rem]`}
         />
-        <label
-          className={`shrink-0 inline-flex items-center gap-1.5 border rounded px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-[#E85D2C] ${
-            uploading ? "opacity-60 cursor-wait" : "cursor-pointer hover:border-[#E85D2C]"
-          }`}
-        >
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-          {uploading ? "Uploading…" : "Camera"}
-          {/* No name attribute: the file itself must not be submitted with the form. */}
-          <input type="file" accept="image/*" capture="environment" disabled={uploading} onChange={handleFile} className="sr-only" />
-        </label>
-        <input name="image_alt" defaultValue={initialAlt} placeholder="Alt text" className={`${inputClass} flex-1`} />
+        <PickButton
+          icon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          label={uploading ? "Uploading…" : "Camera"}
+          capture
+          disabled={uploading}
+          onFiles={onPickFiles}
+        />
+        <PickButton icon={<ImageIcon className="h-4 w-4" />} label="Gallery" disabled={uploading} onFiles={onPickFiles} />
+        <input name="image_alt" defaultValue={row.alt_text} placeholder="Alt text" className={`${inputClass} flex-[1_1_10rem]`} />
         <button type="button" onClick={onRemove} className="text-red-600 text-sm px-2 py-2 shrink-0">
           Remove
         </button>
@@ -635,7 +731,7 @@ function ImageRow({
           {error}
         </p>
       )}
-      {showPreview && (
+      {isHttp && brokenUrl !== url && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={url}
@@ -644,7 +740,7 @@ function ImageRow({
           className="h-20 w-20 object-cover rounded border bg-neutral-50"
         />
       )}
-      {/^https?:\/\//i.test(url) && brokenUrl === url && <p className="text-xs text-neutral-500">Preview unavailable for this URL.</p>}
+      {isHttp && brokenUrl === url && <p className="text-xs text-neutral-500">Preview unavailable for this URL.</p>}
     </div>
   )
 }

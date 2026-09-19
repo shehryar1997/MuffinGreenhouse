@@ -6,6 +6,7 @@ import { ProductFilters, FilterSidebar } from "@/components/shop/product-filters
 import { Pagination } from "@/components/shop/pagination"
 import type { Product } from "@/types"
 import { generateCategoryBreadcrumb } from "@/lib/structured-data"
+import { isNonPlantCategorySlug } from "@/lib/product-categories"
 
 interface CategoryMeta {
   title: string
@@ -22,7 +23,7 @@ interface ShopCategoryClientProps {
 }
 
 export function ShopCategoryClient({ products, meta, categorySlug, currentPage, totalPages }: ShopCategoryClientProps) {
-  const isPlantCategory = !["planting-media", "fertilizer", "pots", "other-equipment"].includes(categorySlug)
+  const isPlantCategory = !isNonPlantCategorySlug(categorySlug)
   const breadcrumbSchema = generateCategoryBreadcrumb(meta.title, categorySlug, currentPage > 1 ? currentPage : undefined)
 
   return (

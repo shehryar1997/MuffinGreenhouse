@@ -2,6 +2,7 @@
 // ponytail: This module can be swapped with the full Plant Finder matching function later
 
 import { Product } from "@/types"
+import { isPlantProduct } from "@/lib/product-categories"
 
 export type LightLevel = "low" | "medium" | "bright"
 
@@ -22,6 +23,7 @@ export const lightLevelLabels: Record<LightLevel, string> = {
  */
 export function filterProductsByLight(products: Product[], lightLevel: LightLevel): Product[] {
   return products.filter((product) => {
+    if (!isPlantProduct(product)) return false
     const requirement = product.lightRequirement
     
     // Map full_sun to bright for our three-category system
