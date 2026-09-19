@@ -200,7 +200,7 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium text-forest-800">Password</label>
               <div className="relative">
                 <Input type={showPassword ? "text" : "password"} value={password} onChange={onChange(setPassword, "password")} placeholder="At least 8 characters" className={inputClass(fieldErrors.password)} />
-                <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-400 hover:text-forest-600">
+                <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-600">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -210,7 +210,7 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium text-forest-800">Phone Number</label>
               <Input type="tel" value={phone} onChange={handlePhone} placeholder="03001234567" className={inputClass(fieldErrors.phone)} />
               <CollapseError error={fieldErrors.phone} />
-              <p className="mt-1 text-xs text-forest-400">Used for contact/delivery purposes</p>
+              <p className="mt-1 text-xs text-forest-500">Used for contact/delivery purposes</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-forest-800">Street Address</label>
@@ -269,7 +269,7 @@ export default function RegisterPage() {
                 type="button" 
                 onClick={onResend} 
                 disabled={resendCountdown > 0 || isLoading} 
-                className={cn("mt-1 text-sm font-medium", resendCountdown > 0 ? "text-forest-400 cursor-not-allowed" : "text-clay-600 hover:text-clay-700")}
+                className={cn("mt-1 text-sm font-medium", resendCountdown > 0 ? "text-forest-500 cursor-not-allowed" : "text-clay-600 hover:text-clay-700")}
               >
                 {resendCountdown > 0 ? `Resend in ${resendCountdown}s` : "Resend code"}
               </button>

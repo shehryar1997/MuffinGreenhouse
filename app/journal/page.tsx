@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { JournalPageClient } from "./journal-client"
 
 export const metadata: Metadata = {
-  title: "Plant Care Journal & Tips - Muffin Greenhouse",
+  title: "Plant Care Journal & Tips",
   description: "Expert plant care guides, indoor gardening tips, and plant parent advice tailored for Karachi and Pakistani climates.",
 }
 

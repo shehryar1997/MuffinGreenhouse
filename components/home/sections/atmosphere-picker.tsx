@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Product } from "@/types"
-import { moodThemes, Mood } from "@/lib/mood-utils"
+import { moodThemes, Mood, filterProductsByMood } from "@/lib/mood-utils"
 import { FadeIn, AnimatedHeading } from "@/components/home/shared/animations"
 import { MoodPlantsGrid } from "@/components/home/shared/mood-plants-grid"
 
@@ -11,7 +11,10 @@ interface AtmospherePickerProps {
 }
 
 export function AtmospherePicker({ products }: AtmospherePickerProps) {
-  const [selectedMood, setSelectedMood] = useState<Mood>("soft")
+  // Open on the first mood that has plants: "soft" had none, so the section's first view was an empty state.
+  const [selectedMood, setSelectedMood] = useState<Mood>(
+    () => (["soft", "bright", "moody"] as Mood[]).find((m) => filterProductsByMood(products, m).length > 0) ?? "soft"
+  )
   const theme = moodThemes[selectedMood]
 
   return (
@@ -51,7 +54,7 @@ export function AtmospherePicker({ products }: AtmospherePickerProps) {
                       grid.scrollIntoView({ behavior: 'smooth', block: 'start' })
                     }
                   }}
-                  className={`px-5 py-2 rounded-full text-xs font-medium tracking-wide border transition-all duration-300 ${isSelected ? mTheme.buttonActive : `${mTheme.buttonInactive} ${mTheme.accent ?? mTheme.buttonInactiveText} hover:${mTheme.borderHover}`}`}
+                  className={`px-5 py-2 rounded-full text-xs font-medium tracking-wide border transition-all duration-300 ${isSelected ? mTheme.buttonActive : `${theme.buttonInactive} ${theme.buttonInactiveText} hover:opacity-70`}`}
                 >
                   {m.toUpperCase()}
                 </button>

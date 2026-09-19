@@ -31,7 +31,11 @@ const jetbrains = JetBrains_Mono({
   weight: ["400", "500"],
 })
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com"
+
 export const metadata: Metadata = {
+  // Lets the file-based opengraph-image / twitter-image (and any relative canonical) resolve to absolute URLs.
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Buy Plants Online in Karachi - Muffin Greenhouse",
     template: "%s - Muffin Greenhouse",
@@ -43,10 +47,12 @@ export const metadata: Metadata = {
     description: "Locally grown indoor plants for Karachi homes. Delivery across Pakistan.",
     type: "website",
     locale: "en_PK",
+    siteName: "Muffin Greenhouse",
   },
-  alternates: {
-    canonical: process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com",
-  },
+  twitter: { card: "summary_large_image" },
+  // ponytail: no site-wide canonical here. A single root canonical is inherited by every page that doesn't set
+  // its own, which told search engines that every product/category/policy page was a copy of the home page.
+  // Pages that should be indexed set their own (see app/page.tsx, shop, product, category).
 }
 
 export default function RootLayout({
@@ -75,7 +81,8 @@ export default function RootLayout({
             <CartProvider>
               <WishlistProvider>
                 <SiteChrome>{children}</SiteChrome>
-                <Toaster position="bottom-right" />
+                {/* Top-center: bottom-right collided with the cart drawer's buttons and the floating chat/WhatsApp buttons. */}
+                <Toaster position="top-center" />
               </WishlistProvider>
             </CartProvider>
           </SearchProvider>

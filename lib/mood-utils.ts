@@ -50,18 +50,18 @@ export const moodThemes: Record<Mood, MoodTheme> = {
     buttonInactiveText: "text-forest-800",
   },
   moody: {
-    bg: "bg-forest-300",
-    bgSecondary: "bg-forest-200",
+    bg: "bg-forest-950",
+    bgSecondary: "bg-forest-900",
     textPrimary: "text-cream-100",
     textSecondary: "text-white",    // White for "Not every plant belongs in every room."
     textMuted: "text-white",        // White for "003/THE COLLECTION", etc.
     accent: "text-sprout-300",
     accentText: "text-sprout-300",
-    border: "border-forest-400",
+    border: "border-forest-700",
     borderHover: "border-sprout-300",
     buttonActive: "bg-sprout-300 text-forest-900 border-sprout-300",
-    buttonInactive: "bg-transparent border-forest-500",
-    buttonInactiveText: "text-forest-400",
+    buttonInactive: "bg-transparent border-forest-700",
+    buttonInactiveText: "text-forest-300",
   },
 }
 

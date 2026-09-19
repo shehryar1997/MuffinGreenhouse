@@ -28,7 +28,7 @@ function PlantFilters({ filters, updateFilter }: { filters: FilterState; updateF
       <div>
         <h3 className="font-mono text-xs-tracking-widest text-forest-600 uppercase mb-3">Search</h3>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-500" />
           <Input
             placeholder="Search plants..."
             value={filters.searchQuery}

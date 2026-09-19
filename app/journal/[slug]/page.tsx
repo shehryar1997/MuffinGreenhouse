@@ -7,11 +7,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const post = getJournalPostBySlug(slug)
   if (!post) {
-    return { title: "Post Not Found - Muffin Greenhouse" }
+    return { title: "Post Not Found" }
   }
   return {
-    title: `${post.title} - Muffin Greenhouse`,
+    title: `${post.title}`,
     description: `${post.excerpt} Learn more about plant care with Muffin Greenhouse's expert guides for Karachi plant parents.`,
+    alternates: { canonical: `/journal/${slug}` },
   }
 }
 

@@ -19,20 +19,20 @@ export function ShopAllClient({ products, currentPage, totalPages }: ShopAllClie
   return (
     <ProductFilters products={products}>
       {(filteredProducts, helpers) => {
-        const { filters, hasActiveFilters, updateFilter, clearFilters } = helpers
+        const { filters, maxPrice, hasActiveFilters, updateFilter, clearFilters } = helpers
         return (
           <>
             <div className="bg-[#FAF7F2] min-h-screen pb-8 pt-28 lg:pt-36">
               <div className="container mx-auto px-4">
                 <div className="mb-8">
-                  <h1 className="font-serif text-4xl lg:text-5xl text-forest-900 leading-tight">
-                    Shop the next addition for your collection.
-                  </h1>
+                  <h1 className="font-serif text-4xl lg:text-5xl text-forest-900 leading-tight">All plants</h1>
+                  <p className="mt-2 text-lg text-forest-600">Shop the next addition for your collection.</p>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8">
                   <FilterSidebar
                     filters={filters}
+                    maxPrice={maxPrice}
                     hasActiveFilters={hasActiveFilters}
                     updateFilter={updateFilter}
                     clearFilters={clearFilters}

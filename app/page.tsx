@@ -8,6 +8,7 @@ export const revalidate = 300
 export const metadata: Metadata = {
   title: "Buy Plants Online in Karachi - Muffin Greenhouse",
   description: "Locally grown indoor plants, pots, and plant care supplies for Karachi homes. Delivery across Pakistan with care tips and 30-day plant guarantee.",
+  alternates: { canonical: "/" },
 }
 
 // Server Component: fetches real product data from Supabase, then hands it

@@ -10,12 +10,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const product = await getProductBySlug(slug)
   
   if (!product) {
-    return { title: "Product Not Found - Muffin Greenhouse" }
+    return { title: "Product Not Found" }
   }
   
   return {
-    title: `${product.name} - Muffin Greenhouse`,
+    title: `${product.name}`,
     description: `${product.description} Buy ${product.name} online in Karachi. Locally grown, climate-acclimated plants with care tips. Home delivery across Pakistan.`,
+    alternates: { canonical: `/shop/product/${slug}` },
   }
 }
 

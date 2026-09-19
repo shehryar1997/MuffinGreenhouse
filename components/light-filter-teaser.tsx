@@ -29,7 +29,7 @@ export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
       {/* Section Header */}
       <div className="text-center mb-10">
         <p className="text-forest-600 text-lg mb-2">Wondering what works in your space?</p>
-        <p className="font-mono text-xs text-forest-400 tracking-widest uppercase">Quick preview by light level</p>
+        <p className="font-mono text-xs text-forest-500 tracking-widest uppercase">Quick preview by light level</p>
       </div>
 
       {/* Light Level Selector */}
@@ -137,7 +137,7 @@ export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
         ) : (
           <div className="text-center py-12">
             <p className="text-forest-500 text-sm">No plants match this light level right now.</p>
-            <p className="font-mono text-xs text-forest-400 mt-2">Check back soon or try another option.</p>
+            <p className="font-mono text-xs text-forest-500 mt-2">Check back soon or try another option.</p>
           </div>
         )}
 
@@ -145,7 +145,7 @@ export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
         {previewProducts.length > 0 && (
           <div className="text-center mt-10">
             <Link 
-              href="/shop"
+              href="/shop/all"
               className="inline-flex items-center gap-2 font-mono text-xs tracking-widest uppercase text-forest-600 hover:text-clay-500 transition-colors group"
             >
               View All {lightLevelLabels[selectedLight]} Plants

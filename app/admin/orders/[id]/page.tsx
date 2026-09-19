@@ -78,11 +78,15 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {order.payment_status !== "paid" && (
+              {/* Confirmation added: this e-mails the customer and can't be undone. Hidden on cancelled orders. */}
+              {order.payment_status !== "paid" && order.status !== "cancelled" && (
                 <form action={markPaidForOrder}>
-                  <button type="submit" className="bg-[#E85D2C] text-white rounded px-4 py-2 text-sm font-medium hover:bg-[#d45124]">
+                  <ConfirmSubmitButton
+                    message={`Mark order ${order.order_number} as paid? The customer will be e-mailed an order confirmation. This can't be undone.`}
+                    className="bg-[#E85D2C] text-white rounded px-4 py-2 text-sm font-medium hover:bg-[#d45124]"
+                  >
                     Mark as Paid
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
               )}
               {order.status !== "shipped" && order.status !== "delivered" && order.status !== "cancelled" && (
@@ -90,9 +94,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               )}
               {order.status !== "delivered" && order.status !== "cancelled" && (
                 <form action={markDeliveredForOrder}>
-                  <button type="submit" className="bg-white border rounded px-4 py-2 text-sm font-medium hover:bg-neutral-50">
+                  <ConfirmSubmitButton
+                    message={`Mark order ${order.order_number} as delivered?`}
+                    className="bg-white border rounded px-4 py-2 text-sm font-medium hover:bg-neutral-50"
+                  >
                     Mark as Delivered
-                  </button>
+                  </ConfirmSubmitButton>
                 </form>
               )}
               {order.status !== "cancelled" && order.status !== "delivered" && (

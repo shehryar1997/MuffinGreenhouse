@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense } from "react"
+import Link from "next/link"
 import { ProductCard } from "@/components/ui/product-card"
 import { ProductFilters, FilterSidebar } from "@/components/shop/product-filters"
 import { Pagination } from "@/components/shop/pagination"
@@ -28,7 +29,7 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
 
   return (
     <ProductFilters products={products}>
-      {(filteredProducts, { filters, hasActiveFilters, updateFilter, clearFilters }) => (
+      {(filteredProducts, { filters, maxPrice, hasActiveFilters, updateFilter, clearFilters }) => (
         <>
           <div className="bg-[#FAF7F2] min-h-screen pb-8 pt-28 lg:pt-36">
             <div className="container mx-auto px-4">
@@ -41,6 +42,7 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
                 {isPlantCategory ? (
                   <FilterSidebar
                     filters={filters}
+                    maxPrice={maxPrice}
                     hasActiveFilters={hasActiveFilters}
                     updateFilter={updateFilter}
                     clearFilters={clearFilters}
@@ -49,6 +51,7 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
                 ) : (
                   <FilterSidebar
                     filters={filters}
+                    maxPrice={maxPrice}
                     hasActiveFilters={hasActiveFilters}
                     updateFilter={updateFilter}
                     clearFilters={clearFilters}
@@ -62,7 +65,14 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
                       Showing {filteredProducts.length} {filteredProducts.length !== 1 ? "items" : "item"}
                     </p>
                   </div>
-                  {filteredProducts.length === 0 ? (
+                  {products.length === 0 ? (
+                    // A category with no stock yet is not a filter problem: say so and offer a way forward.
+                    <div className="text-center py-20 bg-white rounded-lg border border-forest-200">
+                      <p className="text-forest-800 text-lg mb-2">Nothing in {meta.title} just yet.</p>
+                      <p className="text-forest-600 mb-4">New plants arrive often. Meanwhile, have a look at everything we have.</p>
+                      <Link href="/shop/all" className="text-clay-600 underline font-medium">Browse all plants</Link>
+                    </div>
+                  ) : filteredProducts.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-lg border border-forest-200">
                       <p className="text-forest-600 text-lg mb-2">No items match your filters.</p>
                       <button onClick={clearFilters} className="text-[#E85A3C] underline font-medium">Clear all</button>

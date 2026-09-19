@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic"
 
 import { MetadataRoute } from "next"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { shopByNeedCategories } from "@/config/nav.config"
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com"
 
@@ -91,18 +92,20 @@ const staticRoutes: MetadataRoute.Sitemap = [
     changeFrequency: "monthly",
     priority: 0.5,
   },
-  {
-    url: `${siteUrl}/account/login`,
+  // Login/register were listed here: they are noindex-worthy utility pages, not landing pages. The shop-by-need
+  // pages and the legal pages were missing.
+  ...shopByNeedCategories.map((c) => ({
+    url: `${siteUrl}${c.href}`,
     lastModified: new Date(),
-    changeFrequency: "yearly",
-    priority: 0.3,
-  },
-  {
-    url: `${siteUrl}/account/register`,
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  })),
+  ...["terms-conditions", "privacy-policy", "refund-policy", "cookie-policy"].map((slug) => ({
+    url: `${siteUrl}/${slug}`,
     lastModified: new Date(),
-    changeFrequency: "yearly",
-    priority: 0.3,
-  },
+    changeFrequency: "yearly" as const,
+    priority: 0.2,
+  })),
 ]
 
 async function getProductRoutes(): Promise<MetadataRoute.Sitemap> {
@@ -136,7 +139,11 @@ async function getCategoryRoutes(): Promise<MetadataRoute.Sitemap> {
     return []
   }
 
-  return (categories || []).map((category) => ({
+  // Only categories that actually have a published product: empty ones are thin pages nobody should land on.
+  const { data: stocked } = await supabaseAdmin.from("products").select("category_slug").not("published_at", "is", null)
+  const stockedSlugs = new Set((stocked || []).map((row) => row.category_slug))
+
+  return (categories || []).filter((category) => stockedSlugs.has(category.slug)).map((category) => ({
     url: `${siteUrl}/shop/${category.slug}`,
     lastModified: category.updated_at ? new Date(category.updated_at) : new Date(),
     changeFrequency: "weekly",

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
 
 interface WishlistContextType {
@@ -16,6 +16,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [productIds, setProductIds] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
+  const userIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -30,6 +31,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled) setIsLoading(false)
         return
       }
+      userIdRef.current = session.user.id
 
       const { data: customer } = await supabase
         .from("customers")
@@ -56,8 +58,24 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     }
 
     load()
+
+    // The session was only read once at mount, so after a soft-navigation sign-in the hearts kept behaving as
+    // signed-out, and after sign-out they kept behaving as signed-in. Follow auth changes instead.
+    const {
+      data: { subscription },
+    } = createBrowserClient().auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        userIdRef.current = null
+        setCustomerId(null)
+        setProductIds(new Set())
+      } else if (event === "SIGNED_IN" && session && session.user.id !== userIdRef.current) {
+        void load()
+      }
+    })
+
     return () => {
       cancelled = true
+      subscription.unsubscribe()
     }
   }, [])
 

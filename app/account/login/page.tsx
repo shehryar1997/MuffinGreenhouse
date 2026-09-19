@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { LoginPageClient } from "./login-client"
 
 export const metadata: Metadata = {
-  title: "Sign In - Muffin Greenhouse",
+  title: "Sign In",
   description: "Sign in to your Muffin Greenhouse account to view orders, saved addresses, and wishlist.",
   robots: { index: false, follow: false },
 }

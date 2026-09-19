@@ -1,13 +1,36 @@
 import { Suspense } from "react"
-import { Mail, Send, BarChart3, Clock, AlertCircle } from "lucide-react"
+import { unstable_cache } from "next/cache"
+import { Send, BarChart3, Clock, AlertCircle } from "lucide-react"
 import { countEmailsSentThisMonth } from "@/lib/email/monthly-count"
 import { EmailForm } from "./email-form"
 
 export const dynamic = "force-dynamic"
 
+// The Resend plan allows 3,000 e-mails a month. This card used to compare against 100, so it showed a full amber
+// bar from the 101st e-mail.
+const MONTHLY_LIMIT = 3000
+const NEAR_LIMIT_AT = 0.8
+
+// Counting pages through Resend's list API at ~600 ms a page (about 18 s near 3,000 e-mails), so reuse the
+// result for 5 minutes instead of recounting on every page view.
+// ponytail: an in-app counter incremented on every send would be instant; this is the smallest change.
+const getMonthlyCount = unstable_cache(() => countEmailsSentThisMonth(), ["resend-monthly-email-count"], { revalidate: 300 })
+
+const TONES = {
+  ok: { label: "Within limit", text: "text-emerald-600", iconBg: "bg-emerald-100", bar: "bg-emerald-500" },
+  near: { label: "Near limit", text: "text-amber-600", iconBg: "bg-amber-100", bar: "bg-amber-500" },
+  over: { label: "Limit reached", text: "text-red-600", iconBg: "bg-red-100", bar: "bg-red-500" },
+} as const
+
 async function MonthlyUsageCard() {
-  const result = await countEmailsSentThisMonth()
-  const isCapped = result.ok && (result.capped || result.count > 100)
+  const result = await getMonthlyCount()
+  const count = result.ok ? result.count : 0
+  const status = count >= MONTHLY_LIMIT ? "over" : count >= MONTHLY_LIMIT * NEAR_LIMIT_AT ? "near" : "ok"
+  const tone = TONES[status]
+  const remainingText =
+    status === "over"
+      ? `Over the limit by ${(count - MONTHLY_LIMIT).toLocaleString("en-PK")}`
+      : `${(MONTHLY_LIMIT - count).toLocaleString("en-PK")} left this month`
 
   return (
     <div className="bg-gradient-to-br from-white to-neutral-50 rounded-2xl p-6 border border-neutral-200 shadow-sm">
@@ -22,15 +45,16 @@ async function MonthlyUsageCard() {
               <>
                 {result.count.toLocaleString("en-PK")}
                 {result.capped ? "+" : ""}
+                <span className="ml-1 text-lg font-medium text-neutral-400">/ {MONTHLY_LIMIT.toLocaleString("en-PK")}</span>
               </>
             ) : (
               <span className="text-amber-600">-</span>
             )}
           </p>
         </div>
-        <div className={`p-3 rounded-xl ${isCapped ? "bg-amber-100" : "bg-emerald-100"}`}>
+        <div className={`p-3 rounded-xl ${tone.iconBg}`}>
           {result.ok ? (
-            <BarChart3 className={`h-5 w-5 ${isCapped ? "text-amber-600" : "text-emerald-600"}`} />
+            <BarChart3 className={`h-5 w-5 ${tone.text}`} />
           ) : (
             <AlertCircle className="h-5 w-5 text-amber-600" />
           )}
@@ -41,18 +65,18 @@ async function MonthlyUsageCard() {
           <>
             <div className="flex justify-between text-sm">
               <span className="text-neutral-500">{result.monthLabel}</span>
-              <span className={`font-medium ${isCapped ? "text-amber-600" : "text-emerald-600"}`}>
-                {isCapped ? "Near limit" : "Within limit"}
+              <span className={`font-medium ${tone.text}`}>
+                {tone.label}
               </span>
             </div>
             <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
               <div 
-                className={`h-full rounded-full transition-all duration-500 ${isCapped ? "bg-amber-500" : "bg-emerald-500"}`}
-                style={{ width: `${Math.min((result.count / 100) * 100, 100)}%` }}
+                className={`h-full rounded-full transition-all duration-500 ${tone.bar}`}
+                style={{ width: `${Math.min((count / MONTHLY_LIMIT) * 100, 100)}%` }}
               />
             </div>
             <p className="text-xs text-neutral-400">
-              Sends from support@muffinplants.com via Resend
+              {remainingText} · Sends from support@muffinplants.com via Resend
             </p>
           </>
         ) : (

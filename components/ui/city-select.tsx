@@ -62,10 +62,10 @@ export function CitySelect({
             className
           )}
         >
-          <span className={cn("truncate", !value && "text-forest-400")}>
+          <span className={cn("truncate", !value && "text-forest-500")}>
             {value || placeholder}
           </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-forest-400" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-forest-500" />
         </button>
       </PopoverPrimitive.Trigger>
       <PopoverPrimitive.Portal>
@@ -86,7 +86,7 @@ export function CitySelect({
             </div>
             <div className="max-h-[250px] overflow-y-auto scrollbar-hide">
               {filteredCities.length === 0 ? (
-                <div className="py-6 text-center text-forest-400 text-sm">
+                <div className="py-6 text-center text-forest-500 text-sm">
                   No cities found
                 </div>
               ) : (
@@ -111,7 +111,7 @@ export function CitySelect({
                         </span>
                         <span>{city.name}</span>
                       </span>
-                      <span className="text-xs text-forest-400">{city.province}</span>
+                      <span className="text-xs text-forest-500">{city.province}</span>
                     </button>
                   ))}
                 </div>

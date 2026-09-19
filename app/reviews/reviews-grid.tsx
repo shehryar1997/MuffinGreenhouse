@@ -13,7 +13,7 @@ export default function ReviewsGrid({ reviews }: ReviewsGridProps) {
     return (
       <div className="text-center py-16 border border-dashed border-forest-200 rounded-2xl">
         <p className="text-forest-600 mb-1">No reviews yet.</p>
-        <p className="text-forest-400 text-sm">Be the first to tell us how your plant is doing.</p>
+        <p className="text-forest-500 text-sm">Be the first to tell us how your plant is doing.</p>
       </div>
     )
   }

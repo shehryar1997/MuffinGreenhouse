@@ -11,6 +11,8 @@ import { WhatsAppButton } from "@/components/ui/whatsapp-button"
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isAdmin = pathname?.startsWith("/admin")
+  // On checkout the chat launcher sits over the form fields on phones; the WhatsApp help button stays.
+  const isCheckout = pathname?.startsWith("/checkout")
 
   if (isAdmin) {
     return <>{children}</>
@@ -19,13 +21,13 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen flex flex-col">
       <Header />
-      <main id="main-content" className="flex-1">
+      <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}
       </main>
       <Footer />
       <CartDrawer />
       <SearchDrawer />
-      <MuffinWidget />
+      {!isCheckout && <MuffinWidget />}
       <WhatsAppButton />
     </div>
   )

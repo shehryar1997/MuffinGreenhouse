@@ -20,9 +20,13 @@ const config: Config = {
     extend: {
       colors: {
         cream: { DEFAULT: "#F7F3EA", 50: "#FDFCF8", 100: "#F7F3EA", 200: "#EDE4D6", 300: "#E2D6C1", 400: "#D7C8AC", 500: "#CCB997" },
-        forest: { DEFAULT: "#12160E", 50: "#2A3122", 100: "#1F2419", 200: "#1A1E14", 300: "#12160E", 400: "#0E110A", 500: "#090B07" },
-        clay: { DEFAULT: "#E85D2C", 50: "#FDF6F3", 100: "#FBE5DC", 200: "#F7C8B7", 300: "#F2A58B", 400: "#ED7E5C", 500: "#E85D2C", 600: "#D44F23" },
-        sprout: { DEFAULT: "#D4F542", 50: "#FBFED6", 100: "#F2FCAB", 200: "#E5F98A", 300: "#D4F542", 400: "#B8D035", 500: "#9CB528" },
+        // ponytail: forest is one light->dark scale (50 pale ... 950 near-black). It used to be an inverted,
+        // dark-only scale that stopped at 500, so ~230 classes (text-forest-600/700/900...) generated no CSS
+        // and bg-forest-50 rendered dark green. Dark surfaces now use forest-950; text needs 500+ for AA.
+        forest: { DEFAULT: "#12160E", 50: "#F3F7EF", 100: "#E5EEDD", 200: "#CCDBC2", 300: "#A9C09B", 400: "#7F9E70", 500: "#56744A", 600: "#435E39", 700: "#34492D", 800: "#263724", 900: "#1A261A", 950: "#12160E" },
+        // clay-500 darkened from #E85D2C (3.1:1 as text, 3.5:1 under white text) to match the AA --primary token.
+        clay: { DEFAULT: "#BF3F18", 50: "#FDF6F3", 100: "#FBE5DC", 200: "#F7C8B7", 300: "#F2A58B", 400: "#ED7E5C", 500: "#BF3F18", 600: "#A33413", 700: "#872B10", 800: "#6B220C" },
+        sprout: { DEFAULT: "#D4F542", 50: "#FBFED6", 100: "#F2FCAB", 200: "#E5F98A", 300: "#D4F542", 400: "#B8D035", 500: "#9CB528", 600: "#61781A", 700: "#4C5E14", 800: "#3A4810" },
         border: "hsl(var(--border))", input: "hsl(var(--input))", ring: "hsl(var(--ring))",
         background: "hsl(var(--background))", foreground: "hsl(var(--foreground))",
         primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },

@@ -42,7 +42,7 @@ export function MoodPlantsGrid({ products, mood, theme }: MoodPlantsGridProps) {
             ) : null}
             <span className={`absolute top-3 left-3 font-mono text-xs ${theme.textPrimary}`}>{String(i + 1).padStart(2, '0')}</span>
             {product.stockStatus === "out_of_stock" && (
-              <span className={`absolute top-3 right-3 font-mono text-[10px] tracking-wider uppercase px-2 py-1 rounded-sm ${theme.bg === "bg-forest-300" ? "bg-cream-100 text-forest-900" : "bg-forest-900 text-white"}`}>
+              <span className={`absolute top-3 right-3 font-mono text-[10px] tracking-wider uppercase px-2 py-1 rounded-sm ${theme.bg === "bg-forest-950" ? "bg-cream-100 text-forest-900" : "bg-forest-900 text-white"}`}>
                 Sold Out
               </span>
             )}

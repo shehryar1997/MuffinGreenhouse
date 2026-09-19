@@ -324,7 +324,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
   }
 
   return (
-    <main id="main-content" tabIndex={-1} className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -517,7 +517,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
                         <button
                           onClick={() => handleRemoveWishlistItem(item.product_id)}
                           disabled={removingWishlistId === item.product_id}
-                          className="p-1.5 text-forest-400 hover:text-red-600 transition-colors"
+                          className="p-1.5 text-forest-500 hover:text-red-600 transition-colors"
                           aria-label="Remove from wishlist"
                         >
                           <Trash2 className="w-4 h-4" />

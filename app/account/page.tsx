@@ -8,7 +8,7 @@ import { createServerClient } from "@/lib/supabase/server-client"
 import { AccountDashboard } from "./account-dashboard"
 
 export const metadata: Metadata = {
-  title: "Your Account - Muffin Greenhouse",
+  title: "Your Account",
   description: "View your orders, saved addresses, and wishlist. Manage your Muffin Greenhouse account.",
   robots: { index: false, follow: false },
 }
@@ -75,7 +75,7 @@ interface WishlistRow {
 // Signed-out state component - fully theme-aware and accessible
 function SignedOutState() {
   return (
-    <main id="main-content" tabIndex={-1} className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         <div className="max-w-4xl">
           <h1 className="font-serif text-display text-foreground leading-[0.95] tracking-tight mb-4">
@@ -113,7 +113,7 @@ function SignedOutState() {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   )
 }
 

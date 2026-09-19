@@ -36,7 +36,13 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
     e.preventDefault()
     e.stopPropagation()
     if (isOutOfStock) return
-    addItem(product, undefined, 1)
+    // Several sizes: a quick add can't know which one, so send the customer to pick (it used to add
+    // the base product with no size, i.e. the wrong price/SKU). One size: add that size, as the product page does.
+    if (product.variants.length > 1) {
+      router.push(`/shop/product/${product.slug}`)
+      return
+    }
+    addItem(product, product.variants[0], 1)
     toast(`${product.name} added to cart`, { action: { label: "View Cart", onClick: () => toggleCart(true) } })
   }
 
@@ -71,7 +77,8 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
     <motion.article
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
+      // Capped: an uncapped index * 0.1 made the 24th card on a page appear after ~2.4 s.
+      transition={{ duration: 0.5, delay: Math.min(index, 6) * 0.06, ease: [0.22, 1, 0.36, 1] }}
       className={cn("group relative", className)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

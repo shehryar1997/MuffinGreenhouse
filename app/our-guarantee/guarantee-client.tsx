@@ -28,15 +28,15 @@ export function GuaranteeClient() {
           </p>
           <ul className="text-forest-700 text-sm space-y-2 mb-6">
             <li className="flex items-start gap-2">
-              <Check className="w-4 h-4 text-sprout-300 mt-0.5 shrink-0" />
+              <Check className="w-4 h-4 text-forest-600 mt-0.5 shrink-0" />
               <span>2-hour window from delivery timestamp</span>
             </li>
             <li className="flex items-start gap-2">
-              <Check className="w-4 h-4 text-sprout-300 mt-0.5 shrink-0" />
+              <Check className="w-4 h-4 text-forest-600 mt-0.5 shrink-0" />
               <span>Clear photos of the plant + packaging required</span>
             </li>
             <li className="flex items-start gap-2">
-              <Check className="w-4 h-4 text-sprout-300 mt-0.5 shrink-0" />
+              <Check className="w-4 h-4 text-forest-600 mt-0.5 shrink-0" />
               <span>Replacement or store credit (your choice)</span>
             </li>
           </ul>
@@ -71,7 +71,7 @@ export function GuaranteeClient() {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-2xl p-6 border border-forest-200/50">
             <h3 className="font-serif text-lg text-forest-900 mb-4 flex items-center gap-2">
-              <Check className="w-5 h-5 text-sprout-300" />
+              <Check className="w-5 h-5 text-forest-600" />
               We Cover
             </h3>
             <ul className="space-y-2 text-forest-700 text-sm">
@@ -102,7 +102,7 @@ export function GuaranteeClient() {
 
         {/* Quick Reference */}
         <div
-          className="bg-forest-300 text-cream-100 rounded-2xl p-8 text-center"
+          className="bg-forest-950 text-cream-100 rounded-2xl p-8 text-center"
         >
           <h3 className="font-serif text-xl mb-4">Quick Reference</h3>
           <div className="max-w-sm mx-auto">

@@ -64,10 +64,11 @@ export function CartDrawer() {
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-border">
-            <div className="flex items-center gap-3" id="cart-title">
+            {/* A real dialog title (the drawer had none, which Radix/vaul warns about and screen readers miss). */}
+            <Drawer.Title className="flex items-center gap-3 text-base font-normal" id="cart-title">
               <span className="font-mono text-xs text-primary">CART</span>
               <span className="font-mono text-xs text-muted-foreground">({itemCount})</span>
-            </div>
+            </Drawer.Title>
             <button 
               ref={closeButtonRef}
               onClick={() => toggleCart(false)} 

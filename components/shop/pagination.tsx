@@ -70,7 +70,7 @@ export function Pagination({ currentPage, totalPages }: PaginationProps) {
       <div className="flex items-center gap-1">
         {pageNumbers.map((p, i) =>
           p === "ellipsis" ? (
-            <span key={`ellipsis-${i}`} className="px-2 text-forest-400 font-mono text-sm">
+            <span key={`ellipsis-${i}`} className="px-2 text-forest-500 font-mono text-sm">
               …
             </span>
           ) : (

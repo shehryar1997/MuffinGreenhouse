@@ -6,8 +6,9 @@ import { ShopAllClient } from "./shop-all-client"
 export const revalidate = 300
 
 export const metadata: Metadata = {
-  title: "All Plants - Muffin Greenhouse",
+  title: "All Plants",
   description: "Browse our full collection of locally grown indoor plants. Home delivery available in Karachi and across Pakistan.",
+  alternates: { canonical: "/shop/all" },
 }
 
 interface ShopAllPageProps {

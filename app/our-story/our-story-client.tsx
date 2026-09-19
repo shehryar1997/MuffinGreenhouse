@@ -33,7 +33,7 @@ export default function OurStoryPageClient() {
               </div>
             </div>
 
-            <div className="bg-forest-300 text-cream-100 rounded-2xl p-12 text-center">
+            <div className="bg-forest-950 text-cream-100 rounded-2xl p-12 text-center">
               <p className="font-serif text-heading-2 mb-4">Our Promise</p>
               <p className="text-cream-300/90 text-body-lg max-w-2xl mx-auto">Honest advice, fair prices, and plants that survive Karachi. No miracle cures. Just plants and people who care.</p>
             </div>

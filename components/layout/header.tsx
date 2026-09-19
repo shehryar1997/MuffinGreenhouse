@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, ShoppingBag, Menu, User, Star, Sparkles } from "lucide-react"
+import { Search, ShoppingBag, Menu, User, Star, Sparkles, X } from "lucide-react"
 import { mainNav, shopMegaMenuSections } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
@@ -15,6 +15,7 @@ export function Header() {
   const [shopMenuOpen, setShopMenuOpen] = useState(false)
   const shopMenuTimeout = useRef<NodeJS.Timeout | null>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const { toggleCart, itemCount } = useCart()
   const { openSearch } = useSearch()
 
@@ -73,8 +74,13 @@ export function Header() {
 
     document.addEventListener("keydown", handleTabKey)
     firstElement?.focus()
+    const menuButton = menuButtonRef.current
 
-    return () => document.removeEventListener("keydown", handleTabKey)
+    return () => {
+      document.removeEventListener("keydown", handleTabKey)
+      // Hand focus back to the hamburger so keyboard users land where they started.
+      menuButton?.focus()
+    }
   }, [mobileMenuOpen])
 
   // Prevent body scroll when menu is open
@@ -104,6 +110,7 @@ export function Header() {
           <div className="flex items-center gap-2 lg:gap-4 flex-1 lg:flex-none">
             {/* Hamburger Menu Button - Mobile Only */}
             <button 
+              ref={menuButtonRef}
               onClick={() => setMobileMenuOpen(true)}
               className="lg:hidden p-3 -ml-2 hover:bg-muted rounded-full transition-colors touch-target"
               style={{ touchAction: "manipulation" }}
@@ -297,8 +304,18 @@ export function Header() {
               <ThemeToggle />
             </div>
 
+            {/* Search - Mobile/Tablet (was desktop-only, so phones had no search at all) */}
+            <button
+              onClick={openSearch}
+              className="p-2.5 lg:hidden hover:bg-muted rounded-full transition-colors"
+              style={{ touchAction: "manipulation" }}
+              aria-label="Search products"
+            >
+              <Search className="w-6 h-6 text-foreground" />
+            </button>
+
             {/* Account Icon - Mobile/Tablet */}
-            <Link 
+            <Link
               href="/account" 
               className="p-3 lg:hidden hover:bg-muted rounded-full transition-colors"
               style={{ touchAction: "manipulation" }}
@@ -318,7 +335,7 @@ export function Header() {
               <span className="relative">
                 <ShoppingBag className="w-6 h-6 lg:w-5 lg:h-5 text-foreground" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#E85A3C] text-white text-[10px] font-mono font-medium rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-0.5 bg-primary text-primary-foreground text-[11px] font-mono font-semibold rounded-full flex items-center justify-center">
                     {itemCount > 9 ? "9+" : itemCount}
                   </span>
                 )}
@@ -345,12 +362,26 @@ export function Header() {
           />
           {/* Slide-in menu panel */}
           <motion.div
+            ref={mobileMenuRef}
+            id="mobile-navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site navigation"
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-[#FAF7F2] z-[100] shadow-2xl"
           >
+            {/* The panel is full-width on phones and covers the header, so it needs its own close control. */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              className="absolute top-4 right-4 z-10 p-3 rounded-full text-forest-900 hover:bg-forest-100 transition-colors touch-target"
+              aria-label="Close navigation menu"
+            >
+              <X className="w-6 h-6" aria-hidden="true" />
+            </button>
             <div className="h-full overflow-y-auto px-6 py-12 pt-24">
               <nav className="space-y-8">
                 {mainNav.map((item, i) => (
@@ -365,7 +396,7 @@ export function Header() {
                       className="flex items-baseline gap-4 group"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <span className="font-mono text-sm text-forest-400">{String(i + 1).padStart(2, '0')}</span>
+                      <span className="font-mono text-sm text-forest-500">{String(i + 1).padStart(2, '0')}</span>
                       {item.isAi ? (
                         <span className="flex items-center gap-2">
                           <span className="font-serif text-4xl text-[#1A1A1A] group-hover:text-[#E85A3C] transition-colors">
@@ -383,7 +414,41 @@ export function Header() {
                 ))}
               </nav>
 
-              <div className="mt-16 pt-8 border-t border-forest-200">
+              {/* Categories and search live here on phones (the mega menu is desktop-only). */}
+              <div className="mt-12 pt-8 border-t border-forest-200 space-y-8">
+                <button
+                  type="button"
+                  onClick={() => { setMobileMenuOpen(false); openSearch() }}
+                  className="flex w-full items-center gap-3 rounded-full border border-forest-300 bg-white px-5 py-3 text-left font-mono text-sm text-forest-600"
+                >
+                  <Search className="w-4 h-4" aria-hidden="true" />
+                  Search plants
+                </button>
+                {shopMegaMenuSections.map((section) => (
+                  <div key={section.id}>
+                    <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-forest-500">{section.title}</h2>
+                    <ul className="grid grid-cols-2 gap-x-4">
+                      {section.items.map((item) => (
+                        <li key={item.id}>
+                          <Link
+                            href={item.href}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="block py-2 text-forest-800 hover:text-clay-600 transition-colors"
+                          >
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+                <div className="flex gap-6 font-mono text-xs uppercase tracking-widest">
+                  <Link href="/account" onClick={() => setMobileMenuOpen(false)} className="py-2 text-forest-800 hover:text-clay-600">Account</Link>
+                  <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="py-2 text-forest-800 hover:text-clay-600">Contact</Link>
+                </div>
+              </div>
+
+              <div className="mt-10 pt-8 border-t border-forest-200">
                 <p className="font-mono text-xs text-forest-500 max-w-xs">
                   A different kind of plant shop. Curated in Karachi, built for real homes.
                 </p>

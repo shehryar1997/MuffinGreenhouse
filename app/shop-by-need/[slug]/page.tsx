@@ -10,27 +10,27 @@ export const revalidate = 300
 // SEO-optimized metadata for use case pages
 const useCaseMetadata: Record<string, { title: string; description: string }> = {
   "low-light-survivors": {
-    title: "Low-Light Indoor Plants - Muffin Greenhouse",
+    title: "Low-Light Indoor Plants",
     description: "Snake plants, ZZ plants, and other shade-loving plants that thrive in dim Karachi apartments. Shop online with home delivery.",
   },
   "balcony-rooftop": {
-    title: "Balcony & Rooftop Plants - Muffin Greenhouse",
+    title: "Balcony & Rooftop Plants",
     description: "Heat and wind-tolerant plants for Karachi balconies and rooftop gardens. Sun-loving succulents and hardy varieties available.",
   },
   "air-purifying": {
-    title: "Air-Purifying Plants - Muffin Greenhouse",
+    title: "Air-Purifying Plants",
     description: "NASA-recommended air-cleaning plants including Peace Lily, Snake Plant, and Pothos. Clean your Karachi home air naturally.",
   },
   "pet-safe": {
-    title: "Pet-Safe Indoor Plants - Muffin Greenhouse",
+    title: "Pet-Safe Indoor Plants",
     description: "Non-toxic plants safe for cats and dogs including spider plants, calatheas, and ferns. Pet-friendly greenery for Karachi homes.",
   },
   "beginner-proof": {
-    title: "Easy Care Plants for Beginners - Muffin Greenhouse",
+    title: "Easy Care Plants for Beginners",
     description: "Hard-to-kill plants perfect for new plant parents in Karachi. Low maintenance options with included care guides. Shop online.",
   },
   "statement-plants": {
-    title: "Large Statement Plants - Muffin Greenhouse",
+    title: "Large Statement Plants",
     description: "Bold, dramatic plants that transform your space: Fiddle Leaf Figs, Monsteras, and Bird of Paradise. Delivery in Karachi.",
   },
 }
@@ -38,12 +38,13 @@ const useCaseMetadata: Record<string, { title: string; description: string }> = 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const meta = useCaseMetadata[slug] || {
-    title: `${slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ")} Plants - Muffin Greenhouse`,
+    title: `${slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ")} Plants`,
     description: "Shop plants curated for your needs. Delivery available in Karachi.",
   }
   return {
     title: meta.title,
     description: meta.description,
+    alternates: { canonical: `/shop-by-need/${slug}` },
   }
 }
 
@@ -72,7 +73,7 @@ export default async function ShopByNeedPage({ params }: ShopByNeedPageProps) {
         ) : (
           <div className="text-center py-16">
             <p className="text-forest-500 text-lg">No plants in this category right now.</p>
-            <p className="text-forest-400">Check back or browse all plants.</p>
+            <p className="text-forest-500">Check back or browse all plants.</p>
           </div>
         )}
       </div>

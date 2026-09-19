@@ -19,7 +19,7 @@ export function VisitUsClient() {
             <div className="bg-cream-200 rounded-2xl p-8">
               <div className="flex items-start gap-4 mb-6">
                 <div className="w-12 h-12 bg-sprout-300/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-6 h-6 text-sprout-300" />
+                  <MapPin className="w-6 h-6 text-forest-700" />
                 </div>
                 <div>
                   <h2 className="font-serif text-xl text-forest-900 mb-1">Pickup Point</h2>
@@ -38,7 +38,7 @@ export function VisitUsClient() {
               </div>
             </div>
 
-            <div className="bg-forest-300 text-cream-100 rounded-2xl p-8">
+            <div className="bg-forest-950 text-cream-100 rounded-2xl p-8">
               <h3 className="font-serif text-xl mb-4">What to expect</h3>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3">

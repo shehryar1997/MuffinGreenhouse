@@ -1,13 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
-import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer, PawPrint } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { formatPrice } from "@/lib/utils"
+import { cn, formatPrice } from "@/lib/utils"
 import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
+import { useWishlist } from "@/components/providers/wishlist-provider"
 import { toast } from "sonner"
 import { Product } from "@/types"
 import { generateProductSchema, serializeJsonLd } from "@/lib/structured-data"
@@ -22,6 +24,54 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   const [requestedQuantity, setQuantity] = useState(1)
   const { addItem, toggleCart } = useCart()
+  const { isWishlisted, toggleWishlist } = useWishlist()
+  const router = useRouter()
+  const wishlisted = isWishlisted(product.id)
+  const [togglingWishlist, setTogglingWishlist] = useState(false)
+
+  // Sticky mobile buy bar: shown only once the real Add to Cart button has scrolled out of view
+  // (on a phone that button sits ~1.6 screens down the page).
+  const ctaRef = useRef<HTMLDivElement>(null)
+  const [ctaInView, setCtaInView] = useState(true)
+  useEffect(() => {
+    const el = ctaRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(([entry]) => setCtaInView(entry.isIntersecting))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const handleToggleWishlist = async () => {
+    if (togglingWishlist) return
+    setTogglingWishlist(true)
+    const result = await toggleWishlist(product.id)
+    setTogglingWishlist(false)
+    if (!result.signedIn) {
+      toast("Sign in to save plants to your wishlist", {
+        action: { label: "Sign in", onClick: () => router.push("/account/login") },
+      })
+      return
+    }
+    if (!result.ok) {
+      toast.error("Couldn't update your wishlist. Try again")
+      return
+    }
+    toast(wishlisted ? `Removed ${product.name} from wishlist` : `${product.name} added to wishlist`)
+  }
+
+  const handleShare = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name, url })
+      } else {
+        await navigator.clipboard.writeText(url)
+        toast("Link copied")
+      }
+    } catch {
+      // Share sheet dismissed, or clipboard blocked: nothing to do.
+    }
+  }
 
   const productSchema = generateProductSchema(product)
   // Tools & Equipment (pots, fertilizer, media...) have no plant care info to show.
@@ -42,10 +92,14 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const quantity = Math.min(Math.max(1, requestedQuantity), Math.max(1, currentStockCount))
 
   return (
-    <div className="bg-cream-100 min-h-screen pt-28 pb-8">
+    <div className="bg-cream-100 min-h-screen pt-28 pb-24 md:pb-8">
       <div className="container mx-auto px-4">
-        <nav className="flex items-center gap-2 text-sm text-forest-500 mb-6">
-          <Link href="/">Home</Link><span>/</span><Link href="/shop/all">Shop</Link><span>/</span><span className="text-forest-900">{product.name}</span>
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-forest-500 mb-6">
+          <Link href="/">Home</Link><span aria-hidden="true">/</span><Link href="/shop/all">Shop</Link>
+          {product.category.slug && (
+            <><span aria-hidden="true">/</span><Link href={`/shop/${product.category.slug}`}>{product.category.name}</Link></>
+          )}
+          <span aria-hidden="true">/</span><span aria-current="page" className="text-forest-900">{product.name}</span>
         </nav>
 
         <div className="grid lg:grid-cols-2 gap-12">
@@ -60,7 +114,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             </div>
             <div className="flex gap-2">
               {product.images.map((img, i) => (
-                <button key={img.id} onClick={() => setSelectedImage(i)} className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${selectedImage === i ? "border-clay-500" : "border-transparent"}`}>
+                <button key={img.id} type="button" onClick={() => setSelectedImage(i)} aria-label={`Show photo ${i + 1} of ${product.images.length}`} aria-current={selectedImage === i} className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${selectedImage === i ? "border-clay-500" : "border-transparent"}`}>
                   <Image src={img.url} alt={img.alt} width={80} height={80} className="object-cover w-full h-full" />
                 </button>
               ))}
@@ -75,9 +129,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="flex items-center gap-4 mb-6">
               <span className="font-mono text-3xl font-medium">{formatPrice(currentPrice)}</span>
               {currentCompareAt && currentCompareAt > currentPrice && (
-                <span className="font-mono text-lg text-forest-400 line-through">{formatPrice(currentCompareAt)}</span>
+                <span className="font-mono text-lg text-forest-500 line-through">{formatPrice(currentCompareAt)}</span>
               )}
-              {isOutOfStock ? <Badge variant="outOfStock">Out of Stock</Badge> : <Badge variant="lowStock">In Stock ({currentStockCount} left)</Badge>}
+              {/* Amber is for "running low" only; a plain in-stock plant used to look like a warning. */}
+              {isOutOfStock ? <Badge variant="outOfStock">Out of Stock</Badge> : product.stockStatus === "low_stock" ? <Badge variant="lowStock">Only {currentStockCount} left</Badge> : <Badge variant="success">In stock</Badge>}
             </div>
 
             {product.variants.length > 1 && (
@@ -85,7 +140,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <label className="font-medium text-forest-900 block mb-2">Size</label>
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
-                    <button key={v.id} onClick={() => setSelectedVariant(v)} disabled={v.stockStatus === "out_of_stock"} 
+                    <button key={v.id} type="button" onClick={() => setSelectedVariant(v)} aria-pressed={selectedVariant?.id === v.id} disabled={v.stockStatus === "out_of_stock"}
                       className={`px-4 py-2 border-2 rounded-lg ${selectedVariant?.id === v.id ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300 disabled:opacity-50"}`}>
                       <span className="text-sm font-medium">{v.name}</span>
                       <span className="ml-2 text-xs text-forest-500">{formatPrice(v.price)}</span>
@@ -98,18 +153,23 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="flex items-center gap-4 mb-8">
               <label className="font-medium text-forest-900">Quantity</label>
               <div className="flex items-center border border-forest-200 rounded-lg">
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-2 hover:bg-forest-50">-</button>
-                <span className="px-4 py-2 font-mono min-w-[3rem] text-center">{quantity}</span>
-                <button onClick={() => setQuantity(Math.min(currentStockCount, quantity + 1))} disabled={quantity >= currentStockCount} className="px-4 py-2 hover:bg-forest-50 disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+                <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Decrease quantity" className="px-4 py-2 hover:bg-forest-50 disabled:opacity-40 disabled:cursor-not-allowed">-</button>
+                <span className="px-4 py-2 font-mono min-w-[3rem] text-center" aria-live="polite">{quantity}</span>
+                <button type="button" onClick={() => setQuantity(Math.min(currentStockCount, quantity + 1))} disabled={quantity >= currentStockCount} aria-label="Increase quantity" className="px-4 py-2 hover:bg-forest-50 disabled:opacity-40 disabled:cursor-not-allowed">+</button>
               </div>
             </div>
 
-            <div className="flex gap-4 mb-8">
+            <div ref={ctaRef} className="flex gap-4 mb-8">
               <Button size="lg" className="flex-1" onClick={handleAddToCart} disabled={isOutOfStock}>
                 {isOutOfStock ? "Out of Stock" : "Add to Cart"}
               </Button>
-              <Button size="lg" variant="outline"><Heart className="w-5 h-5" /></Button>
-              <Button size="lg" variant="outline"><Share2 className="w-5 h-5" /></Button>
+              {/* Both buttons used to have no handler at all. */}
+              <Button size="lg" variant="outline" onClick={handleToggleWishlist} disabled={togglingWishlist} aria-pressed={wishlisted} aria-label={wishlisted ? "Remove from wishlist" : "Save to wishlist"}>
+                <Heart className={cn("w-5 h-5", wishlisted && "fill-primary text-primary")} aria-hidden="true" />
+              </Button>
+              <Button size="lg" variant="outline" onClick={handleShare} aria-label="Share this plant">
+                <Share2 className="w-5 h-5" aria-hidden="true" />
+              </Button>
             </div>
 
             {/* Care Requirements (plants only) */}
@@ -158,11 +218,47 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Pet safety was collected (toxicity) but never shown, and the "Pet Safe" badge only appeared when true,
+                  so its absence said nothing. Always say something, and default to the cautious wording. */}
+              <div className={cn("mt-3 flex items-start gap-3 rounded-xl border p-4", product.isPetSafe ? "border-forest-200 bg-forest-50" : "border-amber-200 bg-amber-50")}>
+                <PawPrint className={cn("mt-0.5 h-5 w-5 shrink-0", product.isPetSafe ? "text-forest-600" : "text-amber-700")} aria-hidden="true" />
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-forest-600">Pets and children</p>
+                  <p className="text-sm font-semibold text-forest-900 leading-relaxed">
+                    {product.isPetSafe ? "Pet-safe" : product.careInfo.toxicity || "Not marked pet-safe. Keep out of reach of cats, dogs and small children."}
+                  </p>
+                </div>
+              </div>
+
+              {(product.careInfo.soil || product.careInfo.fertilizer) && (
+                <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  {product.careInfo.soil && (
+                    <div><dt className="text-xs uppercase tracking-wide text-forest-500">Soil</dt><dd className="text-forest-900">{product.careInfo.soil}</dd></div>
+                  )}
+                  {product.careInfo.fertilizer && (
+                    <div><dt className="text-xs uppercase tracking-wide text-forest-500">Fertilizer</dt><dd className="text-forest-900">{product.careInfo.fertilizer}</dd></div>
+                  )}
+                </dl>
+              )}
             </div>
             )}
           </div>
         </div>
       </div>
+      {/* Sticky mobile buy bar. Right padding keeps the floating WhatsApp/chat buttons off the CTA. */}
+      {!isOutOfStock && !ctaInView && (
+        <div
+          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border bg-background/95 px-4 pt-3 pr-24 backdrop-blur md:hidden"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-forest-900">{product.name}</p>
+            <p className="font-mono text-sm text-forest-700">{formatPrice(currentPrice)}</p>
+          </div>
+          <Button onClick={handleAddToCart}>Add to Cart</Button>
+        </div>
+      )}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(productSchema) }}

@@ -15,7 +15,7 @@ export function generateOrganizationSchema() {
     "@type": "Organization",
     "name": "Muffin Greenhouse",
     "url": BASE_URL,
-    "logo": `${BASE_URL}/images/logo.svg`, // TODO: update actual logo URL when available
+    "logo": `${BASE_URL}/logo-nav.png`, // /images/logo.svg never existed (404)
     "sameAs": [
       "https://www.instagram.com/muffinsgreenhouse/"
     ],
@@ -56,20 +56,9 @@ export function generateProductSchema(product: Product) {
     "priceCurrency": "PKR",
     "availability": availabilityMap[product.stockStatus],
     "url": `${BASE_URL}/shop/product/${product.slug}`,
-    "itemCondition": "https://schema.org/NewCondition",
-    "shippingDetails": {
-      "@type": "OfferShippingDetails",
-      "shippingRate": {
-        "@type": "MonetaryAmount",
-        "value": 0,
-        "currency": "PKR"
-      },
-      "shippingDestination": {
-        "@type": "DefinedRegion",
-        "addressCountry": "PK",
-        "addressRegion": "Sindh"
-      }
-    }
+    "itemCondition": "https://schema.org/NewCondition"
+    // ponytail: shippingDetails removed. It declared a 0 PKR shipping rate, i.e. "free delivery" in search
+    // results, but delivery costs Rs 400+ (see lib/delivery-fee.ts). Re-add with real rates if wanted.
   }
   
   return {

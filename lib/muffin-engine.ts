@@ -17,17 +17,20 @@ interface PlantFinderAnswers {
  * @param products - Array of products to filter (pass products from async data fetch)
  * @param answers - Quiz answers for filtering
  */
+// A plant suits a room that gives it at least the light it needs, and an owner who waters at least as often as it
+// needs. The old rules were inverted: answers.water === "low" ("forgetful") matched EVERY plant, and
+// answers.light === "medium" matched every plant.
+const LIGHT_RANK: Record<string, number> = { low: 0, medium: 1, bright: 2, full_sun: 3 }
+const WATER_RANK: Record<string, number> = { low: 0, medium: 1, high: 2 }
+
 export function findMatchingPlants(products: Product[], answers: PlantFinderAnswers): Product[] {
   return products.filter((p) => {
-    if (!isPlantProduct(p)) return false
-    const lightMatch =
-      !answers.light ||
-      p.lightRequirement === answers.light ||
-      answers.light === "medium"
-    const waterMatch =
-      answers.water === p.waterRequirement || answers.water === "low"
-    const petMatch = answers.pets === "no" || p.isPetSafe
-    return lightMatch && waterMatch && petMatch && p.stockStatus !== "out_of_stock"
+    if (!isPlantProduct(p) || p.stockStatus === "out_of_stock") return false
+    const lightOk = !answers.light || LIGHT_RANK[p.lightRequirement] <= LIGHT_RANK[answers.light]
+    const waterOk = !answers.water || WATER_RANK[p.waterRequirement] <= WATER_RANK[answers.water]
+    // Pets are a safety answer: never relaxed, and only plants marked pet-safe qualify.
+    const petOk = answers.pets !== "yes" || p.isPetSafe
+    return lightOk && waterOk && petOk
   })
 }
 

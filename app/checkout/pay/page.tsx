@@ -110,7 +110,7 @@ function CheckoutPayContent() {
       <div className='min-h-screen bg-forest-50 py-12'>
         <div className='max-w-2xl mx-auto px-4'>
           <div className='bg-white rounded-2xl border border-forest-200 p-8 text-center'>
-            <CheckCircle className='w-10 h-10 text-sprout-600 mx-auto mb-4' />
+            <CheckCircle className='w-10 h-10 text-forest-600 mx-auto mb-4' />
             <h1 className='text-2xl font-serif text-forest-900 mb-2'>Booking Confirmed!</h1>
             <p className='text-forest-600 mb-6'>Your order is held for 24 hours.</p>
             <div className='bg-sprout-50 border border-sprout-200 rounded-xl p-6 mb-6'>
@@ -167,8 +167,8 @@ function CheckoutPayContent() {
                       <span className='text-sm text-forest-500'>{detail.label}</span>
                       <div className='flex items-center gap-2'>
                         <span className='text-sm font-mono text-forest-900'>{detail.value}</span>
-                        <button onClick={() => handleCopy(detail.value, key + '-' + detail.label)} className='p-1 hover:bg-forest-200 rounded' title='Copy'>
-                          {copiedField === key + '-' + detail.label ? <Check className='w-4 h-4 text-sprout-600' /> : <Copy className='w-4 h-4 text-forest-400' />}
+                        <button onClick={() => handleCopy(detail.value, key + '-' + detail.label)} className='p-1 hover:bg-forest-200 rounded' title='Copy' type='button' aria-label={'Copy ' + detail.label}>
+                          {copiedField === key + '-' + detail.label ? <Check className='w-4 h-4 text-forest-600' /> : <Copy className='w-4 h-4 text-forest-500' />}
                         </button>
                       </div>
                     </div>
@@ -187,7 +187,7 @@ function CheckoutPayContent() {
         </div>
         <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
           <p className='text-sm text-forest-600 mb-4'>By clicking Confirm Booking, you agree to complete payment within 24 hours.</p>
-          <Button onClick={handleConfirmBooking} disabled={confirming} className='w-full h-12 text-base bg-sprout-600 hover:bg-sprout-700'>
+          <Button onClick={handleConfirmBooking} disabled={confirming} className='w-full h-12 text-base bg-forest-700 hover:bg-forest-800'>
             {confirming ? <><Loader2 className='w-5 h-5 mr-2 animate-spin' />Confirming...</> : <>Confirm Booking - {formatPrice(paymentDetails.total)}</>}
           </Button>
         </div>

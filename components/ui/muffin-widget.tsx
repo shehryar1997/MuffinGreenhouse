@@ -38,6 +38,14 @@ export function MuffinWidget() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: prefersReducedMotion ? "auto" : "smooth" })
   }, [messages, prefersReducedMotion])
 
+  // Escape closes the panel (keyboard users had no way out short of tabbing to the X).
+  useEffect(() => {
+    if (!isOpen) return
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape") setIsOpen(false) }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [isOpen])
+
   const handleSend = () => {
     if (!input.trim()) return
     setMessages(prev => [...prev, { id: Date.now().toString(), text: input, sender: "user" }])
@@ -63,11 +71,14 @@ export function MuffinWidget() {
             <div
               onClick={() => setIsOpen(false)}
               className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+              aria-hidden="true"
+            />
+            <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="muffin-widget-title"
-            />
-            <div className="fixed right-0 top-0 h-full w-full max-w-md bg-background z-50 flex flex-col border-l border-border">
+              className="fixed right-0 top-0 h-full w-full max-w-md bg-background z-50 flex flex-col border-l border-border"
+            >
               <div className="p-4 border-b border-border flex items-center justify-between bg-card">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
@@ -91,7 +102,7 @@ export function MuffinWidget() {
                       "max-w-[80%] px-4 py-2 text-sm rounded-2xl",
                       m.sender === "user" 
                         ? "bg-primary text-primary-foreground rounded-br-md" 
-                        : "bg-muted text-muted-foreground rounded-bl-md"
+                        : "bg-muted text-foreground rounded-bl-md"
                     )}>
                       {m.text}
                     </div>
@@ -175,7 +186,7 @@ export function MuffinWidget() {
                         "max-w-[80%] px-4 py-2 text-sm rounded-2xl",
                         m.sender === "user" 
                           ? "bg-primary text-primary-foreground rounded-br-md" 
-                          : "bg-muted text-muted-foreground rounded-bl-md"
+                          : "bg-muted text-foreground rounded-bl-md"
                       )}>
                         {m.text}
                       </div>

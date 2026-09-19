@@ -38,6 +38,7 @@ export function SearchDrawer() {
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50" onClick={handleClose} />
         <Drawer.Content className="fixed inset-x-0 top-0 z-50 bg-background flex flex-col max-h-[85vh]">
+          <Drawer.Title className="sr-only">Search products</Drawer.Title>
           <div className="flex items-center justify-between p-6 border-b border-border">
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-primary">SEARCH</span>

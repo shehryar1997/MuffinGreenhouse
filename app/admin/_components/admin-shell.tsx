@@ -25,10 +25,17 @@ const navItems = [
 ]
 
 async function logout() {
-  const response = await fetch("/api/admin/logout", { method: "POST" })
-  if (response.ok) {
-    window.location.href = "/admin/login"
+  try {
+    const response = await fetch("/api/admin/logout", { method: "POST" })
+    if (response.ok) {
+      window.location.href = "/admin/login"
+      return
+    }
+  } catch {
+    // fall through to the message below
   }
+  // Used to fail silently, which is why "Log out" looked broken.
+  window.alert("Couldn't log out. Check your connection and try again.")
 }
 
 function NavLink({ href, icon: Icon, label, color }: { href: string; icon: React.ElementType; label: string; color: string }) {

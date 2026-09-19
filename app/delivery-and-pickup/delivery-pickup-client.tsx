@@ -18,7 +18,7 @@ export function DeliveryPickupClient() {
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-sprout-300/20 rounded-xl flex items-center justify-center">
-                <Truck className="w-6 h-6 text-sprout-300" />
+                <Truck className="w-6 h-6 text-forest-700" />
               </div>
               <div>
                 <h2 className="font-serif text-xl text-forest-900">Karachi Delivery</h2>
@@ -76,7 +76,7 @@ export function DeliveryPickupClient() {
 
           {/* Guarantee */}
           <div
-            className="bg-forest-300 text-cream-100 rounded-2xl p-8 text-center"
+            className="bg-forest-950 text-cream-100 rounded-2xl p-8 text-center"
           >
             <Clock className="w-10 h-10 mx-auto mb-4 opacity-80" />
             <p className="text-lg">

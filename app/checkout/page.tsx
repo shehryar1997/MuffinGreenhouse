@@ -409,7 +409,7 @@ export default function CheckoutPage() {
                       <label htmlFor="email" className="block text-sm font-medium text-forest-700 mb-1">Email Address <span className="text-red-500">*</span></label>
                       <Input id="email" type="email" value={formData.email} onChange={(e) => handleFieldChange("email", e.target.value)} onBlur={() => handleFieldBlur("email")} placeholder="your@email.com" disabled={!!signedInCustomer} className={errors.email && touched.email ? "border-red-300" : ""} />
                       {errors.email && touched.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-                      {isCheckingEmail && <p className="mt-1 text-sm text-forest-400">Checking email...</p>}
+                      {isCheckingEmail && <p className="mt-1 text-sm text-forest-500">Checking email...</p>}
                     </div>
 
                     {/* Full Name */}
@@ -440,7 +440,7 @@ export default function CheckoutPage() {
                                   {addr.is_default && <span className="text-xs bg-sprout-100 text-sprout-700 px-2 py-0.5 rounded">Default</span>}
                                 </div>
                                 <p className="text-sm text-forest-500">{addr.street}</p>
-                                <p className="text-sm text-forest-400">{addr.city}</p>
+                                <p className="text-sm text-forest-500">{addr.city}</p>
                               </div>
                             </label>
                           ))}
@@ -568,10 +568,10 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
               </div>
             </div>
           </button>
-          <p className="text-sm text-forest-400 text-center">Self pickup is only available for Karachi customers</p>
+          <p className="text-sm text-forest-500 text-center">Self pickup is only available for Karachi customers</p>
         </div>
       ) : (
-        <p className="text-sm text-forest-400 text-center py-4">Please select a city to see delivery options</p>
+        <p className="text-sm text-forest-500 text-center py-4">Please select a city to see delivery options</p>
       )}
     </div>
   )
@@ -589,14 +589,14 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCal
           const imageUrl = item.product.images[0]?.url || "/placeholder-plant.png"
           const imageAlt = item.product.images[0]?.alt || item.product.name
           return (
-            <div key={item.product.id} className="flex gap-4">
+            <div key={`${item.product.id}-${item.variant?.id ?? "base"}`} className="flex gap-4">
               <div className="relative w-16 h-16 bg-forest-100 rounded-lg overflow-hidden shrink-0">
                 <Image src={imageUrl} alt={imageAlt} fill className="object-cover" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-sm leading-tight line-clamp-1">{item.product.name}</h3>
                 {item.variant && <p className="text-xs text-forest-500 mt-0.5">{item.variant.name}</p>}
-                <p className="text-xs text-forest-400 mt-0.5">Qty: {item.quantity}</p>
+                <p className="text-xs text-forest-500 mt-0.5">Qty: {item.quantity}</p>
               </div>
               <div className="text-right">
                 <span className="font-mono text-sm">{formatPrice(lineTotal)}</span>
@@ -615,7 +615,7 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCal
             <span className="text-forest-500">Delivery</span>
             <div className="flex flex-col items-end">
               {isCalculatingDeliveryFee ? (
-                <span className="text-sm text-forest-400 animate-pulse">Calculating...</span>
+                <span className="text-sm text-forest-500 animate-pulse">Calculating...</span>
               ) : deliveryFeeError ? (
                 <span className="text-sm text-amber-600 font-medium">{deliveryFeeError}</span>
               ) : (
@@ -629,7 +629,7 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCal
             <span className="font-medium text-lg">Total</span>
             <span className="font-mono text-2xl font-medium">{formatPrice(total)}</span>
           </div>
-          <p className="text-xs text-forest-400 mt-2 text-right">Including all taxes</p>
+          <p className="text-xs text-forest-500 mt-2 text-right">Including all taxes</p>
           {deliveryFeeError && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm text-amber-800">

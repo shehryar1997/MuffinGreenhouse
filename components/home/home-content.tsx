@@ -52,11 +52,20 @@ function SectionSkeleton() {
   )
 }
 
-const FadeIn = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
+// ponytail: `immediate` is for the hero. Framer's initial={{ opacity: 0 }} is server-rendered as opacity:0, so the
+// whole above-the-fold area stayed blank until JavaScript loaded and hydrated (first paint ~2.2 s on the audit run).
+// A CSS animation starts on first paint and needs no JavaScript. Reduced-motion users get static content either way.
+const immediateStyle = (delay: number): React.CSSProperties => ({ animationDelay: `${delay}s`, animationFillMode: "both" })
+
+const FadeIn = ({ children, delay = 0, immediate = false }: { children: React.ReactNode; delay?: number; immediate?: boolean }) => {
   const prefersReducedMotion = useReducedMotion()
 
   if (prefersReducedMotion) {
     return <div>{children}</div>
+  }
+
+  if (immediate) {
+    return <div className="animate-fade-in-up" style={immediateStyle(delay)}>{children}</div>
   }
 
   return (
@@ -68,11 +77,15 @@ const FadeIn = ({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 
 // Kinetic type animation: container wrapper that triggers viewport detection
 // Respects prefers-reduced-motion - falls back to static rendering
-function KineticHeading({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+function KineticHeading({ children, delay = 0, immediate = false }: { children: React.ReactNode; delay?: number; immediate?: boolean }) {
   const prefersReducedMotion = useReducedMotion()
 
   if (prefersReducedMotion) {
     return <div>{children}</div>
+  }
+
+  if (immediate) {
+    return <div className="animate-fade-in-up" style={immediateStyle(delay)}>{children}</div>
   }
 
   return (
@@ -89,12 +102,16 @@ function KineticHeading({ children, delay = 0 }: { children: React.ReactNode; de
 
 // Individual word/line animation with stagger support
 // Each line animates independently with subtle fade + vertical slide
-function KineticLine({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+function KineticLine({ children, className = "", delay = 0, immediate = false }: { children: React.ReactNode; className?: string; delay?: number; immediate?: boolean }) {
   const prefersReducedMotion = useReducedMotion()
 
   // ponytail: If reduced motion preferred, render plain span without animation
   if (prefersReducedMotion) {
     return <span className={className}>{children}</span>
+  }
+
+  if (immediate) {
+    return <span className={`block animate-fade-in-up ${className}`} style={immediateStyle(delay)}>{children}</span>
   }
 
   return (
@@ -166,9 +183,11 @@ interface AnimatedHeadingProps {
   stagger?: number
   /** Initial delay before first line animates (in seconds), default: 0 */
   delay?: number
+  /** Above-the-fold: animate with CSS on first paint instead of waiting for hydration */
+  immediate?: boolean
 }
 
-function AnimatedHeading({ lines, className = "", stagger = 0.08, delay = 0 }: AnimatedHeadingProps) {
+function AnimatedHeading({ lines, className = "", stagger = 0.08, delay = 0, immediate = false }: AnimatedHeadingProps) {
   const prefersReducedMotion = useReducedMotion()
 
   // ponytail: Handle per-line or shared className
@@ -195,7 +214,7 @@ function AnimatedHeading({ lines, className = "", stagger = 0.08, delay = 0 }: A
   return (
     <>
       {lines.map((line, i) => (
-        <KineticLine key={i} className={getLineClass(i)} delay={delay + i * stagger}>
+        <KineticLine key={i} className={getLineClass(i)} delay={delay + i * stagger} immediate={immediate}>
           <LiftText>{line}</LiftText>
         </KineticLine>
       ))}
@@ -226,7 +245,7 @@ function ParallaxMonstera() {
   }
 
   return (
-    <FadeIn delay={0.2}>
+    <FadeIn delay={0.2} immediate>
       <div ref={containerRef as React.RefObject<HTMLDivElement>} className="relative">
         <div
           className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-background"
@@ -278,12 +297,13 @@ export default function HomeContent({ products }: { products: Product[] }) {
     <div className="bg-background">
       {/* Hero */}
       <section className="min-h-screen">
-        <div className="container mx-auto px-6 lg:px-12 pt-8 pb-20">
+        {/* pt-24/28 clears the fixed header (it used to overlap the badge and first line on phones) */}
+        <div className="container mx-auto px-6 lg:px-12 pt-24 lg:pt-28 pb-20">
           <div className="flex justify-end mb-8">
             <AnimatedBadge prefersReducedMotion={prefersReducedMotion} />
           </div>
 
-          <FadeIn>
+          <FadeIn immediate>
             <div className="flex items-center gap-4 mb-8">
               <span className="font-mono text-xs text-primary">001</span>
               <span className="w-8 h-px bg-border"></span>
@@ -292,10 +312,11 @@ export default function HomeContent({ products }: { products: Product[] }) {
           </FadeIn>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <KineticHeading delay={0.1}>
+            <KineticHeading delay={0.1} immediate>
               <div>
                 <h1 className="font-serif leading-[0.85] tracking-tight">
                   <AnimatedHeading
+                    immediate
                     lines={["Good", "plants.", "Good", "energy."]}
                     className={[
                       "text-[clamp(3rem,12vw,8rem)] text-foreground",
@@ -309,6 +330,16 @@ export default function HomeContent({ products }: { products: Product[] }) {
                   <p className="text-muted-foreground text-lg max-w-xs">Green things worth collecting - sourced globally, acclimated for<br />Pakistan.</p>
                   <div className="rotate-90"><ArrowRight className="w-5 h-5 text-primary" /></div>
                 </div>
+                {/* The hero had no call to action; the first real one was two screens down. */}
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Link href="/shop/all" className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-mono text-xs uppercase tracking-widest text-primary-foreground transition hover:brightness-110">
+                    Shop plants
+                    <ArrowRight className="w-3 h-3" aria-hidden="true" />
+                  </Link>
+                  <Link href="/plant-finder" className="inline-flex items-center gap-2 rounded-full border border-foreground/30 px-6 py-3 font-mono text-xs uppercase tracking-widest text-foreground transition hover:border-foreground">
+                    Find your plant
+                  </Link>
+                </div>
               </div>
             </KineticHeading>
 
@@ -319,7 +350,8 @@ export default function HomeContent({ products }: { products: Product[] }) {
 
       {/* Marquee */}
       <section className="bg-foreground py-5 overflow-hidden">
-        <motion.div className="flex whitespace-nowrap" animate={{ x: ['0%', '-50%'] }} transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}>
+        {/* Reduced-motion visitors get a still strip: auto-moving text that can't be paused fails WCAG 2.2.2. */}
+        <motion.div className="flex whitespace-nowrap" animate={prefersReducedMotion ? { x: 0 } : { x: ['0%', '-50%'] }} transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}>
           {[...Array(4)].map((_, i) => (
             <div key={i} className="flex items-center gap-12 px-12">
               <span className="text-background font-medium text-sm tracking-wide">Curated for the modern collector</span>

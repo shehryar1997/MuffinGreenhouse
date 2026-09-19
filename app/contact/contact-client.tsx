@@ -38,7 +38,7 @@ export function ContactPageClient() {
           </div>
         </div>
 
-        <div className="mt-8 bg-forest-300 text-cream-100 rounded-2xl p-8">
+        <div className="mt-8 bg-forest-950 text-cream-100 rounded-2xl p-8">
           <MapPin className="w-8 h-8 mb-4 opacity-80" />
           <h3 className="font-serif text-xl mb-2">Visit the Nursery</h3>
           <p>Lane 5, Street 10, DHA Phase 6, Karachi</p>
