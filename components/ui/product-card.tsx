@@ -68,7 +68,7 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
   ) : null
 
   return (
-    <motion.div
+    <motion.article
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
@@ -76,8 +76,12 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link href={`/shop/product/${product.slug}`} className="block">
-        <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-forest-50 mb-4">
+      <Link 
+        href={`/shop/product/${product.slug}`} 
+        className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-xl"
+        aria-label={`View ${product.name}`}
+      >
+        <div className="relative aspect-[4/5] rounded-xl overflow-hidden bg-muted mb-4 transition-shadow duration-300 group-hover:shadow-lg">
           <Image
             src={product.images[0]?.url || "/placeholder-plant.png"}
             alt={product.images[0]?.alt || product.name}
@@ -87,26 +91,38 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
           />
           {/* Overlay actions */}
           <motion.div 
-            className="absolute inset-0 flex items-center justify-center gap-3"
+            className="absolute inset-0 flex items-center justify-center gap-2 sm:gap-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: isHovered ? 1 : 0 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="absolute inset-0 bg-forest-900/20" />
-            <Button size="icon" variant="secondary" className="relative z-10 rounded-full bg-cream-100 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed" onClick={handleAddToCart} disabled={isOutOfStock} aria-label={isOutOfStock ? "Out of stock" : "Add to cart"}>
+            <div className="absolute inset-0 bg-background/60 dark:bg-foreground/20 backdrop-blur-[2px] transition-opacity" />
+            <Button 
+              size="icon" 
+              variant="secondary" 
+              className="relative z-10 h-10 w-10 rounded-full bg-background/95 hover:bg-background shadow-sm touch-target-sm"
+              onClick={handleAddToCart} 
+              disabled={isOutOfStock} 
+              aria-label={isOutOfStock ? `${product.name} is out of stock` : `Add ${product.name} to cart`}
+            >
               <ShoppingBag className="w-4 h-4" />
             </Button>
             <Button
               size="icon"
               variant="secondary"
-              className="relative z-10 rounded-full bg-cream-100 hover:bg-white"
+              className="relative z-10 h-10 w-10 rounded-full bg-background/95 hover:bg-background shadow-sm touch-target-sm"
               onClick={handleToggleWishlist}
               disabled={isTogglingWishlist}
-              aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+              aria-label={wishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
             >
-              <Heart className={cn("w-4 h-4", wishlisted && "fill-clay-500 text-clay-500")} />
+              <Heart className={cn("w-4 h-4", wishlisted && "fill-primary text-primary")} />
             </Button>
-            <Button size="icon" variant="secondary" className="relative z-10 rounded-full bg-cream-100 hover:bg-white">
+            <Button 
+              size="icon" 
+              variant="secondary" 
+              className="relative z-10 h-10 w-10 rounded-full bg-background/95 hover:bg-background shadow-sm touch-target-sm"
+              aria-label={`Quick view ${product.name}`}
+            >
               <Eye className="w-4 h-4" />
             </Button>
           </motion.div>
@@ -115,19 +131,21 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {product.isNewArrival && <Badge variant="secondary">New</Badge>}
             {stockBadge}
-            {isPlantProduct(product) && product.isPetSafe && <Badge variant="outline">Pet Safe</Badge>}
+            {isPlantProduct(product) && product.isPetSafe && (
+              <Badge variant="outline" className="bg-background/80">Pet Safe</Badge>
+            )}
           </div>
         </div>
 
-        <div className="space-y-1">
-          <p className="font-mono text-xs text-forest-500 uppercase tracking-wider">{product.category.name}</p>
-          <h3 className="font-medium text-forest-900 group-hover:text-clay-600 transition-colors">{product.name}</h3>
-          <p className="font-mono text-sm text-forest-700">{formatPrice(product.price)}</p>
+        <div className="space-y-1.5">
+          <p className="font-mono text-xs text-muted-foreground uppercase tracking-wider">{product.category.name}</p>
+          <h3 className="font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2">{product.name}</h3>
+          <p className="font-mono text-sm text-foreground">{formatPrice(product.price)}</p>
           {product.variants.length > 1 && (
-            <p className="text-xs text-forest-500">{product.variants.length} sizes</p>
+            <p className="text-xs text-muted-foreground">{product.variants.length} sizes available</p>
           )}
         </div>
       </Link>
-    </motion.div>
+    </motion.article>
   )
 }

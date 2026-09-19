@@ -105,13 +105,13 @@ export function Header() {
             {/* Hamburger Menu Button - Mobile Only */}
             <button 
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-3 -ml-2 hover:bg-muted rounded-full transition-colors"
+              className="lg:hidden p-3 -ml-2 hover:bg-muted rounded-full transition-colors touch-target"
               style={{ touchAction: "manipulation" }}
               aria-label="Open navigation menu"
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-navigation"
             >
-              <Menu className="w-6 h-6 text-foreground" />
+              <Menu className="w-6 h-6 text-foreground" aria-hidden="true" />
             </button>
 
             {/* Logo - Desktop Only (Left Side) */}
@@ -199,7 +199,7 @@ export function Header() {
                               <div className="grid grid-cols-3 gap-12">
                                 {shopMegaMenuSections.map((section) => (
                                   <div key={section.id} className="space-y-5">
-                                    <div className="flex items-center gap-2 border-b border-forest-200/50 pb-3">
+                                    <div className="flex items-center gap-2 border-b border-border pb-3">
                                       <h3 className="font-serif text-lg text-foreground">
                                         {section.title}
                                       </h3>
@@ -209,7 +209,7 @@ export function Header() {
                                         <li key={item.id}>
                                           <Link
                                             href={item.href}
-                                            className="group flex items-center justify-between py-2 px-2 -mx-2 rounded-md font-mono text-sm text-forest-600 hover:text-[#1A1A1A] hover:bg-forest-100/50 transition-all"
+                                            className="group flex items-center justify-between py-2 px-2 -mx-2 rounded-md font-mono text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             onClick={() => setShopMenuOpen(false)}
                                           >
                                             <span className="flex items-center gap-2">
@@ -217,12 +217,12 @@ export function Header() {
                                                 {item.label}
                                                 {item.featured && (
                                                   <span className="ml-1.5 inline-flex items-center">
-                                                    <Star className="w-2.5 h-2.5 fill-[#E85A3C] text-[#E85A3C]" />
+                                                    <Star className="w-2.5 h-2.5 fill-primary text-primary" aria-hidden="true" />
                                                   </span>
                                                 )}
                                               </span>
                                             </span>
-                                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-forest-400">→</span>
+                                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" aria-hidden="true">→</span>
                                           </Link>
                                         </li>
                                       ))}
@@ -231,14 +231,14 @@ export function Header() {
                                 ))}
                               </div>
                             </div>
-                            <div className="bg-forest-50 px-8 py-4 border-t border-forest-200/30">
+                            <div className="bg-muted px-8 py-4 border-t border-border">
                               <Link 
                                 href="/shop/all" 
-                                className="flex items-center justify-center gap-2 font-mono text-xs tracking-widest uppercase text-forest-700 hover:text-[#E85A3C] transition-colors"
+                                className="flex items-center justify-center gap-2 font-mono text-xs tracking-widest uppercase text-muted-foreground hover:text-primary transition-colors touch-target-sm"
                                 onClick={() => setShopMenuOpen(false)}
                               >
                                 <span>View All Products</span>
-                                <span>→</span>
+                                <span aria-hidden="true">→</span>
                               </Link>
                             </div>
                           </div>

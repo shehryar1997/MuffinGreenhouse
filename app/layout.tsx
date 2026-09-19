@@ -66,11 +66,11 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(organizationSchema) }}
         />
       </head>
-      <body className={`${playfair.variable} ${inter.variable} ${jetbrains.variable} font-sans`}>
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:px-4 focus:py-2 focus:rounded focus:shadow-lg focus:text-dark focus:font-medium">
-          Skip to content
+      <body className={`${playfair.variable} ${inter.variable} ${jetbrains.variable} font-sans antialiased`}>
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
         </a>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <SearchProvider>
             <CartProvider>
               <WishlistProvider>

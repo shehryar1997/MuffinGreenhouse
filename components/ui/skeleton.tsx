@@ -9,7 +9,11 @@ interface SkeletonProps {
 export function Skeleton({ className }: SkeletonProps) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-[#E8E4DC]", className)}
+      className={cn(
+        "rounded-md skeleton",
+        "supports-[prefers-reduced-motion:reduce]:animate-none supports-[prefers-reduced-motion:reduce]:opacity-50",
+        className
+      )}
       aria-hidden="true"
     />
   )
@@ -77,8 +81,8 @@ export function FilterSidebarSkeleton() {
 // Shop page layout skeleton (all/category pages)
 export function ShopPageSkeleton() {
   return (
-    <div className="bg-[#FAF7F2] min-h-screen pb-8 pt-28 lg:pt-36">
-      <div className="container mx-auto px-4">
+    <div className="bg-background min-h-screen pb-8 pt-28 lg:pt-36">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Title skeleton */}
         <div className="mb-8">
           <Skeleton className="h-12 lg:h-16 w-2/3 max-w-2xl" />
@@ -103,7 +107,7 @@ export function ShopPageSkeleton() {
 // Checkout/Cart skeleton - matches OrderSummary layout
 export function CartSummarySkeleton() {
   return (
-    <div className="p-6 bg-white border border-[#D4D0C7] rounded-xl">
+    <div className="p-6 bg-card border border-border rounded-xl">
       {/* Title */}
       <Skeleton className="h-7 w-40 mb-6" />
       
@@ -126,7 +130,7 @@ export function CartSummarySkeleton() {
       </div>
       
       {/* Totals */}
-      <div className="border-t border-[#D4D0C7] pt-6 space-y-3">
+      <div className="border-t border-border pt-6 space-y-3">
         <div className="flex justify-between">
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-4 w-16" />
@@ -135,7 +139,7 @@ export function CartSummarySkeleton() {
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-12" />
         </div>
-        <div className="border-t border-[#D4D0C7] pt-4 flex justify-between items-center">
+        <div className="border-t border-border pt-4 flex justify-between items-center">
           <Skeleton className="h-5 w-16" />
           <Skeleton className="h-8 w-24" />
         </div>
@@ -147,8 +151,8 @@ export function CartSummarySkeleton() {
 // Full checkout page skeleton
 export function CheckoutPageSkeleton() {
   return (
-    <div className="bg-[#FAF7F2] min-h-screen pt-28 pb-16">
-      <div className="container mx-auto px-4">
+    <div className="bg-background min-h-screen pt-28 pb-16">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Left - Form */}
           <div className="space-y-8">

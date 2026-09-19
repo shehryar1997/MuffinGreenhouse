@@ -84,14 +84,14 @@ function formatDate(dateString: string): string {
 
 function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    confirmed: "bg-blue-100 text-blue-800",
-    processing: "bg-purple-100 text-purple-800",
-    shipped: "bg-indigo-100 text-indigo-800",
-    delivered: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800",
+    pending: "bg-yellow-100 dark:bg-yellow-950/30 text-yellow-900 dark:text-yellow-200",
+    confirmed: "bg-blue-100 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200",
+    processing: "bg-purple-100 dark:bg-purple-950/30 text-purple-900 dark:text-purple-200",
+    shipped: "bg-indigo-100 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200",
+    delivered: "bg-green-100 dark:bg-green-950/30 text-green-900 dark:text-green-200",
+    cancelled: "bg-red-100 dark:bg-red-950/30 text-red-900 dark:text-red-200",
   }
-  return colors[status] || "bg-gray-100 text-gray-800"
+  return colors[status] || "bg-muted text-muted-foreground"
 }
 
 function getProvinceForCity(cityName: string): string {
@@ -324,8 +324,8 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] pt-20">
-      <div className="container mx-auto px-6 lg:px-12 py-12">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-background pt-20">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -334,7 +334,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
-              <h1 className="font-serif text-[clamp(2rem,6vw,4rem)] text-[#1A1A1A] leading-[0.95] tracking-tight mb-2">
+              <h1 className="font-serif text-display text-foreground leading-[0.95] tracking-tight mb-2">
                 Your Account
               </h1>
               <p className="text-forest-600">
@@ -359,7 +359,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="p-6 border border-forest-200/50 bg-white"
+              className="p-6 border border-border bg-card rounded-lg"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -396,7 +396,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-forest-700 mb-1">Name</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Name</label>
                   {isEditingProfile ? (
                     <Input
                       value={editedName}
@@ -405,17 +405,17 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
                       disabled={isSaving}
                     />
                   ) : (
-                    <p className="text-forest-900">{customer.name || "Not set"}</p>
+                    <p className="text-foreground">{customer.name || "Not set"}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-forest-700 mb-1">Email</label>
-                  <p className="text-forest-900">{customer.email}</p>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Email</label>
+                  <p className="text-foreground">{customer.email}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-forest-700 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">Phone</label>
                   {isEditingProfile ? (
                     <Input
                       value={editedPhone}
@@ -424,7 +424,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
                       disabled={isSaving}
                     />
                   ) : (
-                    <p className="text-forest-900">{customer.phone || "Not set"}</p>
+                    <p className="text-foreground">{customer.phone || "Not set"}</p>
                   )}
                 </div>
               </div>
@@ -435,16 +435,16 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="p-6 border border-forest-200/50 bg-white"
+              className="p-6 border border-border bg-card rounded-lg"
             >
               <div className="flex items-center gap-3 mb-4">
-                <ShoppingBag className="w-6 h-6 text-forest-600" />
-                <h2 className="font-serif text-xl">Orders</h2>
+                <ShoppingBag className="w-6 h-6 text-muted-foreground" aria-hidden="true" />
+                <h2 className="font-serif text-xl text-foreground">Orders</h2>
               </div>
 
               {orders.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-forest-500 mb-4">No orders yet</p>
+                  <p className="text-muted-foreground mb-4">No orders yet</p>
                   <Button asChild variant="outline" size="sm">
                     <Link href="/shop/all">Start Shopping</Link>
                   </Button>
@@ -454,19 +454,19 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
                   {orders.map((order) => (
                     <div
                       key={order.id}
-                      className="p-3 border border-forest-100 rounded-lg hover:bg-forest-50/50 transition-colors"
+                      className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-mono text-sm">#{order.order_number}</span>
+                        <span className="font-mono text-sm text-foreground">#{order.order_number}</span>
                         <span className={`text-xs px-2 py-1 rounded ${getStatusColor(order.status)}`}>
                           {order.status}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-sm text-forest-600">
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <span>{formatDate(order.created_at)}</span>
                         <span>{formatPrice(order.total)}</span>
                       </div>
-                      <p className="text-xs text-forest-400 mt-1">
+                      <p className="text-xs text-muted-foreground/70 mt-1">
                         {order.order_items?.length || 0} item(s)
                       </p>
                     </div>
@@ -480,15 +480,15 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="p-6 border border-forest-200/50 bg-white"
+              className="p-6 border border-border bg-card rounded-lg"
             >
               <div className="flex items-center gap-3 mb-4">
-                <Heart className="w-6 h-6 text-forest-600" />
-                <h2 className="font-serif text-xl">Wishlist</h2>
+                <Heart className="w-6 h-6 text-muted-foreground" aria-hidden="true" />
+                <h2 className="font-serif text-xl text-foreground">Wishlist</h2>
               </div>
               {wishlistItems.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-forest-500 mb-4">No plants saved yet</p>
+                  <p className="text-muted-foreground mb-4">No plants saved yet</p>
                   <Button asChild variant="outline" size="sm">
                     <Link href="/shop/all">Browse Plants</Link>
                   </Button>
@@ -554,7 +554,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
 
               {addresses.length === 0 && editingAddressId !== "new" && (
                 <div className="text-center py-4 mb-2">
-                  <p className="text-forest-500 text-sm mb-1">No addresses saved</p>
+                  <p className="text-muted-foreground text-sm mb-1">No addresses saved</p>
                 </div>
               )}
 

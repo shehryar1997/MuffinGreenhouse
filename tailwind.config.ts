@@ -37,6 +37,10 @@ const config: Config = {
         serif: ["var(--font-serif)", "Georgia", "Times New Roman", "serif"],
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        'display': 'clamp(2rem, 6vw, 4rem)',
+        'heading-lg': 'clamp(1.5rem, 4vw, 3rem)',
+        'heading-md': 'clamp(1.25rem, 3vw, 2rem)',
+        'heading-sm': 'clamp(1rem, 2vw, 1.5rem)',
       },
       fontSize: {
         "display-xl": ["clamp(3rem, 10vw, 8rem)", { lineHeight: "0.9", letterSpacing: "-0.02em" }],
