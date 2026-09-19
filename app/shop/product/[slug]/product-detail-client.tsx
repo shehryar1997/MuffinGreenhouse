@@ -23,7 +23,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const [selectedVariant, setSelectedVariant] = useState(product?.variants[0] || null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [requestedQuantity, setQuantity] = useState(1)
-  const { addItem, toggleCart } = useCart()
+  const { addItem } = useCart()
   const { isWishlisted, toggleWishlist } = useWishlist()
   const router = useRouter()
   const wishlisted = isWishlisted(product.id)
@@ -78,8 +78,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const isPlant = isPlantProduct(product)
 
   const handleAddToCart = () => {
+    // Adding opens the cart drawer, which is the confirmation (a toast on top of it said the same thing twice).
     addItem(product, selectedVariant || undefined, quantity)
-    toast(`${product.name} added to cart`, { action: { label: "View Cart", onClick: () => toggleCart(true) } })
   }
 
   const isOutOfStock = product.stockStatus === "out_of_stock"
@@ -224,8 +224,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <div className={cn("mt-3 flex items-start gap-3 rounded-xl border p-4", product.isPetSafe ? "border-forest-200 bg-forest-50" : "border-amber-200 bg-amber-50")}>
                 <PawPrint className={cn("mt-0.5 h-5 w-5 shrink-0", product.isPetSafe ? "text-forest-600" : "text-amber-700")} aria-hidden="true" />
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-forest-600">Pets and children</p>
-                  <p className="text-sm font-semibold text-forest-900 leading-relaxed">
+                  <p className={cn("text-xs font-medium uppercase tracking-wide", product.isPetSafe ? "text-forest-600" : "text-amber-700")}>Pets and children</p>
+                  <p className={cn("text-sm font-semibold leading-relaxed", product.isPetSafe ? "text-forest-900" : "text-amber-900")}>
                     {product.isPetSafe ? "Pet-safe" : product.careInfo.toxicity || "Not marked pet-safe. Keep out of reach of cats, dogs and small children."}
                   </p>
                 </div>

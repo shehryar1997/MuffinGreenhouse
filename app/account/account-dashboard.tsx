@@ -11,6 +11,7 @@ import { CitySelect } from "@/components/ui/city-select"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
 import { pakistanCities } from "@/data/pakistan-cities"
 import { formatPrice } from "@/lib/utils"
+import { useCart } from "@/components/providers/cart-provider"
 import { toast } from "sonner"
 
 // Types
@@ -108,6 +109,7 @@ const EMPTY_ADDRESS_FORM: AddressFormState = { label: "Home", street: "", city: 
 
 export function AccountDashboard({ customer, addresses, orders, wishlistItems }: AccountDashboardProps) {
   const router = useRouter()
+  const { clearCart } = useCart()
   const [isSigningOut, setIsSigningOut] = useState(false)
 
   // Profile (name/phone) editing
@@ -128,6 +130,9 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
     setIsSigningOut(true)
     const supabase = createBrowserClient()
     await supabase.auth.signOut()
+    // The cart lives in this browser, so on a shared or borrowed device the next person shouldn't
+    // inherit it. (A guest's cart is untouched: it survives signing IN, only signing OUT clears it.)
+    clearCart()
     router.push("/")
     router.refresh()
   }
@@ -139,7 +144,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
       .from("customers")
       .update({ name: editedName, phone: editedPhone })
       .eq("id", customer.id)
-      .select()
+      .select("id")
       .single()
 
     if (error || !data) {
@@ -534,7 +539,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
-              className="p-6 border border-forest-200/50 bg-white"
+              className="p-6 border border-forest-200/50 bg-surface"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">

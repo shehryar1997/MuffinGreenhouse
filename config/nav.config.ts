@@ -6,19 +6,16 @@ import { NavItem, MegaMenuSection } from "@/types"
 export const siteConfig = {
   name: "Muffin",
   tagline: "Good plants. Good energy.",
-  description: "A plant nursery for Karachi, Pakistan. Locally grown plants for real homes, with honest care advice.",
-  url: "https://muffin.pk",
+  description: "A plant nursery for Karachi, Pakistan. Plants sourced from around the world and propagated here, for real homes, with honest care advice.",
+  url: "https://www.muffinplants.com",
   whatsappNumber: "+923095360009",
-  email: "hello@muffin.pk",
+  email: "support@muffinplants.com",
+  // No public street address: pickups are arranged over WhatsApp, which shares the address with the customer.
   address: {
-    street: "Plot 12-C, Lane 5, Block 7",
-    area: "Clifton",
     city: "Karachi",
-    postalCode: "75600",
   },
   social: {
-    instagram: "https://instagram.com/muffin.pk",
-    facebook: "https://facebook.com/muffin.pk",
+    instagram: "https://www.instagram.com/muffinsgreenhouse/",
   },
 }
 

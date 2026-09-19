@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { deleteUnreferencedProductImages } from "@/lib/product-images"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
+import { isAllowedImageUrl } from "@/lib/image-hosts"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 
@@ -169,8 +170,49 @@ function parseProductFields(
     if (!text(field)) return { error: `${label} is required.` }
   }
 
+  // Shape checks: these values end up in URLs, order documents and search, so refuse the obviously
+  // malformed ones here with a message, rather than saving them or failing later in the database.
+  const name = text("name")
+  if (name.length < 3 || !/[\p{L}]/u.test(name)) return { error: "Product name must be at least 3 characters and contain letters." }
+  if (name.length > 120) return { error: "Product name is too long (120 characters max)." }
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text("slug")) || text("slug").length > 100) {
+    return { error: "Slug can only use lowercase letters, numbers and single hyphens (e.g. monstera-deliciosa)." }
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{1,39}$/.test(text("sku"))) {
+    return { error: "SKU must be 2–40 characters: letters, numbers, dots, hyphens or underscores (e.g. AROID-001-MED)." }
+  }
+  if (text("description").length < 10) return { error: "Description is too short. Write at least a sentence for customers." }
+  if (text("description").length > 5000) return { error: "Description is too long (5,000 characters max)." }
+  if (text("short_description").length > 300) return { error: "Short description is too long (300 characters max)." }
+  if (text("meta_title").length > 70) return { error: "SEO title is too long (70 characters max)." }
+  if (text("meta_description").length > 170) return { error: "SEO description is too long (170 characters max)." }
+
   const price = Number(formData.get("price"))
-  if (!Number.isFinite(price) || price < 0) return { error: "Price must be a valid number." }
+  if (!Number.isFinite(price) || price <= 0 || price > 10_000_000) return { error: "Price must be a number greater than 0." }
+
+  const stockCount = Number(formData.get("stock_count") || 0)
+  const lowStock = Number(formData.get("low_stock_threshold") || 10)
+  if (!Number.isInteger(stockCount) || stockCount < 0 || stockCount > 1_000_000) return { error: "Stock must be a whole number, 0 or more." }
+  if (!Number.isInteger(lowStock) || lowStock < 0 || lowStock > 100_000) return { error: "Low-stock alert level must be a whole number, 0 or more." }
+
+  if (isPlant) {
+    const oneOf = (field: string, allowed: string[], label: string) =>
+      allowed.includes(text(field)) ? null : `${label} isn't valid. Pick one of the options in the form.`
+    const enumError =
+      oneOf("difficulty", ["beginner", "intermediate", "expert"], "Difficulty") ??
+      oneOf("light_requirement", ["low", "medium", "bright", "full_sun"], "Light requirement") ??
+      oneOf("water_requirement", ["low", "medium", "high"], "Water requirement") ??
+      (text("size") ? oneOf("size", ["small", "medium", "large"], "Size") : null)
+    if (enumError) return { error: enumError }
+  }
+
+  // next/image only loads from allow-listed hosts; an image on any other host would blank the product page.
+  for (const raw of formData.getAll("image_url") as string[]) {
+    const url = raw.trim()
+    if (url && !isAllowedImageUrl(url)) {
+      return { error: "One of the image addresses isn't from an allowed host. Remove it and upload the photo with the upload button instead." }
+    }
+  }
 
   const compareAt = optionalNumber(formData, "compare_at_price")
   const weight = optionalNumber(formData, "weight_kg")
@@ -180,6 +222,11 @@ function parseProductFields(
   if ([compareAt, weight, boxHeight, boxWidth, boxBreadth].includes("invalid")) {
     return { error: "Compare-at price, weight and box dimensions must be valid numbers." }
   }
+
+  if (typeof compareAt === "number" && compareAt <= price) {
+    return { error: "Compare-at (original) price must be higher than the selling price, or left empty." }
+  }
+  if (typeof compareAt === "number" && compareAt > 10_000_000) return { error: "Compare-at price is too large." }
 
   // Delivery for Tools & Equipment is charged per kg (120 PKR/kg), so a product without a
   // weight would ship for free -- refuse to save one.
@@ -203,8 +250,8 @@ function parseProductFields(
       price,
       compare_at_price: compareAt,
       currency: "PKR",
-      stock_count: Number(formData.get("stock_count") || 0),
-      low_stock_threshold: Number(formData.get("low_stock_threshold") || 10),
+      stock_count: stockCount,
+      low_stock_threshold: lowStock,
       difficulty: isPlant ? text("difficulty") : null,
       light_requirement: isPlant ? text("light_requirement") : NON_PLANT_LIGHT_PLACEHOLDER,
       water_requirement: isPlant ? text("water_requirement") : null,

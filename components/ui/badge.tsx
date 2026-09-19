@@ -12,7 +12,7 @@ const badgeVariants = cva(
         secondary:
           "border-transparent bg-secondary text-secondary-foreground hover:brightness-110",
         outline: "text-foreground border-border hover:bg-muted/50",
-        success: "border-transparent bg-sprout dark:bg-sprout-500 text-forest-900 dark:text-forest-950 hover:brightness-110",
+        success: "border-transparent bg-sprout dark:bg-sprout-500 text-ink hover:brightness-110",
         lowStock: "border-transparent bg-orange-100 dark:bg-orange-950/30 text-orange-900 dark:text-orange-200",
         outOfStock: "border-transparent bg-muted text-muted-foreground italic",
       },

@@ -1,6 +1,9 @@
 import type { Config } from "tailwindcss"
 import tailwindcssAnimate from "tailwindcss-animate"
 
+// Palette entries that change with the theme: a CSS variable of RGB channels, so `bg-forest-50/50` still works.
+const v = (name: string) => `rgb(var(--${name}) / <alpha-value>)`
+
 const config: Config = {
   darkMode: ["class"],
   content: [
@@ -19,14 +22,20 @@ const config: Config = {
     },
     extend: {
       colors: {
-        cream: { DEFAULT: "#F7F3EA", 50: "#FDFCF8", 100: "#F7F3EA", 200: "#EDE4D6", 300: "#E2D6C1", 400: "#D7C8AC", 500: "#CCB997" },
-        // ponytail: forest is one light->dark scale (50 pale ... 950 near-black). It used to be an inverted,
-        // dark-only scale that stopped at 500, so ~230 classes (text-forest-600/700/900...) generated no CSS
-        // and bg-forest-50 rendered dark green. Dark surfaces now use forest-950; text needs 500+ for AA.
-        forest: { DEFAULT: "#12160E", 50: "#F3F7EF", 100: "#E5EEDD", 200: "#CCDBC2", 300: "#A9C09B", 400: "#7F9E70", 500: "#56744A", 600: "#435E39", 700: "#34492D", 800: "#263724", 900: "#1A261A", 950: "#12160E" },
+        // cream = surfaces, forest = text/borders, pale sprouts = tinted surfaces. All flip in dark mode via the
+        // variables in globals.css (forest is inverted there). For colours that must NOT flip, use ink / paper below.
+        cream: { DEFAULT: v("cream-100"), 50: v("cream-50"), 100: v("cream-100"), 200: v("cream-200"), 300: v("cream-300"), 400: v("cream-400"), 500: v("cream-500") },
+        forest: { DEFAULT: v("forest-950"), 50: v("forest-50"), 100: v("forest-100"), 200: v("forest-200"), 300: v("forest-300"), 400: v("forest-400"), 500: v("forest-500"), 600: v("forest-600"), 700: v("forest-700"), 800: v("forest-800"), 900: v("forest-900"), 950: v("forest-950") },
         // clay-500 darkened from #E85D2C (3.1:1 as text, 3.5:1 under white text) to match the AA --primary token.
         clay: { DEFAULT: "#BF3F18", 50: "#FDF6F3", 100: "#FBE5DC", 200: "#F7C8B7", 300: "#F2A58B", 400: "#ED7E5C", 500: "#BF3F18", 600: "#A33413", 700: "#872B10", 800: "#6B220C" },
-        sprout: { DEFAULT: "#D4F542", 50: "#FBFED6", 100: "#F2FCAB", 200: "#E5F98A", 300: "#D4F542", 400: "#B8D035", 500: "#9CB528", 600: "#61781A", 700: "#4C5E14", 800: "#3A4810" },
+        // 300-500 are the bright lime accents (same in both themes); the pale (50-200) and dark (600-800) steps flip.
+        sprout: { DEFAULT: "#D4F542", 50: v("sprout-50"), 100: v("sprout-100"), 200: v("sprout-200"), 300: "#D4F542", 400: "#B8D035", 500: "#9CB528", 600: v("sprout-600"), 700: v("sprout-700"), 800: v("sprout-800") },
+        // Theme-independent brand colours: use these (not forest/cream) on surfaces that stay the same in
+        // light and dark mode, e.g. text on a lime section or a dark panel over a photo.
+        ink: { DEFAULT: "#12160E", soft: "#1A261A", muted: "#3D4A36" },
+        paper: { DEFAULT: "#F7F3EA", dim: "#D9D2C2" },
+        // A raised surface (cards, inputs, panels): white in light mode, a lifted dark green in dark mode.
+        surface: "hsl(var(--surface) / <alpha-value>)",
         border: "hsl(var(--border))", input: "hsl(var(--input))", ring: "hsl(var(--ring))",
         background: "hsl(var(--background))", foreground: "hsl(var(--foreground))",
         primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },

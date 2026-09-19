@@ -23,21 +23,21 @@ export function GuaranteeClient() {
           </div>
           <p className="text-forest-700 leading-relaxed mb-4">
             We stand behind every plant we ship. If your plant arrives dead or severely damaged, 
-            we have got you covered. Just share clear photos within <strong>2 hours</strong> of delivery 
-            so we can assess and make it right.
+            we have got you covered. Just share clear photos within <strong>2 hours</strong> of receiving
+            your package, then return the plant to us and we&apos;ll make it right.
           </p>
           <ul className="text-forest-700 text-sm space-y-2 mb-6">
             <li className="flex items-start gap-2">
               <Check className="w-4 h-4 text-forest-600 mt-0.5 shrink-0" />
-              <span>2-hour window from delivery timestamp</span>
+              <span>2-hour window from the moment you receive your package</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="w-4 h-4 text-forest-600 mt-0.5 shrink-0" />
-              <span>Clear photos of the plant + packaging required</span>
+              <span>Clear photos of the plant and its packaging, sent on WhatsApp with your order number</span>
             </li>
             <li className="flex items-start gap-2">
               <Check className="w-4 h-4 text-forest-600 mt-0.5 shrink-0" />
-              <span>Replacement or store credit (your choice)</span>
+              <span>Return the plant to us, then choose a replacement or store credit</span>
             </li>
           </ul>
           <a
@@ -57,8 +57,8 @@ export function GuaranteeClient() {
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
             <div>
-              <h3 className="font-serif text-lg text-forest-900 mb-2">The Root Check Rule</h3>
-              <p className="text-forest-700 text-sm leading-relaxed">
+              <h3 className="font-serif text-lg text-amber-900 mb-2">The Root Check Rule</h3>
+              <p className="text-amber-800 text-sm leading-relaxed">
                 If roots are white/tan and firm (healthy) but leaves decline after arrival, 
                 that is <strong>acclimation stress</strong>, not transit damage. We will not replace it, 
                 but we will guide you through recovery with a free plant doctor consultation included.
@@ -69,7 +69,7 @@ export function GuaranteeClient() {
 
         {/* Coverage Grid */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 border border-forest-200/50">
+          <div className="bg-surface rounded-2xl p-6 border border-forest-200/50">
             <h3 className="font-serif text-lg text-forest-900 mb-4 flex items-center gap-2">
               <Check className="w-5 h-5 text-forest-600" />
               We Cover
@@ -95,20 +95,21 @@ export function GuaranteeClient() {
               <li>• Soil spillage during transit</li>
               <li>• Decline after acclimation period</li>
               <li>• Plants kept in unsuitable conditions</li>
-              <li>• Claims past the 2-hour timeframe</li>
+              <li>• Claims made more than 2 hours after you received the package</li>
+              <li>• Plants that aren&apos;t returned to us</li>
             </ul>
           </div>
         </div>
 
         {/* Quick Reference */}
         <div
-          className="bg-forest-950 text-cream-100 rounded-2xl p-8 text-center"
+          className="bg-ink text-paper border border-paper/10 rounded-2xl p-8 text-center"
         >
           <h3 className="font-serif text-xl mb-4">Quick Reference</h3>
           <div className="max-w-sm mx-auto">
             <div className="bg-white/10 rounded-lg p-4">
               <div className="font-semibold mb-1">All Plants</div>
-              <div>2 hours • Clear photos required • Replacement or store credit</div>
+              <div>Photos within 2 hours • Return the plant • Replacement or store credit</div>
             </div>
           </div>
         </div>

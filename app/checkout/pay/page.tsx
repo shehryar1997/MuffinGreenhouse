@@ -109,7 +109,7 @@ function CheckoutPayContent() {
     return (
       <div className='min-h-screen bg-forest-50 py-12'>
         <div className='max-w-2xl mx-auto px-4'>
-          <div className='bg-white rounded-2xl border border-forest-200 p-8 text-center'>
+          <div className='bg-surface rounded-2xl border border-forest-200 p-8 text-center'>
             <CheckCircle className='w-10 h-10 text-forest-600 mx-auto mb-4' />
             <h1 className='text-2xl font-serif text-forest-900 mb-2'>Booking Confirmed!</h1>
             <p className='text-forest-600 mb-6'>Your order is held for 24 hours.</p>
@@ -134,7 +134,7 @@ function CheckoutPayContent() {
           <h1 className='text-3xl font-serif text-forest-900 mb-2'>Complete Your Payment</h1>
           <p className='text-forest-600'>Order #{paymentDetails.orderNumber}</p>
         </div>
-        <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
+        <div className='bg-surface rounded-xl border border-forest-200 p-6 mb-6'>
           <div className='flex items-center justify-between'>
             <span className='text-forest-600'>Total Amount to Pay</span>
             <span className='text-3xl font-mono font-medium text-forest-900'>{formatPrice(paymentDetails.total)}</span>
@@ -149,7 +149,7 @@ function CheckoutPayContent() {
             </div>
           </div>
         </div>
-        <div className='bg-white rounded-xl border border-forest-200 overflow-hidden mb-6'>
+        <div className='bg-surface rounded-xl border border-forest-200 overflow-hidden mb-6'>
           <div className='px-6 py-4 border-b border-forest-200 bg-forest-50'>
             <h2 className='font-medium text-forest-900'>Payment Options</h2>
             <p className='text-sm text-forest-500'>Pay to any of the following accounts</p>
@@ -178,20 +178,20 @@ function CheckoutPayContent() {
             ))}
           </div>
         </div>
-        <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
+        <div className='bg-surface rounded-xl border border-forest-200 p-6 mb-6'>
           <h3 className='font-medium text-forest-900 mb-2'>Prefer to pay via WhatsApp?</h3>
           <p className='text-sm text-forest-600 mb-4'>You can also complete your payment directly through WhatsApp.</p>
           <a href={getWhatsAppUrl()} target='_blank' rel='noopener noreferrer' className='inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium rounded-lg transition-colors'>
             <MessageCircle className='w-5 h-5' /> Pay via WhatsApp instead
           </a>
         </div>
-        <div className='bg-white rounded-xl border border-forest-200 p-6 mb-6'>
+        <div className='bg-surface rounded-xl border border-forest-200 p-6 mb-6'>
           <p className='text-sm text-forest-600 mb-4'>By clicking Confirm Booking, you agree to complete payment within 24 hours.</p>
-          <Button onClick={handleConfirmBooking} disabled={confirming} className='w-full h-12 text-base bg-forest-700 hover:bg-forest-800'>
+          <Button onClick={handleConfirmBooking} disabled={confirming} className='w-full h-12 text-base bg-primary text-primary-foreground hover:brightness-110'>
             {confirming ? <><Loader2 className='w-5 h-5 mr-2 animate-spin' />Confirming...</> : <>Confirm Booking - {formatPrice(paymentDetails.total)}</>}
           </Button>
         </div>
-        <div className='bg-white rounded-xl border border-forest-200 p-6'>
+        <div className='bg-surface rounded-xl border border-forest-200 p-6'>
           <h3 className='font-medium text-forest-900 mb-4'>Order Summary</h3>
           {paymentDetails.items.length > 0 && (
             <div className='space-y-2 mb-4'>

@@ -22,7 +22,7 @@ export default function CookiePolicyPage() {
           </p>
         </section>
 
-        <div className="bg-white rounded-sm p-8 lg:p-12 border border-forest-950/10">
+        <div className="bg-surface rounded-sm p-8 lg:p-12 border border-forest-950/10">
           <div className="space-y-6 text-forest-950/80">
             
             <div className="bg-amber-50 border border-amber-200 rounded-sm p-4">
@@ -123,7 +123,7 @@ export default function CookiePolicyPage() {
               <h2 className="font-serif text-2xl text-forest-950 mb-3">6. Cookie Duration</h2>
               <ul className="list-disc pl-5 space-y-1">
                 <li><strong>Session:</strong> Deleted when browser closes</li>
-                <li><strong>Cart:</strong> 30 days or until cleared</li>
+                <li><strong>Cart:</strong> Until you clear it, or sign out of your account</li>
                 <li><strong>Auth:</strong> Duration of login session</li>
               </ul>
             </div>
@@ -132,6 +132,7 @@ export default function CookiePolicyPage() {
               <h2 className="font-serif text-2xl text-forest-950 mb-3">7. Contact</h2>
               <ul className="list-disc pl-5 space-y-1">
                 <li>WhatsApp: +92 309 5360009</li>
+                <li>E-mail: support@muffinplants.com</li>
                 <li>Instagram: @muffinsgreenhouse</li>
               </ul>
             </div>

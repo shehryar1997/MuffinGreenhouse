@@ -14,8 +14,8 @@ export function Footer() {
               <span className="text-sm">&#10022;</span>
             </div>
             <p className="text-secondary-foreground/80 text-sm max-w-xs">Good plants for good energy.</p>
-            <p className="mt-4 text-sm"><Link href="/visit-us" className="text-foreground hover:opacity-60 transition-opacity">Lane 5, DHA Phase 6</Link></p>
-            <p className="text-secondary-foreground/80 text-sm">Daily 10am to 7pm</p>
+            <p className="mt-4 text-sm"><Link href="/visit-us" className="text-foreground hover:opacity-60 transition-opacity">Karachi · pickup on WhatsApp</Link></p>
+            <p className="text-secondary-foreground/80 text-sm"><a href="mailto:support@muffinplants.com" className="hover:opacity-60 transition-opacity">support@muffinplants.com</a></p>
           </div>
 
           {/* Shop */}

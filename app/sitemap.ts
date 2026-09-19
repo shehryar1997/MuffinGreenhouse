@@ -157,6 +157,7 @@ async function getJournalRoutes(): Promise<MetadataRoute.Sitemap> {
     .select("slug, updated_at")
     .not("slug", "is", null)
     .not("published_at", "is", null)
+    .lte("published_at", new Date().toISOString()) // scheduled (future) posts aren't public yet
 
   if (error) {
     console.error("Error fetching journal posts for sitemap:", error.message)
@@ -176,6 +177,7 @@ async function getEventRoutes(): Promise<MetadataRoute.Sitemap> {
     .from("events")
     .select("slug, updated_at")
     .not("slug", "is", null)
+    .eq("status", "published") // drafts and cancelled events stay out of search results
 
   if (error) {
     console.error("Error fetching events for sitemap:", error.message)

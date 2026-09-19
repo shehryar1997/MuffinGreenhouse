@@ -82,8 +82,8 @@ test.describe('Smoke Tests', () => {
 
     await addButton.click();
 
-    // Confirmation toast, and the item really landed in the persisted cart.
-    await expect(page.getByText(/added to cart/i).first()).toBeVisible();
+    // The cart drawer slides open as the confirmation, and the item really landed in the persisted cart.
+    await expect(page.getByRole('dialog', { name: /cart/i })).toBeVisible();
     await expect.poll(() => cartItemCount(page)).toBeGreaterThan(0);
   });
 

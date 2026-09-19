@@ -187,4 +187,55 @@ test.describe('audit: regression guard tests', () => {
     const ogImage = page.locator('meta[property="og:image"]')
     await expect(ogImage).toHaveCount(1)
   })
+
+  test('events page renders with an event list or the empty state, never mock data', async ({ page }) => {
+    await page.goto('/events', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/workshops/i)
+    // Old hard-coded mock events (2024 dates) must be gone.
+    await expect(page.getByText(/Repotting Workshop: Spring Ready|Plant Parents 101/)).toHaveCount(0)
+    const hasEvents = (await page.getByRole('link', { name: /reserve a spot|see details/i }).count()) > 0
+    const hasEmptyState = (await page.getByText(/nothing on the calendar yet/i).count()) > 0
+    expect(hasEvents || hasEmptyState).toBe(true)
+  })
+
+  test('journal page renders posts or the coming-soon state, never the placeholder article', async ({ page }) => {
+    await page.goto('/journal', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/journal/i)
+    await expect(page.getByText(/How to Care for Your Monstera/)).toHaveCount(0)
+  })
+
+  test('unknown event and journal slugs 404', async ({ page }) => {
+    expect((await page.goto('/events/no-such-event-zz'))?.status()).toBe(404)
+    expect((await page.goto('/journal/no-such-post-zz'))?.status()).toBe(404)
+  })
+
+  test('forgot-password page loads and login links to it', async ({ page }) => {
+    await page.goto('/account/login', { waitUntil: 'domcontentloaded' })
+    await page.getByRole('link', { name: /forgot password/i }).click()
+    await expect(page).toHaveURL(/forgot-password/)
+    await expect(page.getByRole('button', { name: /send me a code/i })).toBeVisible()
+  })
+
+  test('policy facts: 2-hour claim window, support e-mail, no stale claims', async ({ page }) => {
+    await page.goto('/our-guarantee', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByText(/2 hours/i).first()).toBeVisible()
+    await expect(page.getByText(/30-day|30 day/i)).toHaveCount(0)
+
+    await page.goto('/contact', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByText('support@muffinplants.com')).toBeVisible()
+    await expect(page.getByText(/hello@muffin\.pk|Lane 5|Phase 6/)).toHaveCount(0)
+  })
+
+  test('dark mode toggle switches the theme and keeps text readable', async ({ page }) => {
+    await page.goto('/contact', { waitUntil: 'domcontentloaded' })
+    await page.getByRole('button', { name: /switch to dark mode/i }).click()
+    await expect(page.locator('html')).toHaveClass(/dark/)
+    const heading = page.getByRole('heading', { level: 1 })
+    const [fg, bg] = await Promise.all([
+      heading.evaluate((el) => getComputedStyle(el).color),
+      page.locator('body').evaluate((el) => getComputedStyle(el).backgroundColor),
+    ])
+    // The old palette left dark heading text on the dark page (~1.1:1); it must now be clearly readable.
+    expect(getContrastRatio(fg, bg)).toBeGreaterThan(4.5)
+  })
 })

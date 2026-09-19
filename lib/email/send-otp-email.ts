@@ -27,24 +27,26 @@ function getResend(): Resend {
 }
 
 /**
- * Send an OTP verification code via email.
+ * Send a one-time code by e-mail.
  * @param toEmail - Recipient email address
- * @param code - 6-digit verification code
+ * @param code - 6-digit code
+ * @param purpose - "verify" (confirm a new account's e-mail) or "reset" (choose a new password)
  */
-export async function sendOtpEmail(toEmail: string, code: string): Promise<void> {
+export async function sendOtpEmail(toEmail: string, code: string, purpose: "verify" | "reset" = "verify"): Promise<void> {
   const resend = getResend()
 
+  const isReset = purpose === "reset"
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: [toEmail],
-    subject: "Your Muffin Plants verification code",
+    subject: isReset ? "Your Muffin Plants password reset code" : "Your Muffin Plants verification code",
     text: `Hi there,
 
-Your verification code is: ${code}
+${isReset ? "Your password reset code is" : "Your verification code is"}: ${code}
 
-This code will expire in 5 minutes.
+This code will expire in 10 minutes.
 
-If you didn't request this verification code, you can safely ignore this email.
+${isReset ? "If you didn't ask to reset your password, you can safely ignore this email. Your password won't change." : "If you didn't request this verification code, you can safely ignore this email."}
 
 ${emailSignOff()}`,
   })

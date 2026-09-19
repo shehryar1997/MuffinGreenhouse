@@ -26,7 +26,7 @@ export default function ReviewsGrid({ reviews }: ReviewsGridProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.1 }}
-          className="bg-white rounded-2xl p-6 border border-forest-200/50"
+          className="bg-surface rounded-2xl p-6 border border-forest-200/50"
         >
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-1 text-sprout-500">

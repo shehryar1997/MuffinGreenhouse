@@ -32,17 +32,17 @@ export function ContactPageClient() {
             <Mail className="w-10 h-10 text-clay-500 mb-4" />
             <h2 className="font-serif text-xl text-forest-900 mb-2">Email</h2>
             <p className="text-forest-600 text-sm mb-4">For detailed questions</p>
-            <a href="mailto:hello@muffin.pk" className="font-mono text-clay-500 hover:underline">
-              hello@muffin.pk
+            <a href="mailto:support@muffinplants.com" className="font-mono text-clay-500 hover:underline break-all">
+              support@muffinplants.com
             </a>
           </div>
         </div>
 
-        <div className="mt-8 bg-forest-950 text-cream-100 rounded-2xl p-8">
+        <div className="mt-8 bg-ink text-paper border border-paper/10 rounded-2xl p-8">
           <MapPin className="w-8 h-8 mb-4 opacity-80" />
-          <h3 className="font-serif text-xl mb-2">Visit the Nursery</h3>
-          <p>Lane 5, Street 10, DHA Phase 6, Karachi</p>
-          <p className="opacity-80 mt-2">Open daily 10am to 7pm</p>
+          <h3 className="font-serif text-xl mb-2">Pickup &amp; visits</h3>
+          <p>We&apos;re based in Karachi. Pickups and visits are arranged in advance.</p>
+          <p className="opacity-80 mt-2">Message us on WhatsApp and we&apos;ll share the address and agree a time.</p>
         </div>
       </div>
     </div>

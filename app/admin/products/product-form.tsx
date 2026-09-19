@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react"
 import { Camera, ImageIcon, Loader2 } from "lucide-react"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
+import { uploadAdminImage } from "@/lib/admin-upload"
 import { findProductsByName, type PrefillProduct, type ProductActionResult } from "./actions"
 
 const inputClass = "w-full border rounded px-3 py-2 text-sm"
@@ -256,7 +257,7 @@ export function ProductForm({
   async function uploadIntoRow(id: string, file: File) {
     updateRow(id, { uploading: true, error: null })
     try {
-      updateRow(id, { url: await uploadImage(file), uploading: false })
+      updateRow(id, { url: await uploadAdminImage(file, "products"), uploading: false })
     } catch (err) {
       updateRow(id, { uploading: false, error: err instanceof Error ? err.message : "Upload failed." })
     }
@@ -662,47 +663,6 @@ function Checkbox({ name, label, defaultChecked }: { name: string; label: string
       {label}
     </label>
   )
-}
-
-const MAX_EDGE_PX = 2000
-// Vercel rejects request bodies over ~4.5MB, and phone photos are often bigger,
-// so shrink in the browser first. The server still converts to AVIF.
-const SKIP_DOWNSCALE_BYTES = 3.5 * 1024 * 1024
-
-async function downscaleForUpload(file: File): Promise<Blob> {
-  try {
-    const bitmap = await createImageBitmap(file) // honours EXIF orientation
-    const scale = Math.min(1, MAX_EDGE_PX / Math.max(bitmap.width, bitmap.height))
-    if (scale === 1 && file.size <= SKIP_DOWNSCALE_BYTES) {
-      bitmap.close()
-      return file
-    }
-    const canvas = document.createElement("canvas")
-    canvas.width = Math.round(bitmap.width * scale)
-    canvas.height = Math.round(bitmap.height * scale)
-    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-    bitmap.close()
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9))
-    return blob ?? file
-  } catch {
-    // Browser can't decode it (e.g. HEIC outside Safari) -- let the server try.
-    return file
-  }
-}
-
-/** Uploads one image and returns its public URL; throws an Error with a user-readable message. */
-async function uploadImage(file: File): Promise<string> {
-  const body = await downscaleForUpload(file)
-  const fd = new FormData()
-  fd.append("file", body, file.name)
-  const res = await fetch("/api/admin/upload-image", { method: "POST", body: fd })
-  const data: { url?: string; error?: string } | null = await res.json().catch(() => null)
-  if (!res.ok || !data?.url) {
-    if (res.status === 401) throw new Error("Your admin session has expired. Log in again, then retry.")
-    if (res.status === 413) throw new Error("That image is too large to upload. Try a smaller photo.")
-    throw new Error(data?.error ?? `Upload failed (HTTP ${res.status}).`)
-  }
-  return data.url
 }
 
 // A file picker styled as a button. `capture` opens the camera directly on phones

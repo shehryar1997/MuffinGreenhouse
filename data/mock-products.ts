@@ -1,4 +1,4 @@
-import { Category, Event, JournalPost } from "@/types"
+import { Category } from "@/types"
 
 // ===== ALL CATEGORIES =====
 export const categories: Record<string, Category> = {
@@ -77,17 +77,12 @@ export const categoryMeta: Record<string, { title: string; description: string; 
   },
   all: {
     title: "All Plants",
-    description: "Browse our complete collection of locally grown plants.",
+    description: "Browse our complete collection of plants.",
     tagline: "Everything we have in stock.",
   },
 }
 
 
-export const mockEvents: Event[] = [
-  { id: "evt-001", slug: "repotting-workshop-spring-ready", title: "Repotting Workshop: Spring Ready", description: "Learn the art of repotting your plants for spring growth. Bring your own plant or use one of ours. We'll cover soil mixes, pot sizing, and root health.", type: "workshop", datetime: "2024-10-15T14:00:00Z", location: "Nursery Pickup Point, DHA Phase 6", price: 500, spotsTotal: 15, spotsRemaining: 8, image: "https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=800&q=80", isUpcoming: true },
-  { id: "evt-002", slug: "free-plant-walk-karachi", title: "Free Plant Walk: Karachi's Urban Greenery", description: "Join us for a guided tour of Karachi's hidden green spaces. Discover native and ornamental plants thriving in our city climate. Perfect for plant enthusiasts of all levels.", type: "tour", datetime: "2024-10-20T08:00:00Z", location: "Frere Hall Gardens", price: 0, spotsTotal: 25, spotsRemaining: 12, image: "https://images.unsplash.com/photo-1466692476864-a5c4f23df6f0?w=800&q=80", isUpcoming: true },
-  { id: "evt-003", slug: "plant-parents-101", title: "Plant Parents 101", description: "Everything you need to know about caring for your first plants. We cover watering, light, soil, and common mistakes new plant parents make.", type: "workshop", datetime: "2024-09-01T10:00:00Z", location: "Muffin Nursery", price: 1500, spotsTotal: 12, spotsRemaining: 0, image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80", isUpcoming: false },
-]
 export const useCases: Record<string, { title: string; desc: string; icon: string }> = {
   "low-light-survivors": { title: "Low-Light Survivors", desc: "Thrive where the sun doesn't shine", icon: "🌙" },
   "balcony-rooftop": { title: "Balcony & Rooftop", desc: "Wind and heat warriors", icon: "🏠" },
@@ -106,14 +101,3 @@ export const shopByNeedIcons: Record<string, string> = {
   "air-purifying": "💨",
   "balcony-rooftop": "🏠",
 }
-
-export const mockJournalPosts: JournalPost[] = [
-  { id: "j1", slug: "monstera-care", title: "How to Care for Your Monstera", excerpt: "Everything you need.", content: "...", author: "Aisha", coverImage: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80", tags: ["care"], publishedAt: "2024-01-10T00:00:00Z" },
-]
-
-
-
-// Event data access functions
-export const getEventBySlug = (slug: string): Event | undefined => mockEvents.find((e) => e.slug === slug)
-export const getUpcomingEvents = (): Event[] => mockEvents.filter((e) => e.isUpcoming)
-export const getPastEvents = (): Event[] => mockEvents.filter((e) => !e.isUpcoming)

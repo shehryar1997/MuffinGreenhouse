@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { VisitUsClient } from "./visit-us-client"
 
 export const metadata: Metadata = {
-  title: "Visit Our Nursery",
-  description: "Plan your visit to Muffin Greenhouse in Karachi. See our plant collection in person, get expert advice, and take home your favorites.",
+  title: "Pickup & Visits",
+  description: "Collect your order or visit Muffin Greenhouse in Karachi. Pickups and visits are arranged on WhatsApp, and pickup is free.",
 }
 
 export default function VisitUsPage() {

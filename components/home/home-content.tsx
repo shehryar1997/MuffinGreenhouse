@@ -8,7 +8,7 @@ import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { useReducedMotion } from "@/hooks/use-reduced-motion"
 import { useParallax } from "@/hooks/use-parallax"
-import { Product } from "@/types"
+import { Product, Event } from "@/types"
 
 // ponytail: Lazy-load below-the-fold sections to improve initial page load
 // LightFilterTeaser is client-only (uses useState), so ssr: false
@@ -289,7 +289,7 @@ function AnimatedBadge({ prefersReducedMotion }: { prefersReducedMotion: boolean
   )
 }
 
-export default function HomeContent({ products }: { products: Product[] }) {
+export default function HomeContent({ products, events }: { products: Product[]; events: Event[] }) {
   const prefersReducedMotion = useReducedMotion()
   useEffect(() => {}, [])
 
@@ -436,7 +436,7 @@ export default function HomeContent({ products }: { products: Product[] }) {
 
 
       {/* Section 006 - Events (lazy-loaded) */}
-      <EventsSection />
+      <EventsSection events={events} />
 
     </div>
   )

@@ -435,7 +435,7 @@ export function Header() {
                 <button
                   type="button"
                   onClick={() => { setMobileMenuOpen(false); openSearch() }}
-                  className="flex w-full items-center gap-3 rounded-full border border-forest-300 bg-white px-5 py-3 text-left font-mono text-sm text-forest-600"
+                  className="flex w-full items-center gap-3 rounded-full border border-forest-300 bg-surface px-5 py-3 text-left font-mono text-sm text-forest-600"
                 >
                   <Search className="w-4 h-4" aria-hidden="true" />
                   Search plants

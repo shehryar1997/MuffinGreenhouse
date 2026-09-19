@@ -298,7 +298,7 @@ export function FilterSidebar({
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-controls="shop-filters"
-        className="flex w-full items-center justify-between rounded-lg border border-forest-200 bg-white px-4 py-3 font-mono text-sm text-forest-700 lg:hidden"
+        className="flex w-full items-center justify-between rounded-lg border border-forest-200 bg-surface px-4 py-3 font-mono text-sm text-forest-700 lg:hidden"
       >
         <span>{activeCount > 0 ? `Filters (${activeCount})` : "Filters"}</span>
         <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} aria-hidden="true" />

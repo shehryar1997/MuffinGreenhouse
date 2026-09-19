@@ -40,31 +40,63 @@ async function getOrderForEmail(orderId: string): Promise<OrderForEmail | null> 
 
 export async function markPaid(orderId: string) {
   await requireAdmin()
-  const { error } = await supabaseAdmin
-    .from("orders")
-    .update({ payment_status: "paid", status: "confirmed", confirmed_at: new Date().toISOString() })
-    .eq("id", orderId)
-  if (error) throw new Error(error.message)
 
-  try {
-    const order = await getOrderForEmail(orderId)
-    if (order?.customer?.email) {
-      await sendOrderConfirmedEmail({
-        toEmail: order.customer.email,
-        customerName: order.customer.name || undefined,
-        orderNumber: order.order_number,
-        total: order.total,
-        items: order.order_items.map((item) => ({
-          productName: item.product_name,
-          quantity: item.quantity,
-          price: item.unit_price,
-        })),
-        deliveryType: order.delivery_type,
-      })
+  const { data: current, error: readError } = await supabaseAdmin
+    .from("orders")
+    .select("status, payment_status")
+    .eq("id", orderId)
+    .maybeSingle()
+  if (readError) throw new Error(readError.message)
+  if (!current) throw new Error("Order not found")
+
+  // Already paid (double click / stale page): nothing to change and nothing to re-send.
+  if (current.payment_status === "paid") redirect(`/admin/orders/${orderId}`)
+
+  // A cancelled order has already given its stock back, so reviving it as "confirmed" would oversell.
+  if (current.status === "cancelled") {
+    throw new Error("This order was cancelled and its stock was released. Ask the customer to place a new order instead.")
+  }
+
+  // Payment is what moves an order from "pending" to "confirmed". An order that is already confirmed,
+  // processing, shipped or delivered keeps its status: marking it paid must never send it backwards.
+  const confirming = current.status === "pending"
+  const { data: updated, error } = await supabaseAdmin
+    .from("orders")
+    .update({
+      payment_status: "paid",
+      ...(confirming ? { status: "confirmed", confirmed_at: new Date().toISOString() } : {}),
+    })
+    .eq("id", orderId)
+    .eq("status", current.status) // lost a race with a cancel/ship? then update nothing
+    .neq("payment_status", "paid")
+    .select("id")
+  if (error) throw new Error(error.message)
+  if (!updated || updated.length === 0) {
+    throw new Error("The order changed while you were working on it. Refresh the page and try again.")
+  }
+
+  // The "order confirmed" e-mail only makes sense at the moment the order is confirmed.
+  if (confirming) {
+    try {
+      const order = await getOrderForEmail(orderId)
+      if (order?.customer?.email) {
+        await sendOrderConfirmedEmail({
+          toEmail: order.customer.email,
+          customerName: order.customer.name || undefined,
+          orderNumber: order.order_number,
+          total: order.total,
+          items: order.order_items.map((item) => ({
+            productName: item.product_name,
+            quantity: item.quantity,
+            price: item.unit_price,
+          })),
+          deliveryType: order.delivery_type,
+        })
+      }
+    } catch (emailError) {
+      // Log error but don't fail the mark-as-paid action
+      console.error("Failed to send order confirmed email:", emailError)
     }
-  } catch (emailError) {
-    // Log error but don't fail the mark-as-paid action
-    console.error("Failed to send order confirmed email:", emailError)
   }
 
   redirect(`/admin/orders/${orderId}`)
@@ -141,34 +173,38 @@ export async function markDelivered(orderId: string) {
 export async function cancelOrder(orderId: string) {
   await requireAdmin()
 
-  const { data: before, error: readError } = await supabaseAdmin
-    .from("orders")
-    .select("status, payment_status, order_number, customer:customers(email, name)")
-    .eq("id", orderId)
-    .maybeSingle()
-  if (readError) throw new Error(readError.message)
-  if (!before) throw new Error("Order not found")
-  // Already cancelled (double click / stale page): don't cancel or e-mail twice.
-  if (before.status === "cancelled") redirect(`/admin/orders/${orderId}`)
-
-  const { error } = await supabaseAdmin
-    .from("orders")
-    .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-    .eq("id", orderId)
-  if (error) throw new Error(error.message)
+  // One database call cancels the order AND puts its plants back in stock, atomically
+  // (see cancel_order() in the migrations). It refuses orders that have already shipped.
+  const { data, error } = await supabaseAdmin.rpc("cancel_order", { p_order_id: orderId, p_reason: "admin" })
+  if (error) {
+    if (error.message.includes("ORDER_ALREADY_SHIPPED")) {
+      throw new Error("This order has already shipped, so it can't be cancelled here. Handle it as a return instead.")
+    }
+    if (error.message.includes("ORDER_NOT_FOUND")) throw new Error("Order not found")
+    throw new Error(error.message)
+  }
+  const result = data as { order_number: string; already_cancelled: boolean; payment_status: string }
+  // Already cancelled (double click / stale page): don't e-mail twice.
+  if (result.already_cancelled) redirect(`/admin/orders/${orderId}`)
 
   // Tell the customer: "cancelled because the invoice wasn't cleared -- book again any time".
   // Skipped for orders that were already PAID: that wording would be wrong for a customer who
   // paid, so a cancelled paid order needs a personal message from you instead.
-  if (before.payment_status !== "paid") {
+  if (result.payment_status !== "paid") {
     try {
-      const customer = before.customer as unknown as { email: string; name: string | null } | null
-      if (customer?.email) {
+      const { data: order } = await supabaseAdmin
+        .from("orders")
+        .select("order_number, customer:customers(email, name)")
+        .eq("id", orderId)
+        .maybeSingle()
+      const customer = order?.customer as unknown as { email: string; name: string | null } | null
+      if (order && customer?.email) {
         await sendOrderCancelledEmail({
           toEmail: customer.email,
           customerName: customer.name,
-          orderNumber: before.order_number,
+          orderNumber: order.order_number,
         })
+        await supabaseAdmin.from("orders").update({ cancellation_email_sent_at: new Date().toISOString() }).eq("id", orderId)
       }
     } catch (emailError) {
       // The order is already cancelled; don't fail the action because the e-mail didn't go out.

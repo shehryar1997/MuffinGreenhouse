@@ -4,30 +4,18 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { createServerClient } from "@/lib/supabase/server-client"
+import { sendOtpEmail } from "@/lib/email/send-otp-email"
+import { allowHit, callerIp } from "@/lib/db-rate-limit"
+import { issueOtp } from "@/lib/otp"
 
 export interface LoginResult {
   success: boolean
   error?: string
-}
-
-// Resolves an email-or-phone input to the account's email, with no sign-in
-// or redirect side effects. Used by any client component (e.g. checkout's
-// inline sign-in) that needs to call supabase.auth.signInWithPassword
-// itself from the browser client rather than the server-redirecting flow
-// below. Looking up a customer by phone requires the service-role client,
-// which is why this has to be a server action rather than done client-side.
-export async function resolveEmailOrPhone(emailOrPhone: string): Promise<string | null> {
-  if (!emailOrPhone.trim()) return null
-  if (emailOrPhone.includes("@")) return emailOrPhone.trim().toLowerCase()
-
-  const { data: customer, error } = await supabaseAdmin
-    .from("customers")
-    .select("email")
-    .eq("phone", emailOrPhone.trim())
-    .single()
-
-  if (error || !customer) return null
-  return customer.email
+  /** Correct password, but the e-mail was never verified: the UI shows the code entry step. */
+  needsVerification?: boolean
+  customerId?: string
+  email?: string
+  canResendAt?: string
 }
 
 // Only ever redirect to a path within this site. `returnTo` comes from a URL
@@ -40,16 +28,20 @@ function safeReturnTo(returnTo: string | null | undefined): string {
   return returnTo
 }
 
+const GENERIC_ERROR = "Incorrect email/phone or password"
+
 export async function loginWithPassword(
   emailOrPhone: string,
   password: string,
   returnTo?: string | null
 ): Promise<LoginResult> {
-  if (!emailOrPhone.trim()) {
-    return { success: false, error: "Incorrect email/phone or password" }
+  if (!emailOrPhone.trim() || !password) {
+    return { success: false, error: GENERIC_ERROR }
   }
-  if (!password) {
-    return { success: false, error: "Incorrect email/phone or password" }
+
+  const ip = await callerIp()
+  if (!(await allowHit(`login-ip:${ip}`, 30, 10 * 60))) {
+    return { success: false, error: "Too many sign-in attempts. Please wait a few minutes and try again." }
   }
 
   let email: string
@@ -59,18 +51,18 @@ export async function loginWithPassword(
     email = emailOrPhone.trim().toLowerCase()
   } else {
     // It's a phone number - look up the matching customer to get their email
-    const phone = emailOrPhone.trim()
-    const { data: customer, error: lookupError } = await supabaseAdmin
+    const { data: customer } = await supabaseAdmin
       .from("customers")
       .select("email")
-      .eq("phone", phone)
-      .single()
+      .eq("phone", emailOrPhone.trim())
+      .not("auth_id", "is", null)
+      .limit(1)
+      .maybeSingle()
 
-    if (lookupError || !customer) {
-      // ponytail: Same generic error whether phone not found or password wrong
-      return { success: false, error: "Incorrect email/phone or password" }
+    if (!customer) {
+      // Same generic error whether phone not found or password wrong
+      return { success: false, error: GENERIC_ERROR }
     }
-
     email = customer.email
   }
 
@@ -78,13 +70,28 @@ export async function loginWithPassword(
   const cookieStore = await cookies()
   const supabase = createServerClient(cookieStore)
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    return { success: false, error: "Incorrect email/phone or password" }
+    // Supabase only reports "not confirmed" AFTER the password checked out, so this reveals nothing
+    // to someone guessing. It means sign-up was never finished: send a fresh code and continue there.
+    if (error.code === "email_not_confirmed") {
+      const { data: customer } = await supabaseAdmin.from("customers").select("id").eq("email", email).maybeSingle()
+      if (customer) {
+        const issued = await issueOtp(customer.id, "verify")
+        if (issued.ok) {
+          try {
+            await sendOtpEmail(email, issued.code, "verify")
+          } catch (mailError) {
+            console.error("Failed to send verification code at login:", mailError)
+          }
+          return { success: false, needsVerification: true, customerId: customer.id, email, canResendAt: issued.canResendAt }
+        }
+        // A code was sent moments ago: let them use it.
+        return { success: false, needsVerification: true, customerId: customer.id, email }
+      }
+    }
+    return { success: false, error: GENERIC_ERROR }
   }
 
   // Success - redirect back to where the user started (e.g. /checkout), or

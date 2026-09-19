@@ -18,7 +18,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group toast group-[.toaster]:bg-cream-100 group-[.toaster]:text-forest-900 group-[.toaster]:border-forest-200 group-[.toaster]:shadow-lg",
           description: "group-[.toast]:text-forest-600",
           actionButton:
-            "group-[.toast]:bg-clay-500 group-[.toast]:text-cream-50",
+            "group-[.toast]:bg-clay-500 group-[.toast]:text-white",
           cancelButton:
             "group-[.toast]:bg-muted group-[.toast]:text-forest-500",
         },

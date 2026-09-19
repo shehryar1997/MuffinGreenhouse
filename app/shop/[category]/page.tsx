@@ -54,7 +54,7 @@ const categoryMetadata: Record<string, { title: string; description: string }> =
   },
   all: {
     title: "All Plants & Supplies",
-    description: "Browse our full collection of locally grown indoor plants, pots, fertilizers, and tools. Home delivery available in Karachi and across Pakistan.",
+    description: "Browse our full collection of indoor plants sourced worldwide and propagated in Karachi, pots, fertilizers, and tools. Home delivery available in Karachi and across Pakistan.",
   },
 }
 

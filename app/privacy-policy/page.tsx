@@ -22,7 +22,7 @@ export default function PrivacyPolicyPage() {
           </p>
         </section>
 
-        <div className="bg-white rounded-sm p-8 lg:p-12 border border-forest-950/10">
+        <div className="bg-surface rounded-sm p-8 lg:p-12 border border-forest-950/10">
           <div className="space-y-6 text-forest-950/80">
             
             <div className="bg-amber-50 border border-amber-200 rounded-sm p-4">
@@ -105,7 +105,7 @@ export default function PrivacyPolicyPage() {
             <div>
               <h2 className="font-serif text-2xl text-forest-950 mb-3">7. Your Rights</h2>
               <p className="leading-relaxed">
-                Under PECA 2016 and consumer protection principles, you may request access, correction, or deletion of your data. Contact us via WhatsApp at +92 309 5360009.
+                Under PECA 2016 and consumer protection principles, you may request access, correction, or deletion of your data. Contact us via WhatsApp at +92 309 5360009 or e-mail support@muffinplants.com.
               </p>
             </div>
 

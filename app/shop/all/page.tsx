@@ -7,7 +7,7 @@ export const revalidate = 300
 
 export const metadata: Metadata = {
   title: "All Plants",
-  description: "Browse our full collection of locally grown indoor plants. Home delivery available in Karachi and across Pakistan.",
+  description: "Browse our full collection of indoor plants sourced worldwide and propagated in Karachi. Home delivery available in Karachi and across Pakistan.",
   alternates: { canonical: "/shop/all" },
 }
 

@@ -34,7 +34,7 @@ export function MuffinPageClient() {
   const handleSend = () => send(input)
 
   return (
-    <div className="bg-forest-950 min-h-[calc(100vh-80px)] flex flex-col">
+    <div className="bg-ink min-h-[calc(100vh-80px)] flex flex-col">
       <div className="flex-1 container mx-auto px-4 max-w-3xl py-8 flex flex-col">
         <div className="text-center mb-6">
           <h1 className="inline-flex items-center gap-2 px-4 py-2 bg-sprout-300/20 rounded-full">
@@ -47,10 +47,10 @@ export function MuffinPageClient() {
           <AnimatePresence>
             {messages.map((m) => (
               <motion.div key={m.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-4 ${m.sender === "user" ? "flex-row-reverse" : ""}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${m.sender === "bot" ? "bg-clay-500" : "bg-forest-700"}`}>
-                  {m.sender === "bot" ? <Bot className="w-5 h-5 text-white" /> : <User className="w-5 h-5 text-cream-100" />}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${m.sender === "bot" ? "bg-clay-500" : "bg-ink-muted"}`}>
+                  {m.sender === "bot" ? <Bot className="w-5 h-5 text-white" /> : <User className="w-5 h-5 text-paper" />}
                 </div>
-                <div className={`max-w-[75%] p-4 rounded-2xl ${m.sender === "bot" ? "bg-cream-100 text-forest-900 rounded-tl-none" : "bg-clay-500 text-white rounded-tr-none"}`}>
+                <div className={`max-w-[75%] p-4 rounded-2xl ${m.sender === "bot" ? "bg-paper text-ink rounded-tl-none" : "bg-clay-500 text-white rounded-tr-none"}`}>
                   <p>{m.text}</p>
                 </div>
               </motion.div>
@@ -60,10 +60,10 @@ export function MuffinPageClient() {
 
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2 px-4">
-            {quickReplies.map(reply => <button key={reply} type="button" onClick={() => send(reply)} className="px-4 py-2 text-sm bg-white/10 text-cream-100 rounded-full hover:bg-white/20 transition-colors">{reply}</button>)}
+            {quickReplies.map(reply => <button key={reply} type="button" onClick={() => send(reply)} className="px-4 py-2 text-sm bg-white/10 text-paper rounded-full hover:bg-white/20 transition-colors">{reply}</button>)}
           </div>
           <div className="flex gap-2">
-            <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSend()} placeholder="Type your question..." aria-label="Type your question" className="flex-1 bg-white/10 border-white/20 text-cream-100 placeholder:text-cream-300/70" />
+            <Input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSend()} placeholder="Type your question..." aria-label="Type your question" className="flex-1 bg-white/10 border-white/20 text-paper placeholder:text-paper-dim/70" />
             <Button onClick={handleSend} className="bg-clay-500 hover:bg-clay-600" aria-label="Send message"><Send className="w-4 h-4" aria-hidden="true" /></Button>
           </div>
         </div>

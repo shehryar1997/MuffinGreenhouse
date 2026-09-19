@@ -9,6 +9,10 @@ import { PUBLIC_BASE_URL, getR2Client } from "@/lib/r2"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
+// Where an upload is filed in the bucket. The daily orphan-image sweep only ever looks inside
+// products/, so event and journal covers are never mistaken for abandoned product photos.
+const FOLDERS = ["products", "events", "journal"] as const
+
 const MAX_EDGE_PX = 2000
 // Vercel rejects request bodies over ~4.5MB before this handler ever runs, so
 // the form downscales client-side first. This cap only guards other hosts/callers.
@@ -23,6 +27,7 @@ export async function POST(request: Request) {
   }
 
   let file: File
+  let folder: (typeof FOLDERS)[number] = "products"
   try {
     const form = await request.formData()
     const entry = form.get("file")
@@ -30,6 +35,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No image file provided (expected multipart field 'file')." }, { status: 400 })
     }
     file = entry
+    const requested = form.get("folder")
+    if (typeof requested === "string" && (FOLDERS as readonly string[]).includes(requested)) {
+      folder = requested as (typeof FOLDERS)[number]
+    }
   } catch {
     return NextResponse.json({ error: "Request must be multipart/form-data." }, { status: 400 })
   }
@@ -57,7 +66,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })
   }
 
-  const key = `products/${crypto.randomUUID()}.avif`
+  const key = `${folder}/${crypto.randomUUID()}.avif`
   try {
     await r2.client.send(
       new PutObjectCommand({

@@ -8,6 +8,8 @@ import {
   Users,
   ShoppingCart,
   Mail,
+  CalendarDays,
+  BookOpen,
   LogOut,
   Sprout,
   ChevronRight,
@@ -23,6 +25,8 @@ const navItems = [
   { href: "/admin/products", label: "Products", icon: Package, color: "#E85D2C" },
   { href: "/admin/customers", label: "Customers", icon: Users, color: "#3f6b3f" },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart, color: "#7EC8E3" },
+  { href: "/admin/events", label: "Events", icon: CalendarDays, color: "#8B5CF6" },
+  { href: "/admin/journal", label: "Journal", icon: BookOpen, color: "#0EA5A4" },
   { href: "/admin/email", label: "Email", icon: Mail, color: "#D4F542" },
 ]
 
@@ -40,9 +44,14 @@ async function logout() {
   window.alert("Couldn't log out. Check your connection and try again.")
 }
 
+// "/admin" (Dashboard) must match exactly: every admin URL starts with it.
+function isNavActive(pathname: string, href: string) {
+  return href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(href + "/")
+}
+
 function NavLink({ href, icon: Icon, label, color }: { href: string; icon: React.ElementType; label: string; color: string }) {
   const pathname = usePathname()
-  const isActive = pathname.startsWith(href) || (href === "/admin/products" && pathname === "/admin")
+  const isActive = isNavActive(pathname, href)
 
   return (
     <Link href={href} className="group relative">
@@ -182,7 +191,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                       onClick={() => setMobileMenuOpen(false)}
                       className={cn(
                         "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
-                        pathname.startsWith(item.href)
+                        isNavActive(pathname, item.href)
                           ? "bg-[#E85D2C]/10 text-[#E85D2C]"
                           : "text-neutral-600 hover:bg-neutral-100"
                       )}

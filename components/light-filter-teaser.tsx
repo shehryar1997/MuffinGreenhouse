@@ -45,7 +45,7 @@ export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
                 transition-all duration-300 ease-out
                 ${isSelected 
                   ? "bg-clay-500 text-white shadow-lg shadow-clay-500/25 scale-105" 
-                  : "bg-white text-forest-600 border border-forest-200 hover:border-clay-400 hover:text-clay-600"
+                  : "bg-surface text-forest-600 border border-forest-200 hover:border-clay-400 hover:text-clay-600"
                 }
               `}
               aria-pressed={isSelected}
@@ -56,7 +56,7 @@ export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
                   className={`w-2 h-2 rounded-full transition-colors duration-300 ${
                     light === "low" ? "bg-amber-400" : 
                     light === "medium" ? "bg-amber-500" : "bg-amber-600"
-                  } ${isSelected ? "bg-white/90" : ""}`}
+                  } ${isSelected ? "bg-surface/90" : ""}`}
                   aria-hidden="true"
                 />
                 {lightLevelLabels[light]}
@@ -106,11 +106,11 @@ export function LightFilterTeaser({ products }: LightFilterTeaserProps) {
                     )}
                     
                     {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-forest-900/0 group-hover:bg-forest-900/20 transition-colors duration-300" />
+                    <div className="absolute inset-0 bg-ink/0 group-hover:bg-ink/20 transition-colors duration-300" />
                     
                     {/* Stock badge */}
                     {product.stockStatus === "out_of_stock" && (
-                      <span className="absolute top-2 left-2 font-mono text-xs tracking-wider uppercase bg-forest-900/80 text-white px-2 py-1 rounded-sm">
+                      <span className="absolute top-2 left-2 font-mono text-xs tracking-wider uppercase bg-ink/80 text-white px-2 py-1 rounded-sm">
                         Sold Out
                       </span>
                     )}

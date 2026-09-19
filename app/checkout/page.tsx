@@ -403,7 +403,7 @@ export default function CheckoutPage() {
                   )}
 
                   {/* Delivery Form */}
-                  <div className="p-6 bg-white border border-forest-200 rounded-xl">
+                  <div className="p-6 bg-surface border border-forest-200 rounded-xl">
                     {/* Email */}
                     <div className="mb-4">
                       <label htmlFor="email" className="block text-sm font-medium text-forest-700 mb-1">Email Address <span className="text-red-500">*</span></label>
@@ -538,7 +538,7 @@ export default function CheckoutPage() {
                   </button>
 
                   {/* Review & Place Order */}
-                  <div className="p-8 bg-white border border-forest-200 rounded-xl text-center">
+                  <div className="p-8 bg-surface border border-forest-200 rounded-xl text-center">
                     <div className="w-16 h-16 bg-forest-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Package className="w-8 h-8 text-forest-500" />
                     </div>
@@ -553,7 +553,7 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Delivery Summary */}
-                  <div className="p-6 bg-white border border-forest-200 rounded-xl">
+                  <div className="p-6 bg-surface border border-forest-200 rounded-xl">
                     <h3 className="font-medium text-forest-900 mb-4">Delivery Summary</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between"><span className="text-forest-500">Name</span><span className="text-forest-900">{formData.fullName}</span></div>
@@ -634,7 +634,7 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
 // Order Summary Component
 function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCalculatingDeliveryFee, deliveryFeeError, currentStep }: { items: CartItem[]; subtotal: number; deliveryFee: number; deliveryType: "delivery" | "pickup"; total: number; isCalculatingDeliveryFee?: boolean; deliveryFeeError?: string | null; currentStep?: number }) {
   return (
-    <div className="p-6 bg-white border border-forest-200 rounded-xl">
+    <div className="p-6 bg-surface border border-forest-200 rounded-xl">
       <h2 className="font-serif text-xl mb-6">Order Summary</h2>
       <div className="space-y-4 mb-6">
         {items.map((item) => {

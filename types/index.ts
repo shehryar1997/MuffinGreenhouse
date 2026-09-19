@@ -164,20 +164,29 @@ export interface Badge {
   unlockedAt?: string
 }
 
+export type EventType = "workshop" | "tour" | "market"
+export type EventStatus = "draft" | "published" | "cancelled"
+
 export interface Event {
   id: string
   slug: string
   title: string
   description: string
-  type: "workshop" | "tour" | "market"
+  type: EventType
+  status: EventStatus
   datetime: string
+  endDatetime: string | null
   location: string
   price: number
   spotsTotal: number
   spotsRemaining: number
-  image: string
+  maxSpotsPerBooking: number
+  whatToExpect: string[]
+  image: string | null
+  /** Derived: still in the future and not cancelled. */
   isUpcoming: boolean
 }
+
 export interface JournalPost {
   id: string
   slug: string
@@ -185,9 +194,13 @@ export interface JournalPost {
   excerpt: string
   content: string
   author: string
-  coverImage: string
+  coverImage: string | null
   tags: string[]
-  publishedAt: string
+  isFeatured: boolean
+  metaTitle: string | null
+  metaDescription: string | null
+  /** null while the post is a draft. */
+  publishedAt: string | null
 }
 
 // Muffin Intelligence types

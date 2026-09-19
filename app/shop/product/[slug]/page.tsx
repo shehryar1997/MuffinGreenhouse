@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   
   return {
     title: `${product.name}`,
-    description: `${product.description} Buy ${product.name} online in Karachi. Locally grown, climate-acclimated plants with care tips. Home delivery across Pakistan.`,
+    description: `${product.description} Buy ${product.name} online in Karachi. Healthy plants with care tips. Home delivery across Pakistan.`,
     alternates: { canonical: `/shop/product/${slug}` },
   }
 }

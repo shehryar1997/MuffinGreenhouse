@@ -8,9 +8,9 @@ export function VisitUsClient() {
     <div className="bg-cream-100 min-h-screen">
       <div className="container mx-auto px-4 pt-32 pb-20 max-w-5xl">
         <div className="text-center mb-16">
-          <p className="font-mono text-sm text-forest-500 mb-2">Location</p>
-          <h1 className="font-serif text-display text-forest-900 mb-4">Visit the Nursery</h1>
-          <p className="text-forest-600 max-w-xl mx-auto">Browse plants in person, get advice from our team, and say hi to Bruno.</p>
+          <p className="font-mono text-sm text-forest-500 mb-2">Pickup &amp; visits</p>
+          <h1 className="font-serif text-display text-forest-900 mb-4">Pickup &amp; Visits</h1>
+          <p className="text-forest-600 max-w-xl mx-auto">Collect your order or drop in to see the plants in person. We arrange every visit on WhatsApp.</p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12">
@@ -22,9 +22,8 @@ export function VisitUsClient() {
                   <MapPin className="w-6 h-6 text-forest-700" />
                 </div>
                 <div>
-                  <h2 className="font-serif text-xl text-forest-900 mb-1">Pickup Point</h2>
-                  <p className="text-forest-600">Lane 5, Street 10, DHA Phase 6, Karachi</p>
-                  <p className="text-forest-500 text-sm mt-2">The green gate is hard to miss</p>
+                  <h2 className="font-serif text-xl text-forest-900 mb-1">Pickup by arrangement</h2>
+                  <p className="text-forest-600">We&apos;re based in Karachi. We share the exact address on WhatsApp once your visit is arranged.</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -32,13 +31,13 @@ export function VisitUsClient() {
                   <Clock className="w-6 h-6 text-clay-500" />
                 </div>
                 <div>
-                  <h3 className="font-medium text-forest-900">Hours</h3>
-                  <p className="text-forest-600">Daily 10am to 7pm</p>
+                  <h3 className="font-medium text-forest-900">Pick a time that suits you</h3>
+                  <p className="text-forest-600">Message us on WhatsApp and we&apos;ll agree a slot.</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-forest-950 text-cream-100 rounded-2xl p-8">
+            <div className="bg-ink text-paper border border-paper/10 rounded-2xl p-8">
               <h3 className="font-serif text-xl mb-4">What to expect</h3>
               <ul className="space-y-4">
                 <li className="flex items-center gap-3">
@@ -93,12 +92,11 @@ export function VisitUsClient() {
         </div>
 
         <div
-          className="mt-16 bg-white border border-forest-200/50 rounded-2xl p-8 text-center max-w-2xl mx-auto"
+          className="mt-16 bg-surface border border-forest-200/50 rounded-2xl p-8 text-center max-w-2xl mx-auto"
         >
           <Car className="w-10 h-10 text-clay-500 mx-auto mb-4" />
           <p className="text-forest-600">
-            <strong>Free parking</strong> available on the lane. For all Karachi orders, 
-            we offer free pickup or delivery starting at PKR 200.
+            <strong>Pickup is free.</strong> Prefer delivery? It&apos;s a flat PKR 400 across Karachi for up to 4 items.
           </p>
         </div>
       </div>

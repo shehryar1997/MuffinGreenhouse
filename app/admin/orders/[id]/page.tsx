@@ -102,10 +102,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   </ConfirmSubmitButton>
                 </form>
               )}
-              {order.status !== "cancelled" && order.status !== "delivered" && (
+              {/* Shipped plants have left the greenhouse, so their stock can't be returned: no cancel from here on. */}
+              {order.status !== "cancelled" && order.status !== "delivered" && order.status !== "shipped" && (
                 <form action={cancelOrderForOrder}>
                   <ConfirmSubmitButton
-                    message={`Cancel order ${order.order_number}?${order.payment_status !== "paid" ? " The customer will be e-mailed that the order was cancelled because the invoice wasn't cleared." : " This order is already paid, so no cancellation e-mail will be sent."}`}
+                    message={`Cancel order ${order.order_number}? Its plants go back in stock.${order.payment_status !== "paid" ? " The customer will be e-mailed that the order was cancelled because the invoice wasn't cleared." : " This order is already paid, so no cancellation e-mail will be sent."}`}
                     className="bg-white border border-red-200 text-red-700 rounded px-4 py-2 text-sm font-medium hover:bg-red-50"
                   >
                     Cancel Order

@@ -80,7 +80,7 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
                       {isPlantCategory && (
                         <div>
                           <select 
-                            className="font-mono text-sm text-forest-700 bg-white border border-forest-200 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-clay-300"
+                            className="font-mono text-sm text-forest-700 bg-surface border border-forest-200 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-clay-300"
                             value={filters.sort || 'new'}
                             onChange={(e) => updateFilter('sort', e.target.value)}
                           >
@@ -94,13 +94,13 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
                     </div>
                     {products.length === 0 && !hasActiveFilters ? (
                       // A category with no stock yet is not a filter problem: say so and offer a way forward.
-                      <div className="text-center py-20 bg-white rounded-lg border border-forest-200">
+                      <div className="text-center py-20 bg-surface rounded-lg border border-forest-200">
                         <p className="text-forest-800 text-lg mb-2">Nothing in {meta.title} just yet.</p>
                         <p className="text-forest-600 mb-4">New plants arrive often. Meanwhile, have a look at everything we have.</p>
                         <Link href="/shop/all" className="text-clay-600 underline font-medium">Browse all plants</Link>
                       </div>
                     ) : products.length === 0 ? (
-                      <div className="text-center py-20 bg-white rounded-lg border border-forest-200">
+                      <div className="text-center py-20 bg-surface rounded-lg border border-forest-200">
                         <p className="text-forest-600 text-lg mb-2">No items match your filters.</p>
                         <button onClick={clearFilters} className="text-clay-500 hover:text-clay-600 underline font-medium">
                           Clear all filters

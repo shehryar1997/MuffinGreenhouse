@@ -25,7 +25,7 @@ interface ProductCardProps {
 export function ProductCard({ product, index = 0, className }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false)
-  const { addItem, toggleCart } = useCart()
+  const { addItem } = useCart()
   const { isWishlisted, toggleWishlist } = useWishlist()
   const router = useRouter()
   const wishlisted = isWishlisted(product.id)
@@ -42,8 +42,8 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
       router.push(`/shop/product/${product.slug}`)
       return
     }
+    // Adding opens the cart drawer, which is the confirmation (a toast on top of it said the same thing twice).
     addItem(product, product.variants[0], 1)
-    toast(`${product.name} added to cart`, { action: { label: "View Cart", onClick: () => toggleCart(true) } })
   }
 
   const handleToggleWishlist = async (e: React.MouseEvent) => {

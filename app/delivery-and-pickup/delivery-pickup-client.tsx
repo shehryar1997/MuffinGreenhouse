@@ -14,7 +14,7 @@ export function DeliveryPickupClient() {
         <div className="space-y-8">
           {/* Karachi */}
           <div
-            className="bg-white rounded-2xl p-8 border border-forest-200/50"
+            className="bg-surface rounded-2xl p-8 border border-forest-200/50"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-sprout-300/20 rounded-xl flex items-center justify-center">
@@ -42,19 +42,19 @@ export function DeliveryPickupClient() {
               </div>
               <div>
                 <h2 className="font-serif text-xl text-forest-900">Self Pickup</h2>
-                <p className="text-forest-500">DHA Phase 6, Karachi. The green gate you can&apos;t miss</p>
+                <p className="text-forest-500">Free, by arrangement in Karachi</p>
               </div>
             </div>
             <ul className="space-y-2 text-forest-700">
-              <li>Your pre-booked plants ready for pickup at the gate, quick and hassle-free</li>
+              <li>Choose Pickup at checkout, then message us on WhatsApp and we&apos;ll share the address</li>
               <li>Personal care advice from the Muffinman himself (yes, he&apos;s real)</li>
-              <li>Open daily 12 PM to 9 PM for your botanical convenience</li>
+              <li>We agree a pickup time with you, so your plants are packed and waiting</li>
             </ul>
           </div>
 
           {/* Other Cities */}
           <div
-            className="bg-white rounded-2xl p-8 border border-forest-200/50"
+            className="bg-surface rounded-2xl p-8 border border-forest-200/50"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-forest-200/50 rounded-xl flex items-center justify-center">
@@ -76,12 +76,12 @@ export function DeliveryPickupClient() {
 
           {/* Guarantee */}
           <div
-            className="bg-forest-950 text-cream-100 rounded-2xl p-8 text-center"
+            className="bg-ink text-paper border border-paper/10 rounded-2xl p-8 text-center"
           >
             <Clock className="w-10 h-10 mx-auto mb-4 opacity-80" />
             <p className="text-lg">
-              <strong>Plant Health Check:</strong> Share photos within 2 hours of delivery.<br/>
-              We offer replacement or store credit for dead plants, your choice.<br/>
+              <strong>Plant Health Check:</strong> Share photos within 2 hours of receiving your package.<br/>
+              Return a dead or damaged plant and choose a replacement or store credit.<br/>
               We package with care. You care for plants. We both win.
             </p>
           </div>

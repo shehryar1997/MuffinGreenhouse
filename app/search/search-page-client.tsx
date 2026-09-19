@@ -71,7 +71,7 @@ export function SearchPageClient({
                   <Link
                     key={category.id}
                     href={category.href}
-                    className="group block p-4 bg-white border border-forest-100 rounded-lg hover:border-forest-200 hover:shadow-sm transition-all"
+                    className="group block p-4 bg-surface border border-forest-100 rounded-lg hover:border-forest-200 hover:shadow-sm transition-all"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-forest-800 group-hover:text-primary transition-colors">
@@ -112,7 +112,7 @@ function ZeroResultsState({ query, popularCategories }: { query: string; popular
               <Link
                 key={category.id}
                 href={category.href}
-                className="group block p-3 bg-white border border-forest-100 rounded-lg hover:border-forest-200 hover:shadow-sm transition-all"
+                className="group block p-3 bg-surface border border-forest-100 rounded-lg hover:border-forest-200 hover:shadow-sm transition-all"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-sm text-forest-800 group-hover:text-primary transition-colors">

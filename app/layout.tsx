@@ -40,11 +40,11 @@ export const metadata: Metadata = {
     default: "Buy Plants Online in Karachi - Muffin Greenhouse",
     template: "%s - Muffin Greenhouse",
   },
-  description: "Locally grown indoor plants, pots, and plant care supplies for Karachi homes. Delivery across Pakistan with care tips and 30-day plant guarantee.",
+  description: "Healthy indoor plants sourced from around the world and propagated in Karachi. Pots, plant care supplies and honest care tips, delivered across Pakistan.",
   keywords: ["plants", "nursery", "Karachi", "Pakistan", "succulents", "aroids", "hoya", "monstera", "indoor plants", "snake plant", "online plant shop"],
   openGraph: {
     title: "Muffin Greenhouse - Good Plants. Good Energy.",
-    description: "Locally grown indoor plants for Karachi homes. Delivery across Pakistan.",
+    description: "Indoor plants sourced worldwide and propagated in Karachi. Delivery across Pakistan.",
     type: "website",
     locale: "en_PK",
     siteName: "Muffin Greenhouse",

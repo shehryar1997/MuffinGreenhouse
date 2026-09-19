@@ -1,12 +1,14 @@
 "use client"
 
 import { Suspense, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Leaf, Eye, EyeOff } from "lucide-react"
+import { toast } from "sonner"
 import { loginWithPassword } from "./actions"
+import { resendOTP, signInAfterVerification, verifyOTP } from "../register/actions"
 
 export function LoginPageClient() {
   return (
@@ -17,6 +19,7 @@ export function LoginPageClient() {
 }
 
 function LoginForm() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const returnTo = searchParams.get("returnTo")
   const prefillEmail = searchParams.get("email")
@@ -26,6 +29,9 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  // Set when the password was right but sign-up was never finished (e-mail not verified yet).
+  const [pendingVerify, setPendingVerify] = useState<{ customerId: string; email: string } | null>(null)
+  const [code, setCode] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,10 +42,50 @@ function LoginForm() {
 
     setIsLoading(false)
 
+    if (result.needsVerification && result.customerId && result.email) {
+      setPendingVerify({ customerId: result.customerId, email: result.email })
+      setCode("")
+      toast.success("We've e-mailed you a 6-digit code")
+      return
+    }
     if (!result.success && result.error) {
       setError(result.error)
     }
     // On success, the server action handles redirect
+  }
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pendingVerify) return
+    setError(null)
+    setIsLoading(true)
+    const verified = await verifyOTP(pendingVerify.customerId, code)
+    if (!verified.success) {
+      setIsLoading(false)
+      setError(verified.error ?? "Verification failed")
+      return
+    }
+    const signedIn = await signInAfterVerification(pendingVerify.email, password)
+    setIsLoading(false)
+    if (!signedIn.success) {
+      setPendingVerify(null)
+      setError("Your e-mail is verified. Please sign in again.")
+      return
+    }
+    toast.success("Email verified. Welcome!")
+    const safe = returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "/account"
+    router.push(safe)
+    router.refresh()
+  }
+
+  const handleResend = async () => {
+    if (!pendingVerify) return
+    setError(null)
+    setIsLoading(true)
+    const r = await resendOTP(pendingVerify.customerId)
+    setIsLoading(false)
+    if (r.success) toast.success("New code sent")
+    else setError(r.error ?? "Couldn't send a new code")
   }
 
   return (
@@ -53,6 +99,40 @@ function LoginForm() {
           <p className="text-forest-600 mt-2">Sign in to your Muffin account</p>
         </div>
 
+        {pendingVerify ? (
+          <form onSubmit={handleVerify} className="space-y-4">
+            <p className="text-sm text-forest-700">
+              Your account isn&apos;t verified yet. Enter the 6-digit code we sent to <strong>{pendingVerify.email}</strong> to finish signing in.
+            </p>
+            <Input
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              aria-label="6-digit verification code"
+              className="tracking-[0.4em] text-center text-lg"
+              disabled={isLoading}
+              required
+            />
+            {error && (
+              <p className="text-sm text-red-600" role="alert">
+                {error}
+              </p>
+            )}
+            <Button type="submit" className="w-full" disabled={isLoading || code.length !== 6}>
+              {isLoading ? "Verifying..." : "Verify & sign in"}
+            </Button>
+            <div className="flex items-center justify-between text-sm">
+              <button type="button" onClick={handleResend} disabled={isLoading} className="text-clay-500 hover:underline">
+                Send a new code
+              </button>
+              <button type="button" onClick={() => { setPendingVerify(null); setError(null) }} className="text-forest-600 hover:underline">
+                Back
+              </button>
+            </div>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email-or-phone" className="block text-sm font-medium text-forest-700 mb-1">
@@ -73,9 +153,17 @@ function LoginForm() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-forest-700 mb-1">
-              Password
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-forest-700">
+                Password
+              </label>
+              <Link
+                href={`/account/forgot-password${emailOrPhone.includes("@") ? `?email=${encodeURIComponent(emailOrPhone.trim())}` : ""}`}
+                className="text-xs text-clay-500 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <div className="relative">
               <Input
                 id="password"
@@ -111,6 +199,7 @@ function LoginForm() {
             {isLoading ? "Entering..." : "Enter your Green World 🌱"}
           </Button>
         </form>
+        )}
 
         <div className="mt-8 text-center text-sm text-forest-600">
           Don&apos;t have an account?{" "}

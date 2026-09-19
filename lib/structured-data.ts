@@ -22,10 +22,8 @@ export function generateOrganizationSchema() {
     "description": siteConfig.description,
     "address": {
       "@type": "PostalAddress",
-      "streetAddress": siteConfig.address.street,
       "addressLocality": siteConfig.address.city,
       "addressRegion": "Sindh",
-      "postalCode": siteConfig.address.postalCode,
       "addressCountry": "PK"
     },
     "contactPoint": {
