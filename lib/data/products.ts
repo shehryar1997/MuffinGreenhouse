@@ -4,6 +4,7 @@ import { supabase } from "@/supabase/client"
 import { mapSupabaseProductToProduct } from "./adapters"
 import { SupabaseProduct } from "@/supabase/client"
 import { isPlantProduct, NON_PLANT_CATEGORY_NAMES, NON_PLANT_CATEGORY_SLUGS } from "@/lib/product-categories"
+import { MAX_PRICE } from "@/components/shop/product-filters"
 
 // Re-export static category/use-case display config (not product data)
 export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
@@ -57,25 +58,75 @@ export interface PaginatedProducts {
   totalCount: number
 }
 
+export interface FilterParams {
+  light?: 'low' | 'medium' | 'bright' | 'full_sun'
+  water?: 'low' | 'medium' | 'high'
+  pets?: 'yes' | 'no'
+  min?: number
+  max?: number
+  stock?: 'in'
+  sort?: 'new' | 'price-asc' | 'price-desc' | 'name'
+}
+
 // PostgREST `not.in` drops NULL rows, so each filter also keeps rows with no category.
 // Names are quoted because "Other Equipment" / "Planting Media" contain spaces.
 const NOT_NON_PLANT_SLUG = `category_slug.is.null,category_slug.not.in.(${NON_PLANT_CATEGORY_SLUGS.join(",")})`
 const NOT_NON_PLANT_NAME = `category_name.is.null,category_name.not.in.(${NON_PLANT_CATEGORY_NAMES.map((n) => `"${n}"`).join(",")})`
 
 /** Plants only: "All Plants" excludes the Tools & Equipment categories (they have their own pages). */
-export async function getPaginatedProducts(page: number, pageSize: number = PRODUCTS_PER_PAGE): Promise<PaginatedProducts> {
+export async function getPaginatedProducts(page: number, pageSize: number = PRODUCTS_PER_PAGE, filters?: FilterParams): Promise<PaginatedProducts> {
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("products")
     .select(PRODUCT_SELECT, { count: "exact" })
     .not("published_at", "is", null)
     .or(NOT_NON_PLANT_SLUG)
     .or(NOT_NON_PLANT_NAME)
-    .order("sort_order", { foreignTable: "product_images", ascending: true })
-    .order("sort_order", { foreignTable: "product_variants", ascending: true })
-    .range(from, to)
+
+  // Apply filters
+  if (filters?.light) {
+    query = query.eq("light_requirement", filters.light)
+  }
+  if (filters?.water) {
+    query = query.eq("water_requirement", filters.water)
+  }
+  if (filters?.pets) {
+    const isPetSafe = filters.pets === "yes"
+    query = query.eq("is_pet_safe", isPetSafe)
+  }
+  if (filters?.min !== undefined) {
+    query = query.gte("price", filters.min)
+  }
+  if (filters?.max !== undefined) {
+    query = query.lte("price", filters.max)
+  }
+  if (filters?.stock === 'in') {
+    query = query.eq("stock_status", "in_stock")
+  }
+
+  // Apply sorting
+  switch (filters?.sort) {
+    case 'price-asc':
+      query = query.order("price", { ascending: true })
+      break
+    case 'price-desc':
+      query = query.order("price", { ascending: false })
+      break
+    case 'name':
+      query = query.order("name", { ascending: true })
+      break
+    case 'new':
+    default:
+      query = query.order("published_at", { ascending: false })
+  }
+
+  // Always order images/variants by sort_order
+  query = query.order("sort_order", { foreignTable: "product_images", ascending: true })
+  query = query.order("sort_order", { foreignTable: "product_variants", ascending: true })
+
+  const { data, error, count } = await query.range(from, to)
 
   if (error) {
     console.error("Error fetching paginated products:", error)
@@ -88,18 +139,58 @@ export async function getPaginatedProducts(page: number, pageSize: number = PROD
   }
 }
 
-export async function getPaginatedProductsByCategory(categorySlug: string, page: number, pageSize: number = PRODUCTS_PER_PAGE): Promise<PaginatedProducts> {
+export async function getPaginatedProductsByCategory(categorySlug: string, page: number, pageSize: number = PRODUCTS_PER_PAGE, filters?: FilterParams): Promise<PaginatedProducts> {
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("products")
     .select(PRODUCT_SELECT, { count: "exact" })
     .eq("category_slug", categorySlug)
     .not("published_at", "is", null)
-    .order("sort_order", { foreignTable: "product_images", ascending: true })
-    .order("sort_order", { foreignTable: "product_variants", ascending: true })
-    .range(from, to)
+
+  // Apply filters
+  if (filters?.light) {
+    query = query.eq("light_requirement", filters.light)
+  }
+  if (filters?.water) {
+    query = query.eq("water_requirement", filters.water)
+  }
+  if (filters?.pets) {
+    const isPetSafe = filters.pets === "yes"
+    query = query.eq("is_pet_safe", isPetSafe)
+  }
+  if (filters?.min !== undefined) {
+    query = query.gte("price", filters.min)
+  }
+  if (filters?.max !== undefined) {
+    query = query.lte("price", filters.max)
+  }
+  if (filters?.stock === 'in') {
+    query = query.eq("stock_status", "in_stock")
+  }
+
+  // Apply sorting
+  switch (filters?.sort) {
+    case 'price-asc':
+      query = query.order("price", { ascending: true })
+      break
+    case 'price-desc':
+      query = query.order("price", { ascending: false })
+      break
+    case 'name':
+      query = query.order("name", { ascending: true })
+      break
+    case 'new':
+    default:
+      query = query.order("published_at", { ascending: false })
+  }
+
+  // Always order images/variants by sort_order
+  query = query.order("sort_order", { foreignTable: "product_images", ascending: true })
+  query = query.order("sort_order", { foreignTable: "product_variants", ascending: true })
+
+  const { data, error, count } = await query.range(from, to)
 
   if (error) {
     console.error("Error fetching paginated products by category:", error)
@@ -183,6 +274,28 @@ export async function getProductsByUseCase(useCaseSlug: string): Promise<Product
 
   // Use-case tags are a plant concept; never list Tools & Equipment here.
   return (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct)).filter(isPlantProduct)
+}
+
+export async function getPriceBounds(): Promise<{ min: number; max: number }> {
+  const { data, error } = await supabase
+    .from("products")
+    .select("price")
+    .not("published_at", "is", null)
+    .or(NOT_NON_PLANT_SLUG)
+    .or(NOT_NON_PLANT_NAME)
+
+  if (error || !data) {
+    console.error("Error fetching price bounds:", error)
+    return { min: 0, max: MAX_PRICE }
+  }
+
+  const prices = data.map(row => row.price).filter(price => price > 0)
+  if (prices.length === 0) return { min: 0, max: MAX_PRICE }
+
+  return {
+    min: Math.min(...prices),
+    max: Math.max(...prices)
+  }
 }
 
 export async function getWeeklySoldCount(): Promise<number> {

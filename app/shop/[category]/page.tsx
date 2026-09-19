@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
-import { getPaginatedProductsByCategory, categoryMeta, PRODUCTS_PER_PAGE } from "@/lib/data/products"
+import { getPaginatedProductsByCategory, categoryMeta, PRODUCTS_PER_PAGE, FilterParams, getPriceBounds } from "@/lib/data/products"
 import { ShopCategoryClient } from "./shop-category-client"
+import { MAX_PRICE } from "@/components/shop/product-filters"
 
 export const revalidate = 300
 
@@ -72,20 +73,56 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 
 interface ShopCategoryPageProps {
   params: Promise<{ category: string }>
-  searchParams: Promise<{ page?: string }>
+  searchParams: Promise<{ 
+    page?: string
+    light?: 'low' | 'medium' | 'bright' | 'full_sun'
+    water?: 'low' | 'medium' | 'high'
+    pets?: 'yes' | 'no'
+    min?: string
+    max?: string
+    stock?: 'in'
+    sort?: 'new' | 'price-asc' | 'price-desc' | 'name'
+  }>
 }
 
 export default async function ShopCategoryPage({ params, searchParams }: ShopCategoryPageProps) {
   const { category } = await params
-  const { page } = await searchParams
-  const requestedPage = Math.max(1, parseInt(page ?? "1", 10) || 1)
-  const { products, totalCount } = await getPaginatedProductsByCategory(category, requestedPage, PRODUCTS_PER_PAGE)
+  const paramsObj = await searchParams
+  const requestedPage = Math.max(1, parseInt(paramsObj.page ?? "1", 10) || 1)
+  
+  // Build filter params from search params
+  const filters: FilterParams = {}
+  if (paramsObj.light && ['low', 'medium', 'bright', 'full_sun'].includes(paramsObj.light)) {
+    filters.light = paramsObj.light
+  }
+  if (paramsObj.water && ['low', 'medium', 'high'].includes(paramsObj.water)) {
+    filters.water = paramsObj.water
+  }
+  if (paramsObj.pets && ['yes', 'no'].includes(paramsObj.pets)) {
+    filters.pets = paramsObj.pets
+  }
+  if (paramsObj.min) {
+    const min = parseInt(paramsObj.min, 10)
+    if (!isNaN(min) && min >= 0) filters.min = min
+  }
+  if (paramsObj.max) {
+    const max = parseInt(paramsObj.max, 10)
+    if (!isNaN(max) && max >= 0) filters.max = max
+  }
+  if (paramsObj.stock === 'in') {
+    filters.stock = 'in'
+  }
+  if (paramsObj.sort && ['new', 'price-asc', 'price-desc', 'name'].includes(paramsObj.sort)) {
+    filters.sort = paramsObj.sort
+  }
+
+  const { products, totalCount } = await getPaginatedProductsByCategory(category, requestedPage, PRODUCTS_PER_PAGE, filters)
   const totalPages = Math.max(1, Math.ceil(totalCount / PRODUCTS_PER_PAGE))
 
   // A made-up slug used to render a blank "category" with HTTP 200; only the known categories may be empty.
   if (totalCount === 0 && !categoryMeta[category]) notFound()
 
-  if (requestedPage > totalPages) {
+  if (requestedPage > totalPages && totalPages > 0) {
     redirect(totalPages > 1 ? `/shop/${category}?page=${totalPages}` : `/shop/${category}`)
   }
 
@@ -94,6 +131,11 @@ export default async function ShopCategoryPage({ params, searchParams }: ShopCat
     description: "Browse our collection.",
     tagline: "Quality plants for Karachi.",
   }
+  
+  // Get price bounds for the price slider (only for plant categories)
+  const isPlantCategory = !['fertilizer', 'other-equipment', 'pots', 'planting-media'].includes(category)
+  const priceBounds = isPlantCategory ? await getPriceBounds() : { min: 0, max: MAX_PRICE }
+
   return (
     <ShopCategoryClient
       products={products}
@@ -101,6 +143,9 @@ export default async function ShopCategoryPage({ params, searchParams }: ShopCat
       categorySlug={category}
       currentPage={requestedPage}
       totalPages={totalPages}
+      totalCount={totalCount}
+      filters={filters}
+      priceBounds={priceBounds}
     />
   )
 }
