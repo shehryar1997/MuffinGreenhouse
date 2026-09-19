@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ShoppingBag } from "lucide-react"
 import { Product } from "@/types"
 import { ProductCard } from "@/components/ui/product-card"
+import { useWishlist } from "@/components/providers/wishlist-provider"
 
 interface WishlistClientProps {
   initialProducts: Product[]
@@ -14,7 +15,13 @@ interface WishlistClientProps {
 export function WishlistClient({ initialProducts }: WishlistClientProps) {
   const [products] = useState<Product[]>(initialProducts)
 
-  if (products.length === 0) {
+  // Follow the hearts: un-saving a plant here removes it at once (the grid used to keep the server list until a
+  // refresh), and saving it again brings it back. Until the provider has loaded its own list, show what the
+  // server rendered, so the grid never flashes empty.
+  const { isWishlisted, isLoading, isSignedIn } = useWishlist()
+  const visible = isLoading || !isSignedIn ? products : products.filter((p) => isWishlisted(p.id))
+
+  if (visible.length === 0) {
     return (
       <div className="text-center py-16 lg:py-24">
         <motion.div
@@ -55,7 +62,7 @@ export function WishlistClient({ initialProducts }: WishlistClientProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
       <AnimatePresence mode="popLayout">
-        {products.map((product, index) => (
+        {visible.map((product, index) => (
           <motion.div
             key={product.id}
             layout

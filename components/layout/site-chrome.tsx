@@ -13,6 +13,8 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   const isAdmin = pathname?.startsWith("/admin")
   // On checkout the chat launcher sits over the form fields on phones; the WhatsApp help button stays.
   const isCheckout = pathname?.startsWith("/checkout")
+  // The payment page has its own WhatsApp buttons, and the floating one covered the copy icons on the bank rows.
+  const isPay = pathname?.startsWith("/checkout/pay")
 
   if (isAdmin) {
     return <>{children}</>
@@ -28,7 +30,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <CartDrawer />
       <SearchDrawer />
       {!isCheckout && <MuffinWidget />}
-      <WhatsAppButton />
+      {!isPay && <WhatsAppButton />}
     </div>
   )
 }

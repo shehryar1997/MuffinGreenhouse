@@ -385,8 +385,8 @@ export default function HomeContent({ products }: { products: Product[] }) {
                   className={[
                     "text-[clamp(2.5rem,10vw,5rem)] text-foreground",
                     "text-[clamp(2.5rem,10vw,5rem)] text-foreground",
-                    "text-[clamp(2.5rem,10vw,5rem)] text-sprout-400",
-                    "text-[clamp(2.5rem,10vw,5rem)] text-sprout-400",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-sprout-700",
+                    "text-[clamp(2.5rem,10vw,5rem)] text-sprout-700",
                   ]}
                 />
               </h2>
