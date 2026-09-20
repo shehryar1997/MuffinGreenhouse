@@ -117,6 +117,9 @@ Do not regenerate the full map unless explicitly asked to.
 `lib/rate-limit.test.ts` — Test suite for rate limiting — N/A — N/A
 `lib/UPGRADE-RATE-LIMIT.md` — Upgrade guide for distributed rate limiting — N/A — N/A
 `lib/email/mailer.ts` — The one place e-mail is sent from: Resend first, Mailtrap when Resend's daily/monthly limit is used up — sendEmail, createMailer — resend
+`lib/email/usage.ts` — Records each send attempt in the email_usage table and loads it for the admin stats — recordEmailAttempt, loadEmailUsage — @/supabase/admin-client
+`lib/email/usage-summary.ts` — Pure maths for the admin e-mail stats (today, month, 14-day series) — summarizeUsage, scrubError
+`lib/email/limits.ts` — Per-provider daily/monthly limits shown in the admin (env-overridable) — emailLimits
 `lib/email/send-event-emails.ts` — Event booking e-mails (spot held / booked, payment received) — sendEventBookingReceivedEmail, sendEventPaymentConfirmedEmail — @/lib/email/mailer
 `lib/email/send-otp-email.ts` — OTP email sender — sendOtpEmail — @/lib/email/mailer
 `lib/email/send-order-confirmation.ts` — Order confirmation email sender — sendOrderConfirmationEmail — @/lib/email/mailer

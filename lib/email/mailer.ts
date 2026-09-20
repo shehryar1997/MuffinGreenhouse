@@ -5,9 +5,10 @@
 //   Resend    100 a day, 3,000 a month   (first choice: the domain has been verified there the longest)
 //   Mailtrap  150 a day, 4,000 a month   (takes over when Resend's daily or monthly limit is used up)
 //
-// That is 250 a day in total. The providers themselves enforce their limits and report them in the error, so there
-// is no counter to keep in step: when Resend says "daily quota exceeded" the mailer skips it for a while and uses
+// That is 250 a day in total. The providers themselves enforce their limits and report them in the error, so sending
+// never depends on a counter: when Resend says "daily quota exceeded" the mailer skips it for a while and uses
 // Mailtrap, then tries Resend again later, which also picks up the daily reset without knowing when it happens.
+// Every attempt is also recorded (lib/email/usage.ts -> the email_usage table) so /admin/email can show the numbers.
 //
 // A message a provider rejects as invalid (a bad address, a missing field) is NOT retried elsewhere: the other
 // provider would reject it too, and would only spend some of its quota.
@@ -30,6 +31,15 @@ export interface OutgoingEmail {
 export interface SendResult {
   provider: ProviderName
   id?: string
+}
+
+/** One attempt with one provider, reported to `onAttempt` (the admin panel's usage stats are built from these). */
+export interface EmailAttempt {
+  provider: ProviderName
+  ok: boolean
+  /** Sent by a provider other than the preferred one, because the preferred one couldn't take it. */
+  tookOver: boolean
+  error?: string
 }
 
 /** What went wrong with one attempt, in terms the mailer can act on. */
@@ -155,9 +165,23 @@ export class EmailSendError extends Error {
   }
 }
 
-/** Builds a mailer over the given providers, in order of preference. `now` is injectable for tests. */
-export function createMailer(providers: Provider[], now: () => number = Date.now) {
+export interface MailerOptions {
+  /** Called after every attempt. Must not be needed for sending: errors in it are ignored. */
+  onAttempt?: (attempt: EmailAttempt) => void | Promise<void>
+  /** Injectable clock, for tests. */
+  now?: () => number
+}
+
+/** Builds a mailer over the given providers, in order of preference. */
+export function createMailer(providers: Provider[], { onAttempt, now = Date.now }: MailerOptions = {}) {
   const blockedUntil = new Map<ProviderName, number>()
+  const report = async (attempt: EmailAttempt) => {
+    try {
+      await onAttempt?.(attempt)
+    } catch {
+      // Statistics are a nice-to-have; they must never stop an e-mail.
+    }
+  }
 
   return async function send(mail: OutgoingEmail): Promise<SendResult> {
     const configured = providers.filter((p) => p.isConfigured())
@@ -173,11 +197,14 @@ export function createMailer(providers: Provider[], now: () => number = Date.now
       try {
         const result = await provider.send(mail)
         blockedUntil.delete(provider.name)
+        await report({ provider: provider.name, ok: true, tookOver: provider.name !== configured[0].name })
         if (failures.length > 0) console.warn(`[email] sent through ${provider.name} after: ${failures.map((f) => f.message).join(" | ")}`)
         return result
       } catch (err) {
         const failure = err instanceof ProviderError ? err : new ProviderError(`${provider.name}: ${err instanceof Error ? err.message : "unknown error"}`)
         failures.push({ provider: provider.name, message: failure.message })
+        // A message refused as invalid says nothing about the provider's health, so it isn't counted against it.
+        if (!failure.opts.final) await report({ provider: provider.name, ok: false, tookOver: false, error: failure.message })
         if (failure.opts.quota) blockedUntil.set(provider.name, now() + (failure.opts.quota === "monthly" ? MONTHLY_BACKOFF_MS : DAILY_BACKOFF_MS))
         if (failure.opts.final) break
       }
@@ -208,7 +235,10 @@ let shared: ReturnType<typeof createMailer> | null = null
 
 /** Sends one e-mail through whichever provider can take it. Throws EmailSendError if none could. */
 export function sendEmail(mail: OutgoingEmail): Promise<SendResult> {
-  shared ??= createMailer(configuredOrder())
+  shared ??= createMailer(configuredOrder(), {
+    // Loaded on first use, so importing the mailer never needs database settings.
+    onAttempt: async (attempt) => (await import("./usage")).recordEmailAttempt(attempt),
+  })
   return shared(mail)
 }
 
