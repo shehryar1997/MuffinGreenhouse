@@ -69,6 +69,11 @@ export function filterProductsByMood(products: Product[], mood: Mood): Product[]
   return products.filter((product) => product.moodTags.includes(mood))
 }
 
+/** The moods that have at least one plant tagged with them (the homepage only offers these). */
+export function moodsWithPlants(products: Product[]): Mood[] {
+  return (["soft", "bright", "moody"] as Mood[]).filter((m) => filterProductsByMood(products, m).length > 0)
+}
+
 export function getMoodTheme(mood: Mood) {
   return moodThemes[mood]
 }

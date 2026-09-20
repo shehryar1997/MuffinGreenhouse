@@ -193,7 +193,8 @@
 
 @layer components {
   /* Long-form journal posts (rendered by components/journal/markdown.tsx). Uses theme tokens, so it follows dark mode. */
-  .journal-prose { @apply text-foreground/90 text-[1.0625rem] leading-[1.8]; }
+  /* overflow-wrap: anywhere so a long link or unbroken string wraps instead of running off the page. */
+  .journal-prose { @apply text-foreground/90 text-[1.0625rem] leading-[1.8] [overflow-wrap:anywhere]; }
   .journal-prose > * + * { @apply mt-5; }
   .journal-prose h2 { @apply font-serif text-heading-2 text-foreground mt-12 mb-1; }
   .journal-prose h3 { @apply font-serif text-heading-3 text-foreground mt-9 mb-1; }
@@ -203,6 +204,15 @@
   .journal-prose hr { @apply my-10 border-border; }
   .journal-prose figure { @apply my-8; }
   .journal-prose figcaption { @apply mt-2 text-center text-sm text-muted-foreground; }
+  .journal-prose figure img { @apply w-full rounded-xl; }
+
+  /* The admin's visual editor (app/admin/journal/rich-editor.tsx) reuses .journal-prose so what you type looks like the post. */
+  .journal-editor { @apply outline-none; }
+  .journal-editor a { @apply cursor-text; }
+  .journal-editor figure { @apply cursor-pointer select-none; }
+  .journal-editor figure.is-selected img { @apply outline outline-4 outline-primary/60; }
+  .journal-editor > :first-child { @apply mt-0; }
+  .journal-editor h2:first-child, .journal-editor h3:first-child { @apply mt-0; }
 }
 
 @layer utilities {

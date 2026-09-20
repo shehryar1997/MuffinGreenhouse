@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { ImageField } from "@/app/admin/_components/image-field"
-import { Markdown } from "@/components/journal/markdown"
+import { RichEditor } from "./rich-editor"
 import { slugify } from "@/lib/event-format"
 import type { JournalActionResult } from "./actions"
 
@@ -63,8 +63,6 @@ export function PostForm({
   const [error, setError] = useState<string | null>(null)
   const [slug, setSlug] = useState(initial.slug)
   const [slugTouched, setSlugTouched] = useState(Boolean(initial.slug))
-  const [content, setContent] = useState(initial.content)
-  const [preview, setPreview] = useState(false)
   const [published, setPublished] = useState(initial.published)
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -124,40 +122,11 @@ export function PostForm({
         <ImageField name="cover_image_url" folder="journal" label="Cover image" defaultUrl={initial.cover_image_url} hint="Landscape works best. Optional." />
 
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="block text-sm font-medium text-neutral-700">Article</span>
-            <div className="inline-flex rounded-lg border overflow-hidden text-xs">
-              <button type="button" onClick={() => setPreview(false)} className={`px-3 py-1 ${!preview ? "bg-neutral-900 text-white" : "bg-white hover:bg-neutral-50"}`}>
-                Write
-              </button>
-              <button type="button" onClick={() => setPreview(true)} className={`px-3 py-1 ${preview ? "bg-neutral-900 text-white" : "bg-white hover:bg-neutral-50"}`}>
-                Preview
-              </button>
-            </div>
-          </div>
-          {/* Kept mounted (just hidden) so the text is always part of the submitted form. */}
-          <textarea
-            name="content"
-            required
-            rows={18}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className={`${inputClass} font-mono ${preview ? "hidden" : ""}`}
-          />
-          {preview && (
-            <div className="border rounded p-5 bg-white min-h-[16rem]">
-              {content.trim() ? (
-                <div className="journal-prose">
-                  <Markdown source={content} />
-                </div>
-              ) : (
-                <p className="text-sm text-neutral-500">Nothing to preview yet.</p>
-              )}
-            </div>
-          )}
+          <span className="block text-sm font-medium text-neutral-700 mb-1">Article</span>
+          <RichEditor name="content" initialMarkdown={initial.content} />
           <p className="text-xs text-neutral-500 mt-1.5">
-            Formatting: <code>## Heading</code>, <code>- bullet</code>, <code>1. numbered</code>, <code>**bold**</code>, <code>*italic*</code>, <code>[link](https://…)</code>,{" "}
-            <code>&gt; quote</code>, <code>![caption](https://image-url)</code>. A blank line starts a new paragraph.
+            Use the buttons above the text, like in Word. Enter starts a new paragraph; Shift+Enter starts a new line inside the same paragraph.
+            Select text and press Ctrl+K to add a link.
           </p>
         </div>
       </section>

@@ -1,23 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { Resend } from "resend"
 import { checkRateLimit } from "@/lib/rate-limit"
 import * as Sentry from "@sentry/nextjs"
 import { safeEqual } from "@/lib/safe-compare"
 import { isAdminRequest } from "@/lib/admin-auth"
+import { EmailSendError, sendEmail } from "@/lib/email/mailer"
 
-// From email address
-const FROM_EMAIL = "Muffin Plants <support@muffinplants.com>"
 const REPLY_TO = "support@muffinplants.com"
-
-// Lazy initialization - Resend is only created when the API is called
-// This avoids build-time errors when RESEND_API_KEY isn't available
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not set")
-  }
-  return new Resend(apiKey)
-}
 
 interface EmailRequest {
   password: string
@@ -82,31 +70,16 @@ export async function POST(request: NextRequest) {
       headers["References"] = messageId
     }
 
-    // Send email via Resend
-    const resend = getResend()
-    const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
-      to: [to],
-      replyTo: REPLY_TO,
-      subject,
-      text: message,
-      headers,
-    })
+    // Sends through Resend, or Mailtrap when Resend can't take it (see lib/email/mailer.ts)
+    const result = await sendEmail({ to, subject, text: message, replyTo: REPLY_TO, headers })
 
-    if (error) {
-      Sentry.captureException(error)
-      return NextResponse.json(
-        { error: "Failed to send email" },
-        { status: 502 }
-      )
-    }
-
-    return NextResponse.json({ success: true, id: data?.id })
+    return NextResponse.json({ success: true, id: result.id, provider: result.provider })
   } catch (err) {
     Sentry.captureException(err)
+    // Every provider refused it: a bad-gateway-style failure rather than a bug in this route.
     return NextResponse.json(
       { error: "Failed to send email" },
-      { status: 500 }
+      { status: err instanceof EmailSendError ? 502 : 500 }
     )
   }
 }

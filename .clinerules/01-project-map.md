@@ -60,11 +60,12 @@ Do not regenerate the full map unless explicitly asked to.
 `app/admin/products/new/page.tsx` — New product form — N/A — N/A
 `app/admin/products/[id]/edit/page.tsx` — Edit product form — N/A — N/A
 `app/admin/email/page.tsx` — Email sender form [NEW] — AdminEmailPage — N/A
-`app/api/send-email/route.ts` — Resend email API [NEW] — POST handler — resend, @/lib/rate-limit
+`app/api/send-email/route.ts` — Admin reply e-mail API [NEW] — POST handler — @/lib/email/mailer, @/lib/rate-limit
 `app/api/revalidate/route.ts` — ISR revalidation webhook — POST handler — N/A
 `app/api/checkout-submit/route.ts` — Checkout order submission using Supabase create_order RPC — POST handler — @/lib/rate-limit, @/supabase/admin-client, @/lib/email/send-order-confirmation
 `app/api/checkout-confirm/route.ts` — Booking confirmation endpoint (sends booking received email) — POST handler — @/lib/rate-limit, @/supabase/admin-client, @/lib/email/send-booking-received
 `app/api/cron/expire-pending-orders/route.ts` — Cron job to auto-cancel pending orders after 2 hours — GET handler — @/supabase/admin-client, @/lib/email/send-order-cancelled
+`app/api/cron/keep-alive/route.ts` — Daily Supabase keep-alive (prevents the Free plan 7-day inactivity pause; backup for .github/workflows/supabase-keepalive.yml) — GET handler — @/supabase/admin-client, @/lib/safe-compare
 `app/api/product-dimensions/route.ts` — Fetch product box dimensions for shipping calculation — POST handler — @/lib/supabase/server-client
 `app/admin/orders/[id]/actions.ts` — Order status server actions (mark paid/shipped/delivered, cancel) — markPaid, markShipped, markDelivered, cancelOrder — @/supabase/admin-client, @/lib/email/send-order-confirmed, @/lib/email/send-order-shipped
 `app/admin/orders/[id]/mark-shipped-dialog.tsx` — Tracking-number entry modal for marking an order shipped — MarkShippedDialog — @radix-ui/react-dialog, ./actions
@@ -115,12 +116,14 @@ Do not regenerate the full map unless explicitly asked to.
 `lib/rate-limit.ts` — In-memory rate limiting — RateLimiter, defaultLimiter, getClientIP, checkRateLimit — N/A
 `lib/rate-limit.test.ts` — Test suite for rate limiting — N/A — N/A
 `lib/UPGRADE-RATE-LIMIT.md` — Upgrade guide for distributed rate limiting — N/A — N/A
-`lib/email/send-otp-email.ts` — OTP email sender using Resend — sendOtpEmail — resend
-`lib/email/send-order-confirmation.ts` — Order confirmation email sender — sendOrderConfirmationEmail — resend
-`lib/email/send-booking-received.ts` — Booking received email sender — sendBookingReceivedEmail — resend
-`lib/email/send-order-confirmed.ts` — Payment received / order confirmed email sender — sendOrderConfirmedEmail — resend
-`lib/email/send-order-cancelled.ts` — Order cancelled email sender — sendOrderCancelledEmail — resend
-`lib/email/send-order-shipped.ts` — Order shipped email sender with courier tracking number — sendOrderShippedEmail — resend
+`lib/email/mailer.ts` — The one place e-mail is sent from: Resend first, Mailtrap when Resend's daily/monthly limit is used up — sendEmail, createMailer — resend
+`lib/email/send-event-emails.ts` — Event booking e-mails (spot held / booked, payment received) — sendEventBookingReceivedEmail, sendEventPaymentConfirmedEmail — @/lib/email/mailer
+`lib/email/send-otp-email.ts` — OTP email sender — sendOtpEmail — @/lib/email/mailer
+`lib/email/send-order-confirmation.ts` — Order confirmation email sender — sendOrderConfirmationEmail — @/lib/email/mailer
+`lib/email/send-booking-received.ts` — Booking received email sender — sendBookingReceivedEmail — @/lib/email/mailer
+`lib/email/send-order-confirmed.ts` — Payment received / order confirmed email sender — sendOrderConfirmedEmail — @/lib/email/mailer
+`lib/email/send-order-cancelled.ts` — Order cancelled email sender — sendOrderCancelledEmail — @/lib/email/mailer
+`lib/email/send-order-shipped.ts` — Order shipped email sender with courier tracking number — sendOrderShippedEmail — @/lib/email/mailer
 
 ### /types
  `lib/data/products.ts` — Product data access layer with search functions — getAllProducts, getProductBySlug, getProductsByCategory, searchProducts, searchProductsSuggestions, PRODUCTS_PER_PAGE — @/types, @/supabase/client, ./adapters, @/lib/product-categories, @/components/shop/product-filters [LARGE]

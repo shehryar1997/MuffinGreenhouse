@@ -2,12 +2,14 @@ import { Suspense } from "react"
 import { unstable_cache } from "next/cache"
 import { Send, BarChart3, Clock, AlertCircle } from "lucide-react"
 import { countEmailsSentThisMonth } from "@/lib/email/monthly-count"
+import { providerStatus } from "@/lib/email/mailer"
 import { EmailForm } from "./email-form"
 
 export const dynamic = "force-dynamic"
 
-// The Resend plan allows 3,000 e-mails a month. This card used to compare against 100, so it showed a full amber
-// bar from the 101st e-mail.
+// The Resend plan allows 100 e-mails a day and 3,000 a month (this card used to compare against 100, so it showed a
+// full amber bar from the 101st e-mail). When Resend is full, e-mails go out through Mailtrap instead (150 a day,
+// 4,000 a month): see lib/email/mailer.ts. This card counts Resend only.
 const MONTHLY_LIMIT = 3000
 const NEAR_LIMIT_AT = 0.8
 
@@ -38,7 +40,7 @@ async function MonthlyUsageCard() {
         <div>
           <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider flex items-center gap-2">
             <BarChart3 className="h-3.5 w-3.5" />
-            Monthly Usage
+            Resend usage this month
           </p>
           <p className="text-3xl font-bold text-neutral-900 mt-2">
             {result.ok ? (
@@ -76,7 +78,7 @@ async function MonthlyUsageCard() {
               />
             </div>
             <p className="text-xs text-neutral-400">
-              {remainingText} · Sends from support@muffinplants.com via Resend
+              {remainingText} · Resend allows 100 a day
             </p>
           </>
         ) : (
@@ -84,8 +86,20 @@ async function MonthlyUsageCard() {
             {result.error}
           </p>
         )}
+        <BackupNote />
       </div>
     </div>
+  )
+}
+
+function BackupNote() {
+  const mailtrapReady = providerStatus().some((p) => p.name === "mailtrap" && p.configured)
+  return (
+    <p className={`pt-1 text-xs ${mailtrapReady ? "text-emerald-700" : "text-amber-700"}`}>
+      {mailtrapReady
+        ? "Backup on: when Resend's daily or monthly limit is reached, e-mails go out through Mailtrap automatically (150 a day, 4,000 a month)."
+        : "Backup off: add MAILTRAP_API_TOKEN in Vercel to send up to 150 more e-mails a day through Mailtrap when Resend is full."}
+    </p>
   )
 }
 
@@ -94,7 +108,7 @@ export default function AdminEmailPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-serif font-bold text-neutral-900">Email</h1>
-        <p className="text-neutral-500 mt-1">Send emails directly to customers via Resend</p>
+        <p className="text-neutral-500 mt-1">Send emails directly to customers. Resend goes first, with Mailtrap as an automatic backup.</p>
       </div>
 
       <Suspense
@@ -102,7 +116,7 @@ export default function AdminEmailPage() {
           <div className="bg-white rounded-2xl p-6 border border-neutral-200">
             <div className="flex items-center gap-3 text-neutral-400">
               <Clock className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Loading monthly usage...</span>
+              <span className="text-sm">Loading usage...</span>
             </div>
           </div>
         }

@@ -33,7 +33,7 @@ export function RegistrationCard({ event, prefill }: Props) {
   const total = event.price * spots
 
   if (booked) {
-    return <BookedView event={event} booking={booked} name={name} />
+    return <BookedView event={event} booking={booked} name={name} email={email.trim()} />
   }
 
   // Closed states share one shape: a short explanation and a way to get help.
@@ -46,9 +46,15 @@ export function RegistrationCard({ event, prefill }: Props) {
           ? { title: "Fully booked", body: "Message us on WhatsApp and we'll add you to the waitlist in case a spot opens up." }
           : null
 
+  const emailRequired = event.price > 0
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    if (emailRequired && !email.trim()) {
+      setError("Please add your e-mail address. We send your booking and payment details there.")
+      return
+    }
     startTransition(async () => {
       const result = await registerForEvent({ eventId: event.id, name, phone, email, spots })
       if (result.ok) {
@@ -121,8 +127,8 @@ export function RegistrationCard({ event, prefill }: Props) {
               placeholder="0300 1234567"
             />
           </Field>
-          <Field id="reg-email" label="E-mail" hint="Optional">
-            <Input id="reg-email" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+          <Field id="reg-email" label="E-mail" hint={emailRequired ? "We send your booking and payment details here" : "Optional"}>
+            <Input id="reg-email" name="email" type="email" required={emailRequired} autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           </Field>
           {maxSpots > 1 && (
             <Field id="reg-spots" label="How many people?">
@@ -200,7 +206,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function BookedView({ event, booking, name }: { event: Event; booking: Extract<RegisterForEventResult, { ok: true }>; name: string }) {
+function BookedView({ event, booking, name, email }: { event: Event; booking: Extract<RegisterForEventResult, { ok: true }>; name: string; email: string }) {
   const firstName = name.trim().split(/\s+/)[0]
   const receiptMessage = `Hi Muffin! I'm ${name.trim()}. Booking ${booking.reference} for "${event.title}" (${booking.spots} ${booking.spots === 1 ? "person" : "people"}). Here is my payment receipt for ${formatEventPrice(booking.amountDue)}:`
   const confirmMessage = `Hi Muffin! I'm ${name.trim()}. I just booked "${event.title}" (${booking.reference}).`
@@ -247,6 +253,8 @@ function BookedView({ event, booking, name }: { event: Event; booking: Extract<R
           </div>
         </>
       )}
+
+      {email && <p className="mb-5 text-xs text-muted-foreground">We&apos;re also e-mailing these details to {email}.</p>}
 
       <div className="space-y-2.5">
         <Button asChild className="w-full bg-[#25D366] text-white hover:bg-[#128C7E] hover:brightness-100">

@@ -7,6 +7,7 @@ import { Plus } from "lucide-react"
 import { Product } from "@/types"
 import { Mood, MoodTheme, filterProductsByMood } from "@/lib/mood-utils"
 import { formatPrice } from "@/lib/utils"
+import { PhotoFallback } from "@/components/home/shared/plant-art"
 
 interface MoodPlantsGridProps {
   products: Product[]
@@ -39,7 +40,9 @@ export function MoodPlantsGrid({ products, mood, theme }: MoodPlantsGridProps) {
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                 sizes="(max-width: 768px) 50vw, 25vw"
               />
-            ) : null}
+            ) : (
+              <PhotoFallback slug={product.category.slug} />
+            )}
             <span className={`absolute top-3 left-3 font-mono text-xs ${theme.textPrimary}`}>{String(i + 1).padStart(2, '0')}</span>
             {product.stockStatus === "out_of_stock" && (
               <span className={`absolute top-3 right-3 font-mono text-xs tracking-wider uppercase px-2 py-1 rounded-sm ${theme.bg === "bg-ink" ? "bg-paper text-ink" : "bg-ink-soft text-white"}`}>

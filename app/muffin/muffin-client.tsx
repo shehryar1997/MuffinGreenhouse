@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Send, Bot, User, Leaf } from "lucide-react"
+import Image from "next/image"
+import { Send, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getMuffinResponse, MUFFIN_QUICK_REPLIES } from "@/lib/muffin-engine"
+import { askMuffin } from "@/config/nav.config"
 
 interface Message { id: string; text: string; sender: "user" | "bot"; timestamp: Date }
 
@@ -37,9 +39,9 @@ export function MuffinPageClient() {
     <div className="bg-ink min-h-[calc(100vh-80px)] flex flex-col">
       <div className="flex-1 container mx-auto px-4 max-w-3xl py-8 flex flex-col">
         <div className="text-center mb-6">
-          <h1 className="inline-flex items-center gap-2 px-4 py-2 bg-sprout-300/20 rounded-full">
-            <Leaf className="w-5 h-5 text-sprout-300" aria-hidden="true" />
-            <span className="font-mono text-base text-sprout-300">Muffin Intelligence</span>
+          <h1 className="inline-flex items-center gap-3 rounded-full bg-paper py-2 pl-3 pr-6">
+            <Image src={askMuffin.logo} alt="" width={askMuffin.logoWidth} height={askMuffin.logoHeight} className="h-10 w-auto object-contain" priority />
+            <span className="font-serif text-2xl text-ink">{askMuffin.name}</span>
           </h1>
         </div>
 
@@ -47,8 +49,10 @@ export function MuffinPageClient() {
           <AnimatePresence>
             {messages.map((m) => (
               <motion.div key={m.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-4 ${m.sender === "user" ? "flex-row-reverse" : ""}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${m.sender === "bot" ? "bg-clay-500" : "bg-ink-muted"}`}>
-                  {m.sender === "bot" ? <Bot className="w-5 h-5 text-white" /> : <User className="w-5 h-5 text-paper" />}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${m.sender === "bot" ? "bg-paper" : "bg-ink-muted"}`}>
+                  {m.sender === "bot"
+                    ? <Image src={askMuffin.logo} alt="" width={askMuffin.logoWidth} height={askMuffin.logoHeight} className="h-auto w-7 object-contain" />
+                    : <User className="w-5 h-5 text-paper" aria-hidden="true" />}
                 </div>
                 <div className={`max-w-[75%] p-4 rounded-2xl ${m.sender === "bot" ? "bg-paper text-ink rounded-tl-none" : "bg-clay-500 text-white rounded-tr-none"}`}>
                   <p>{m.text}</p>

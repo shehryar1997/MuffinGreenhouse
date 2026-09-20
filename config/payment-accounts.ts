@@ -22,7 +22,7 @@ export const PAYMENT_ACCOUNTS: Record<string, PaymentAccount> = {
     title: "JazzCash",
     icon: "📱",
     details: [
-      { label: "Account Title", value: "Muhammad Shehryar" },
+      { label: "Account Title", value: "Shehryar Ahmad" },
       { label: "Mobile Number", value: "03202065474" },
     ],
   },
@@ -30,7 +30,7 @@ export const PAYMENT_ACCOUNTS: Record<string, PaymentAccount> = {
     title: "Easypaisa",
     icon: "💳",
     details: [
-      { label: "Account Title", value: "Muhammad Shehryar" },
+      { label: "Account Title", value: "Shehryar Ahmad" },
       { label: "Mobile Number", value: "03202065474" },
     ],
   },

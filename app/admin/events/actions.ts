@@ -2,10 +2,28 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
+import { after } from "next/server"
+import * as Sentry from "@sentry/nextjs"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { fromKarachiInputValue, slugify } from "@/lib/event-format"
 import { isAllowedImageUrl } from "@/lib/image-hosts"
+import { sendEventBookingReceivedEmail, sendEventPaymentConfirmedEmail, type EventEmailData } from "@/lib/email/send-event-emails"
+
+/** Sends an e-mail once the response has gone out, and never lets a failed one undo the action it follows. */
+function emailAfter(label: string, send: () => Promise<void>) {
+  after(async () => {
+    try {
+      await send()
+    } catch (err) {
+      console.error(`${label} e-mail failed:`, err)
+      Sentry.captureException(err)
+    }
+  })
+}
+
+type EventRow = { title: string; slug: string; datetime: string; end_datetime: string | null; location: string }
+const emailEvent = (e: EventRow): EventEmailData["event"] => ({ title: e.title, slug: e.slug, datetime: e.datetime, endDatetime: e.end_datetime, location: e.location })
 
 /** What a save/delete hands back to the form. `undefined` = success (the action redirects). */
 export type EventActionResult = { error: string } | undefined
@@ -187,7 +205,7 @@ export async function markRegistrationPaid(registrationId: string, formData: For
   const reference = text(formData, "payment_reference").slice(0, 120)
   const { data: reg } = await supabaseAdmin
     .from("event_registrations")
-    .select("amount_due, cancelled_at")
+    .select("amount_due, cancelled_at, payment_status, guest_name, guest_email, spots_reserved, reference, event:events(title, slug, datetime, end_datetime, location)")
     .eq("id", registrationId)
     .maybeSingle()
   if (!reg) throw new Error("Booking not found")
@@ -204,6 +222,23 @@ export async function markRegistrationPaid(registrationId: string, formData: For
     })
     .eq("id", registrationId)
   if (error) throw new Error(error.message)
+
+  // Tell the guest their spot is confirmed, if they gave an e-mail. Only the first time: pressing the button
+  // again on an already-paid booking must not send it twice.
+  const guestEmail = reg.guest_email as string | null
+  const event = reg.event as unknown as EventRow | null
+  if (guestEmail && event && reg.payment_status !== "paid") {
+    emailAfter("Event payment confirmation", () =>
+      sendEventPaymentConfirmedEmail({
+        toEmail: guestEmail,
+        guestName: (reg.guest_name as string | null) ?? "",
+        reference: reg.reference as string,
+        spots: Number(reg.spots_reserved),
+        amountDue: Number(reg.amount_due),
+        event: emailEvent(event),
+      })
+    )
+  }
 
   const ctx = await slugForRegistration(registrationId)
   refreshPublicPages(ctx?.slug)
@@ -275,7 +310,7 @@ export async function addAttendee(eventId: string, _prev: AddAttendeeState, form
 
   const { data: event } = await supabaseAdmin
     .from("events")
-    .select("slug, price, spots_remaining")
+    .select("slug, title, datetime, end_datetime, location, price, spots_remaining")
     .eq("id", eventId)
     .maybeSingle()
   if (!event) return { error: "This event no longer exists." }
@@ -312,7 +347,17 @@ export async function addAttendee(eventId: string, _prev: AddAttendeeState, form
     if (!error) {
       refreshPublicPages(event.slug)
       revalidatePath(`/admin/events/${eventId}`)
-      return { added: `${name} was added (${reference}).` }
+      // A guest with an e-mail gets the matching one: "you're in" if they already paid, otherwise the booking
+      // e-mail (payment instructions for a paid event, a plain confirmation for a free one).
+      if (email) {
+        const details: EventEmailData = { toEmail: email, guestName: name, reference, spots, amountDue, event: emailEvent(event) }
+        if (paid && amountDue > 0) {
+          emailAfter("Event payment confirmation", () => sendEventPaymentConfirmedEmail(details))
+        } else {
+          emailAfter("Event booking", () => sendEventBookingReceivedEmail({ ...details, holdUntil: new Date(Date.now() + 24 * 60 * 60 * 1000) }))
+        }
+      }
+      return { added: `${name} was added (${reference}).${email ? " A confirmation e-mail is on its way." : ""}` }
     }
     if (error.code !== "23505") return { error: error.message }
   }

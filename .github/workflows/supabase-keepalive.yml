@@ -1,0 +1,59 @@
+name: Supabase keep-alive
+
+# Supabase pauses a Free plan project that gets too little database activity over 7 days.
+# Twice a day this reads one row from two tables through the public REST API, so the project
+# never looks idle. It only needs the two secrets CI already uses (no service-role key).
+#
+# If a run fails (project paused, key rotated, table renamed) GitHub e-mails the person who last
+# edited this schedule, so a broken heartbeat is noticed long before the 7 days are up.
+#
+# On a public repo GitHub switches scheduled workflows off after 60 days without a commit. The
+# Vercel cron at /api/cron/keep-alive is the independent backup for that case.
+on:
+  schedule:
+    # 05:23 and 17:23 UTC: off the top of the hour, when GitHub's scheduler is busiest.
+    - cron: '23 5,17 * * *'
+  # Lets you run it by hand from the Actions tab to check it works.
+  workflow_dispatch:
+
+# Nothing here needs to read or write the repo.
+permissions: {}
+
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Ping Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+    steps:
+      - name: Read from the Supabase REST API
+        run: |
+          set -euo pipefail
+
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error title=Missing secrets::Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          for table in categories products; do
+            # The retries cover a brief network or gateway hiccup; a real outage still fails the run.
+            status=$(curl --silent --show-error --max-time 30 \
+              --retry 3 --retry-delay 10 --retry-all-errors \
+              --header "apikey: $SUPABASE_ANON_KEY" \
+              --output response.json --write-out '%{http_code}' \
+              "${SUPABASE_URL%/}/rest/v1/$table?select=id&limit=1") || status="000"
+
+            if [ "$status" != "200" ]; then
+              echo "::error title=Supabase keep-alive failed::GET /rest/v1/$table returned HTTP $status"
+              if [ -f response.json ]; then head -c 300 response.json; echo; fi
+              exit 1
+            fi
+            echo "GET /rest/v1/$table -> HTTP $status"
+          done

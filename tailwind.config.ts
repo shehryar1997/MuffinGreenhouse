@@ -75,6 +75,9 @@ const config: Config = {
         "leaf-float": { "0%, 100%": { transform: "translateY(0) rotate(0deg)" }, "50%": { transform: "translateY(-10px) rotate(5deg)" } },
         shimmer: { "0%": { backgroundPosition: "-200% 0" }, "100%": { backgroundPosition: "200% 0" } },
         marquee: { "0%": { transform: "translateX(0%)" }, "100%": { transform: "translateX(-50%)" } },
+        float: { "0%, 100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-8px)" } },
+        wiggle: { "0%, 100%": { transform: "rotate(-4deg)" }, "50%": { transform: "rotate(4deg)" } },
+        draw: { to: { strokeDashoffset: "0" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -85,7 +88,10 @@ const config: Config = {
         "scale-in": "scale-in 0.3s ease-out forwards",
         "leaf-float": "leaf-float 3s ease-in-out infinite",
         shimmer: "shimmer 2s linear infinite",
-        marquee: "marquee 20s linear infinite",
+        marquee: "marquee 40s linear infinite",
+        float: "float 6s ease-in-out infinite",
+        wiggle: "wiggle 0.5s ease-in-out infinite",
+        draw: "draw 1.2s ease-out 0.9s forwards",
         counter: "counter-tick 0.5s ease-out forwards",
       },
       transitionTimingFunction: {

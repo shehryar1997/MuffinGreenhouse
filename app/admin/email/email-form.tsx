@@ -51,7 +51,7 @@ export function EmailForm() {
   return (
     <div>
       <div className="bg-white rounded-lg border border-neutral-200 p-6 max-w-xl">
-        <p className="text-neutral-600 text-sm mb-6">Sends from support@muffinplants.com via Resend.</p>
+        <p className="text-neutral-600 text-sm mb-6">Sends from support@muffinplants.com.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

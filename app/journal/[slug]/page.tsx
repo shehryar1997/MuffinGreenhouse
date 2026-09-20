@@ -66,8 +66,8 @@ export default async function JournalPostPage({ params }: { params: Promise<{ sl
         {post.tags.length > 0 && (
           <p className="mb-3 font-mono text-[11px] uppercase tracking-widest text-primary">{post.tags.join(" · ")}</p>
         )}
-        <h1 className="mb-5 font-serif text-display text-foreground">{post.title}</h1>
-        <p className="mb-6 text-xl font-light leading-relaxed text-muted-foreground">{post.excerpt}</p>
+        <h1 className="mb-5 font-serif text-display text-foreground [overflow-wrap:anywhere]">{post.title}</h1>
+        <p className="mb-6 text-xl font-light leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{post.excerpt}</p>
         <p className="mb-10 text-sm text-muted-foreground">
           By {post.author}
           {post.publishedAt && <> · {formatPostDate(post.publishedAt)}</>} · {readingMinutes(post.content)} min read

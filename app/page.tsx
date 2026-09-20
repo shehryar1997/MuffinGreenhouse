@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { getAllProducts } from "@/lib/data/products"
 import { getUpcomingEvents } from "@/lib/data/events"
+import { getPublishedPosts } from "@/lib/data/journal"
 import HomeContent from "@/components/home/home-content"
 
 // ISR: revalidate every 5 minutes + on product updates via /api/revalidate
@@ -12,11 +13,11 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 }
 
-// Server Component: fetches real product data from Supabase, then hands it
+// Server Component: fetches real product, event and journal data from Supabase, then hands it
 // to the client component that owns the interactive homepage UI (motion,
 // mood picker, parallax). Keeps the "Server fetches, Client renders" split
 // used elsewhere in the app (product detail page, shop grids).
 export default async function HomePage() {
-  const [products, events] = await Promise.all([getAllProducts(), getUpcomingEvents()])
-  return <HomeContent products={products} events={events.slice(0, 2)} />
+  const [products, events, posts] = await Promise.all([getAllProducts(), getUpcomingEvents(), getPublishedPosts()])
+  return <HomeContent products={products} events={events.slice(0, 2)} posts={posts.slice(0, 3)} />
 }

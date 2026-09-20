@@ -1,15 +1,9 @@
 // "Order booked" e-mail -- sent right after checkout. Tells the customer their plants are on
 // hold for 24 hours and how to pay. (The "payment received / order confirmed" e-mail is sent
 // later, when the order is marked as paid in the admin panel: see send-order-confirmed.ts.)
-import { Resend } from 'resend'
+import { sendEmail } from './mailer'
 import { paymentAccountsAsText } from '@/config/payment-accounts'
-import { FROM_EMAIL, WHATSAPP_NUMBER, emailSignOff, formatEmailPrice } from './common'
-
-function getResend(): Resend {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) throw new Error('RESEND_API_KEY is not set')
-  return new Resend(apiKey)
-}
+import { WHATSAPP_NUMBER, emailSignOff, formatEmailPrice } from './common'
 
 interface BookingReceivedData {
   toEmail: string
@@ -24,7 +18,6 @@ interface BookingReceivedData {
 }
 
 export async function sendBookingReceivedEmail(data: BookingReceivedData): Promise<void> {
-  const resend = getResend()
   const greeting = data.customerName ? 'Hi ' + data.customerName + ',' : 'Hi there,'
   // Deadlines are shown in Pakistan time regardless of where the server runs.
   const deadlineStr = data.paymentDeadline.toLocaleString('en-PK', {
@@ -44,9 +37,8 @@ export async function sendBookingReceivedEmail(data: BookingReceivedData): Promi
         (isDelivery ? 'Delivery: ' + formatEmailPrice(data.deliveryFee) : 'Pickup: Free') + '\n'
       : ''
 
-  const { error } = await resend.emails.send({
-    from: FROM_EMAIL,
-    to: [data.toEmail],
+  await sendEmail({
+    to: data.toEmail,
     subject: 'Order booked - your plants are on hold for 24 hours - #' + data.orderNumber,
     text: `${greeting}
 
@@ -75,9 +67,4 @@ If we don't receive payment within 24 hours, your items will be released and the
 
 ${emailSignOff()}`,
   })
-
-  if (error) {
-    console.error('Failed to send booking received email:', error)
-    throw new Error('Failed to send booking received: ' + error.message)
-  }
 }

@@ -1,11 +1,14 @@
 "use server"
 
 import { cookies } from "next/headers"
+import { after } from "next/server"
 import { revalidatePath } from "next/cache"
+import * as Sentry from "@sentry/nextjs"
 import { z } from "zod"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { createServerClient } from "@/lib/supabase/server-client"
 import { allowHit, callerIp } from "@/lib/db-rate-limit"
+import { sendEventBookingReceivedEmail } from "@/lib/email/send-event-emails"
 
 export type RegisterForEventResult =
   | { ok: true; reference: string; amountDue: number; spots: number; free: boolean }
@@ -57,6 +60,18 @@ export async function registerForEvent(input: {
     return { ok: false, error: "Too many attempts. Please wait a few minutes and try again." }
   }
 
+  // The event's details go into the confirmation e-mail, and its price decides whether an e-mail is required:
+  // a paid booking is held for 24 hours and the payment instructions are e-mailed, so there must be an address.
+  const { data: event } = await supabaseAdmin
+    .from("events")
+    .select("slug, title, datetime, end_datetime, location, price")
+    .eq("id", eventId)
+    .maybeSingle()
+  if (!event) return { ok: false, error: DB_ERRORS.EVENT_NOT_FOUND }
+  if (Number(event.price) > 0 && !email) {
+    return { ok: false, error: "Please add your e-mail address. We send your booking and payment details there." }
+  }
+
   // Link the booking to the account when someone is signed in (never trust an id from the browser).
   let customerId: string | null = null
   try {
@@ -90,10 +105,30 @@ export async function registerForEvent(input: {
 
   const result = data as { reference: string; amount_due: number | string; spots: number; free: boolean }
 
-  const { data: event } = await supabaseAdmin.from("events").select("slug").eq("id", eventId).maybeSingle()
-  if (event?.slug) revalidatePath(`/events/${event.slug}`)
+  if (event.slug) revalidatePath(`/events/${event.slug}`)
   revalidatePath("/events")
   revalidatePath("/admin/events")
+
+  // Sent after the response goes out, so the booking screen doesn't wait on the mail provider. A failed e-mail
+  // never undoes the booking: the details are on screen and the WhatsApp message follows anyway.
+  if (email) {
+    after(async () => {
+      try {
+        await sendEventBookingReceivedEmail({
+          toEmail: email,
+          guestName: name,
+          reference: result.reference,
+          spots: result.spots,
+          amountDue: Number(result.amount_due),
+          holdUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          event: { title: event.title, slug: event.slug, datetime: event.datetime, endDatetime: event.end_datetime, location: event.location },
+        })
+      } catch (err) {
+        console.error("Event booking e-mail failed:", err)
+        Sentry.captureException(err)
+      }
+    })
+  }
 
   return {
     ok: true,

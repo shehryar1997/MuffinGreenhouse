@@ -40,10 +40,10 @@ export function PostCard({ post, featured = false }: { post: JournalPost; featur
             </span>
           ))}
         </div>
-        <h2 className={cn("mb-3 font-serif text-foreground transition-colors group-hover:text-primary", featured ? "text-heading-2" : "text-xl")}>
+        <h2 className={cn("mb-3 font-serif text-foreground transition-colors group-hover:text-primary", featured ? "text-heading-2" : "text-xl", "[overflow-wrap:anywhere]")}>
           {post.title}
         </h2>
-        <p className={cn("mb-5 text-muted-foreground", featured ? "line-clamp-4" : "line-clamp-3 text-sm")}>{post.excerpt}</p>
+        <p className={cn("mb-5 text-muted-foreground [overflow-wrap:anywhere]", featured ? "line-clamp-4" : "line-clamp-3 text-sm")}>{post.excerpt}</p>
         <div className="mt-auto flex items-center justify-between text-sm text-muted-foreground">
           <span>
             {post.publishedAt ? formatPostDate(post.publishedAt) : ""} · {readingMinutes(post.content)} min read

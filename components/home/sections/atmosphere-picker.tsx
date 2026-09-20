@@ -2,19 +2,21 @@
 
 import { useState } from "react"
 import { Product } from "@/types"
-import { moodThemes, Mood, filterProductsByMood } from "@/lib/mood-utils"
+import { moodThemes, Mood, moodsWithPlants } from "@/lib/mood-utils"
 import { FadeIn, AnimatedHeading } from "@/components/home/shared/animations"
 import { MoodPlantsGrid } from "@/components/home/shared/mood-plants-grid"
 
 interface AtmospherePickerProps {
   products: Product[]
+  n: string
 }
 
-export function AtmospherePicker({ products }: AtmospherePickerProps) {
-  // Open on the first mood that has plants: "soft" had none, so the section's first view was an empty state.
-  const [selectedMood, setSelectedMood] = useState<Mood>(
-    () => (["soft", "bright", "moody"] as Mood[]).find((m) => filterProductsByMood(products, m).length > 0) ?? "soft"
-  )
+export function AtmospherePicker({ products, n }: AtmospherePickerProps) {
+  // Only moods that have plants are offered, and the section is skipped entirely when none do
+  // (it used to open on "No plants matching this mood yet").
+  const moods = moodsWithPlants(products)
+  const [selectedMood, setSelectedMood] = useState<Mood>(() => moods[0] ?? "soft")
+  if (moods.length === 0) return null
   const theme = moodThemes[selectedMood]
 
   return (
@@ -22,7 +24,7 @@ export function AtmospherePicker({ products }: AtmospherePickerProps) {
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <div className="mb-16">
-            <span className={`font-mono text-xs ${theme.textMuted}`}>003</span>
+            <span className={`font-mono text-xs ${theme.textMuted}`}>{n}</span>
             <span className={`mx-3 ${theme.textSecondary}`}>/</span>
             <span className={`font-mono text-xs tracking-widest ${theme.textMuted}`}>THE COLLECTION</span>
           </div>
@@ -41,7 +43,7 @@ export function AtmospherePicker({ products }: AtmospherePickerProps) {
         <FadeIn delay={0.3}>
           <div className="flex items-center gap-3 mb-12 flex-wrap">
             <span className={`font-mono text-xs uppercase mr-4 ${theme.textMuted}`}>My room feels</span>
-            {(["soft", "bright", "moody"] as Mood[]).map((m) => {
+            {moods.map((m) => {
               const mTheme = moodThemes[m]
               const isSelected = selectedMood === m
               return (

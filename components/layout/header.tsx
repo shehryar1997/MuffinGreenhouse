@@ -4,8 +4,8 @@ import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Heart, Search, ShoppingBag, Menu, User, Star, Sparkles, X } from "lucide-react"
-import { mainNav, shopMegaMenuSections } from "@/config/nav.config"
+import { Heart, Search, ShoppingBag, Menu, User, Star, X } from "lucide-react"
+import { askMuffin, mainNav, shopMegaMenuSections } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
 import { useWishlist } from "@/components/providers/wishlist-provider"
@@ -257,15 +257,20 @@ export function Header() {
                   </AnimatePresence>
                 </div>
               ) : item.isAi ? (
-                <Link 
+                <Link
                   key={item.id}
-                  href={item.href} 
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-forest-300 bg-forest-50/50 hover:bg-forest-100 hover:border-forest-400 transition-colors"
+                  href={item.href}
+                  className="group flex flex-col items-center gap-0.5 p-2 -m-2"
+                  aria-label={`${item.label}, our plant assistant`}
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-forest-600" />
-                  <span className="font-mono text-xs font-bold tracking-widest uppercase text-forest-700">
-                    {item.label}
-                  </span>
+                  <Image
+                    src={askMuffin.logo}
+                    alt=""
+                    width={askMuffin.logoWidth}
+                    height={askMuffin.logoHeight}
+                    className="h-9 w-auto object-contain transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110 dark:rounded-lg dark:bg-paper dark:px-1"
+                  />
+                  <span className="font-serif text-xs text-foreground leading-none">{item.label}</span>
                 </Link>
               ) : (
                 <Link 
@@ -414,11 +419,17 @@ export function Header() {
                     >
                       <span className="font-mono text-sm text-forest-500">{String(i + 1).padStart(2, '0')}</span>
                       {item.isAi ? (
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-3">
                           <span className="font-serif text-4xl text-forest-950 group-hover:text-clay-500 transition-colors">
                             {item.label}
                           </span>
-                          <Sparkles className="w-5 h-5 text-forest-500" />
+                          <Image
+                            src={askMuffin.logo}
+                            alt=""
+                            width={askMuffin.logoWidth}
+                            height={askMuffin.logoHeight}
+                            className="h-9 w-auto object-contain dark:rounded-lg dark:bg-paper dark:px-1"
+                          />
                         </span>
                       ) : (
                         <span className="font-serif text-4xl text-forest-950 group-hover:text-clay-500 transition-colors">

@@ -19,6 +19,14 @@ export const siteConfig = {
   },
 }
 
+// The plant assistant (page at /muffin, chat launcher, nav item). One name and one logo everywhere.
+export const askMuffin = {
+  name: "Ask Muffin",
+  logo: "/ask-muffin-logo.png",
+  logoWidth: 320,
+  logoHeight: 284,
+}
+
 // Shop by Need categories — reused across mega-menu and other sections
 export const shopByNeedCategories: NavItem[] = [
   { id: "need-low-light", label: "Low-Light Survivors", href: "/shop-by-need/low-light-survivors" },
@@ -76,7 +84,7 @@ export const mainNav: NavItem[] = [
   },
   {
     id: "muffin",
-    label: "MUFFIN AI",
+    label: askMuffin.name,
     href: "/muffin",
     isAi: true,
   },
@@ -126,7 +134,7 @@ export const mobileNav: NavItem[] = [
   { id: "mobile-plants", label: "Plants", href: "/shop", children: shopMegaMenuSections.find(s => s.id === "plants")?.items },
   { id: "mobile-tools", label: "Tools & Equipment", href: "/shop", children: shopMegaMenuSections.find(s => s.id === "tools-equipment")?.items },
   { id: "mobile-by-need", label: "By Need", href: "/shop-by-need", children: shopByNeedCategories },
-  { id: "mobile-muffin", label: "MUFFIN AI", href: "/muffin", isAi: true },
+  { id: "mobile-muffin", label: askMuffin.name, href: "/muffin", isAi: true },
   { id: "mobile-events", label: "Events", href: "/events" },
   { id: "mobile-journal", label: "Journal", href: "/journal" },
 ]
