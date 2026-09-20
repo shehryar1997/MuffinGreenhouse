@@ -60,6 +60,7 @@ interface OrderItem {
 interface Order {
   id: string
   order_number: string
+  public_token: string
   customer_id: string
   status: string
   payment_status: string
@@ -457,9 +458,10 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
               ) : (
                 <div className="space-y-4 max-h-[300px] overflow-y-auto">
                   {orders.map((order) => (
-                    <div
+                    <Link
                       key={order.id}
-                      className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                      href={`/orders/${order.public_token}`}
+                      className="block p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-mono text-sm text-foreground">#{order.order_number}</span>
@@ -474,7 +476,7 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
                       <p className="text-xs text-muted-foreground/70 mt-1">
                         {order.order_items?.length || 0} item(s)
                       </p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               )}

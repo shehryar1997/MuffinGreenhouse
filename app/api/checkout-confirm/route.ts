@@ -16,6 +16,7 @@ const confirmSchema = z.object({
 interface OrderForConfirmation {
   id: string
   order_number: string
+  public_token: string
   status: string
   payment_status: string
 }
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabaseAdmin
       .from('orders')
-      .select('id, order_number, status, payment_status')
+      .select('id, order_number, public_token, status, payment_status')
       .eq('id', orderId)
       .eq('order_number', orderNumber)
       .maybeSingle()

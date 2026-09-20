@@ -11,6 +11,7 @@ const DEFAULT_COURIER = "Leopards Courier"
 
 interface OrderForEmail {
   order_number: string
+  public_token: string
   total: number
   delivery_type: "delivery" | "pickup"
   customer: { email: string; name: string | null } | null
@@ -22,7 +23,7 @@ interface OrderForEmail {
 async function getOrderForEmail(orderId: string): Promise<OrderForEmail | null> {
   const { data, error } = await supabaseAdmin
     .from("orders")
-    .select("order_number, total, delivery_type, customer:customers(email, name), order_items(product_name, quantity, unit_price)")
+    .select("order_number, public_token, total, delivery_type, customer:customers(email, name), order_items(product_name, quantity, unit_price)")
     .eq("id", orderId)
     .single()
 
@@ -84,6 +85,7 @@ export async function markPaid(orderId: string) {
           toEmail: order.customer.email,
           customerName: order.customer.name || undefined,
           orderNumber: order.order_number,
+          publicToken: order.public_token,
           total: order.total,
           items: order.order_items.map((item) => ({
             productName: item.product_name,
@@ -140,6 +142,7 @@ export async function markShipped(orderId: string, trackingNumber: string): Prom
         toEmail: order.customer.email,
         customerName: order.customer.name,
         orderNumber: order.order_number,
+        publicToken: order.public_token,
         total: order.total,
         items: order.order_items.map((item) => ({
           productName: item.product_name,

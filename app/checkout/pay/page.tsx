@@ -109,7 +109,7 @@ function CheckoutPayContent() {
     return (
       <div className='min-h-screen bg-forest-50 py-12'>
         <div className='max-w-2xl mx-auto px-4'>
-          <div className='bg-surface rounded-2xl border border-forest-200 p-8 text-center'>
+          <div className='bg-surface rounded-2xl border border-forest-200 p-8 text-center animate-in fade-in duration-500'>
             <CheckCircle className='w-10 h-10 text-forest-600 mx-auto mb-4' />
             <h1 className='text-2xl font-serif text-forest-900 mb-2'>Booking Confirmed!</h1>
             <p className='text-forest-600 mb-6'>Your order is held for 24 hours.</p>
@@ -117,10 +117,15 @@ function CheckoutPayContent() {
               <p className='text-sm font-medium text-forest-900'>Order #{paymentDetails.orderNumber}</p>
               <p className='text-sm text-forest-600'>Total: {formatPrice(paymentDetails.total)}</p>
             </div>
-            <a href={getWhatsAppUrl()} target='_blank' rel='noopener noreferrer' className='inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium rounded-lg transition-colors'>
-              <MessageCircle className='w-5 h-5' /> Share Receipt on WhatsApp
-            </a>
-            <Button variant='outline' onClick={() => router.push('/')} className='w-full mt-3'>Continue Shopping</Button>
+            <div className='space-y-3'>
+              <Button onClick={() => router.push(`/orders/${paymentDetails.publicToken}`)} className='w-full h-12 bg-primary text-primary-foreground hover:brightness-110'>
+                View Order Status
+              </Button>
+              <a href={getWhatsAppUrl()} target='_blank' rel='noopener noreferrer' className='inline-flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium rounded-lg transition-colors'>
+                <MessageCircle className='w-5 h-5' /> Share Receipt on WhatsApp
+              </a>
+              <Button variant='outline' onClick={() => router.push('/')} className='w-full'>Continue Shopping</Button>
+            </div>
           </div>
         </div>
       </div>

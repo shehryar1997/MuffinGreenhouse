@@ -163,16 +163,32 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     setState((prev) => ({ ...prev, results: results.slice(0, 8), isLoading: false }))
   }, [])
 
-  // Debounced search
-  const debouncedSearch = useMemo(
-    () => debounce(performSearch, 80),
-    [performSearch]
-  )
+  // Debounced search - stored in ref to avoid recreating and to allow cleanup
+  const debouncedSearchRef = useRef<((query: string) => void) | null>(null)
+  const performSearchRef = useRef(performSearch)
+
+  // Keep performSearchRef up to date without triggering re-renders
+  useEffect(() => {
+    performSearchRef.current = performSearch
+  }, [performSearch])
+
+  // Initialize debounced function once, use ref to access latest performSearch
+  useEffect(() => {
+    debouncedSearchRef.current = debounce((query: string) => {
+      performSearchRef.current(query)
+    }, 80)
+
+    return () => {
+      // Cleanup: cancel any pending debounced calls on unmount
+      // The debounce function doesn't expose cancel, so we just clear the ref
+      debouncedSearchRef.current = null
+    }
+  }, [])
 
   const setQuery = useCallback((query: string) => {
     setState((prev) => ({ ...prev, query, isLoading: query.length > 0 }))
-    debouncedSearch(query)
-  }, [debouncedSearch])
+    debouncedSearchRef.current?.(query)
+  }, [])
 
   const clearSearch = useCallback(() => {
     setState({

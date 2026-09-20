@@ -293,9 +293,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // create_order only returns { order_id, order_number, customer_id, total }.
+    // create_order returns { order_id, order_number, public_token, customer_id, total }.
     const orderId: string = data.order_id
     const orderNumber: string = data.order_number
+    const publicToken: string = data.public_token
     const total = Number(data.total) || 0
     const subtotal = total - deliveryFee
 
@@ -327,6 +328,7 @@ export async function POST(request: NextRequest) {
           toEmail: customerEmail,
           customerName,
           orderNumber: orderNumber?.toString() ?? orderId,
+          publicToken,
           items: summaryItems.map(({ productName, quantity, price }) => ({ productName, quantity, price })),
           subtotal,
           deliveryFee,
@@ -345,6 +347,7 @@ export async function POST(request: NextRequest) {
     const summary: PaymentSummary = {
       orderId,
       orderNumber,
+      publicToken,
       total,
       customerEmail: customerEmail ?? "",
       customerName: customerName ?? "",

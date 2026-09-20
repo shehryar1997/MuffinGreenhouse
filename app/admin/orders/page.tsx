@@ -8,6 +8,19 @@ import { fmtDate, fmtNumber, plural, rs } from "../_components/format"
 export const dynamic = "force-dynamic"
 const PAGE_SIZE = 25
 
+interface OrderRow {
+  id: string
+  order_number: string
+  status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"
+  payment_status: "pending" | "paid" | "failed" | "refunded"
+  total: number
+  delivery_type: "delivery" | "pickup"
+  created_at: string
+  tracking_number: string | null
+  courier: string | null
+  customer: { name: string | null; email: string; phone?: string | null } | { name: string | null; email: string; phone?: string | null }[] | null
+}
+
 const STATUSES = ["all", "pending", "confirmed", "shipped", "delivered", "cancelled"]
 
 export default async function AdminOrdersPage(props: { searchParams: Promise<{ status?: string; page?: string }> }) {
@@ -78,7 +91,7 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
             </tr>
           </Thead>
           <tbody>
-            {ordersList.map((o: any) => {
+            {ordersList.map((o: OrderRow) => {
               const customer = o.customer as { name: string | null; email: string } | null
               return (
                 <Tr key={o.id}>

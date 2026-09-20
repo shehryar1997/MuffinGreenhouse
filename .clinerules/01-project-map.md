@@ -64,6 +64,7 @@ Do not regenerate the full map unless explicitly asked to.
 `app/api/revalidate/route.ts` — ISR revalidation webhook — POST handler — N/A
 `app/api/checkout-submit/route.ts` — Checkout order submission using Supabase create_order RPC — POST handler — @/lib/rate-limit, @/supabase/admin-client, @/lib/email/send-order-confirmation
 `app/api/checkout-confirm/route.ts` — Booking confirmation endpoint (sends booking received email) — POST handler — @/lib/rate-limit, @/supabase/admin-client, @/lib/email/send-booking-received
+`app/orders/[token]/page.tsx` — Public order status page — Server Component — @/supabase/admin-client, @/lib/utils
 `app/api/cron/expire-pending-orders/route.ts` — Cron job to auto-cancel pending orders after 2 hours — GET handler — @/supabase/admin-client, @/lib/email/send-order-cancelled
 `app/api/cron/keep-alive/route.ts` — Daily Supabase keep-alive (prevents the Free plan 7-day inactivity pause; backup for .github/workflows/supabase-keepalive.yml) — GET handler — @/supabase/admin-client, @/lib/safe-compare
 `app/api/product-dimensions/route.ts` — Fetch product box dimensions for shipping calculation — POST handler — @/lib/supabase/server-client

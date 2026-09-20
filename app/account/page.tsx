@@ -39,6 +39,7 @@ interface OrderItem {
 interface Order {
   id: string
   order_number: string
+  public_token: string
   customer_id: string
   status: string
   payment_status: string
@@ -154,7 +155,7 @@ export default async function AccountPage() {
   const { data: orders = [] } = await supabase
     .from("orders")
     .select(`
-      id, order_number, customer_id, status, payment_status, total, created_at,
+      id, order_number, public_token, customer_id, status, payment_status, total, created_at,
       order_items:order_items(id, order_id, product_id, quantity, unit_price, total_price, product_name, product_sku, variant_name)
     `)
     .eq("customer_id", customer.id)

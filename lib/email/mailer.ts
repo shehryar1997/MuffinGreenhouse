@@ -24,6 +24,7 @@ export interface OutgoingEmail {
   to: string
   subject: string
   text: string
+  html?: string
   replyTo?: string
   headers?: Record<string, string>
 }
@@ -96,6 +97,7 @@ const resendProvider: Provider = {
       to: [mail.to],
       subject: mail.subject,
       text: mail.text,
+      ...(mail.html ? { html: mail.html } : {}),
       ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
       ...(mail.headers && Object.keys(mail.headers).length > 0 ? { headers: mail.headers } : {}),
     })
@@ -138,6 +140,7 @@ const mailtrapProvider: Provider = {
           to: [{ email: mail.to }],
           subject: mail.subject,
           text: mail.text,
+          ...(mail.html ? { html: mail.html } : {}),
           ...(mail.replyTo ? { reply_to: parseAddress(mail.replyTo) } : {}),
           ...(mail.headers && Object.keys(mail.headers).length > 0 ? { headers: mail.headers } : {}),
         }),

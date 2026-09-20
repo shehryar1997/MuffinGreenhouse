@@ -6,6 +6,7 @@ export const PAYMENT_SUMMARY_KEY_PREFIX = "muffin:payment-summary:"
 export interface PaymentSummary {
   orderId: string
   orderNumber: string
+  publicToken: string
   total: number
   customerEmail: string
   customerName: string

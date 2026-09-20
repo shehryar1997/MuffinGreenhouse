@@ -9,6 +9,9 @@ import { isValidSessionCookie, COOKIE_NAME } from "@/lib/admin-session"
 import { Panel, PageHeader, StatStrip } from "./_components/ui"
 import { fmtNumber, plural, rs } from "./_components/format"
 
+interface StockRow { stock_count: number; low_stock_threshold: number | null }
+interface OrderTotalRow { total: number }
+
 const KARACHI_OFFSET_MS = 5 * 60 * 60 * 1000
 function getKarachiNow(): Date { return new Date(new Date().getTime() + KARACHI_OFFSET_MS) }
 function startOfDayKarachi(d: Date): Date { const k = new Date(d.getTime()); k.setUTCHours(0,0,0,0); return new Date(k.getTime() - KARACHI_OFFSET_MS) }
@@ -28,7 +31,7 @@ export async function AdminDashboardPage() {
   const ck = await cookies()
   if (!isValidSessionCookie(ck.get(COOKIE_NAME)?.value)) redirect("/admin/login")
 
-  const kn = getKarachiNow(), td = startOfDayKarachi(kn).toISOString(), sm = startOfMonthKarachi(kn).toISOString(), to = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
+  const kn = getKarachiNow(), td = startOfDayKarachi(kn).toISOString(), sm = startOfMonthKarachi(kn).toISOString(), to = new Date(kn.getTime() - 12 * 60 * 60 * 1000).toISOString()
 
   const [r1, r2, r3, r4, r5, r6, r7, r8, r9] = await Promise.all([
     supabaseAdmin.from("orders").select("id", { count: "exact", head: true }).or("status.eq.pending,payment_status.eq.pending"),
@@ -43,10 +46,10 @@ export async function AdminDashboardPage() {
   ])
 
   const ap = r1.count ?? 0, op = r2.count ?? 0, ps = r3.count ?? 0
-  const lsp = (r4.data ?? []).filter((x: any) => x.stock_count <= (x.low_stock_threshold ?? 5)).length
-  const lsv = (r5.data ?? []).filter((x: any) => x.stock_count <= (x.low_stock_threshold ?? 5)).length
+  const lsp = (r4.data ?? []).filter((x: StockRow) => x.stock_count <= (x.low_stock_threshold ?? 5)).length
+  const lsv = (r5.data ?? []).filter((x: StockRow) => x.stock_count <= (x.low_stock_threshold ?? 5)).length
   const ot = r6.count ?? 0
-  const rm = (r7.data ?? []).reduce((s: number, o: any) => s + Number(o.total ?? 0), 0)
+  const rm = (r7.data ?? []).reduce((s: number, o: OrderTotalRow) => s + Number(o.total ?? 0), 0)
   const ue = r8.count ?? 0, ep = r9.count ?? 0
 
   // Work waiting on someone, most urgent first. A zero means nothing to do, and the row says so.
