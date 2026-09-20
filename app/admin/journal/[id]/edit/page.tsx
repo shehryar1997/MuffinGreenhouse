@@ -1,9 +1,9 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { requireAdmin } from "@/lib/admin-auth"
 import { toKarachiInputValue } from "@/lib/event-format"
 import { nowMs } from "@/lib/now"
+import { PageHeader } from "../../../_components/ui"
 import { PostForm } from "../../post-form"
 import { DeletePostButton } from "../../delete-post-button"
 import { deletePost, updatePost } from "../../actions"
@@ -18,15 +18,12 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif">Edit post</h1>
-        <div className="flex items-center gap-4">
-          <Link href="/admin/journal" className="text-sm text-neutral-600 hover:text-neutral-900">
-            ← Back to journal
-          </Link>
-          <DeletePostButton title={post.title} action={deletePost.bind(null, id)} />
-        </div>
-      </div>
+      <PageHeader
+        title="Edit post"
+        description={post.title}
+        back={{ href: "/admin/journal", label: "Journal" }}
+        actions={<DeletePostButton title={post.title} action={deletePost.bind(null, id)} />}
+      />
       <PostForm
         action={updatePost.bind(null, id)}
         submitLabel="Save changes"

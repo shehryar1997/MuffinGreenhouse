@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import * as Dialog from "@radix-ui/react-dialog"
+import { Loader2 } from "lucide-react"
+import { buttonClass, inputClass } from "../../_components/ui"
 import { markShipped } from "./actions"
 
 export function MarkShippedDialog({ orderId }: { orderId: string }) {
@@ -30,21 +32,21 @@ export function MarkShippedDialog({ orderId }: { orderId: string }) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button type="button" className="bg-white border rounded px-4 py-2 text-sm font-medium hover:bg-neutral-50">
-          Mark as Shipped
+        <button type="button" className={buttonClass()}>
+          Mark as shipped
         </button>
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-lg">
-          <Dialog.Title className="text-lg font-serif text-neutral-900">Mark as Shipped</Dialog.Title>
-          <Dialog.Description className="text-sm text-neutral-500 mt-1">
+        <Dialog.Overlay className="admin-scope fixed inset-0 z-50 bg-ink/50 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content className="admin-scope fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-surface p-6 text-foreground shadow-lg data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+          <Dialog.Title className="font-sans text-base font-semibold tracking-normal">Mark as shipped</Dialog.Title>
+          <Dialog.Description className="mt-1.5 text-sm text-muted-foreground">
             Enter the Leopards Courier tracking number. The customer will be emailed this number automatically.
           </Dialog.Description>
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4">
             <div>
-              <label htmlFor="tracking-number" className="block text-sm font-medium text-neutral-700 mb-1">
-                Tracking Number
+              <label htmlFor="tracking-number" className="mb-1.5 block text-[13px] font-medium">
+                Tracking number
               </label>
               <input
                 id="tracking-number"
@@ -53,22 +55,25 @@ export function MarkShippedDialog({ orderId }: { orderId: string }) {
                 onChange={(e) => setTrackingNumber(e.target.value)}
                 placeholder="e.g. LC123456789"
                 autoFocus
-                className="w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D2C]"
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "tracking-error" : undefined}
+                className={`${inputClass} font-mono`}
               />
-              {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+              {error && (
+                <p id="tracking-error" role="alert" className="mt-1.5 text-[13px] text-red-700">
+                  {error}
+                </p>
+              )}
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-1">
               <Dialog.Close asChild>
-                <button type="button" className="px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 rounded" disabled={isSubmitting}>
+                <button type="button" className={buttonClass({ variant: "secondary" })} disabled={isSubmitting}>
                   Cancel
                 </button>
               </Dialog.Close>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-[#E85D2C] text-white rounded px-4 py-2 text-sm font-medium hover:bg-[#d45124] disabled:opacity-60"
-              >
-                {isSubmitting ? "Marking as Shipped..." : "Confirm & Send Email"}
+              <button type="submit" disabled={isSubmitting} className={buttonClass({ variant: "primary" })}>
+                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+                {isSubmitting ? "Marking as shipped…" : "Confirm and send email"}
               </button>
             </div>
           </form>

@@ -1,9 +1,11 @@
 import Link from "next/link"
-import { Search } from "lucide-react"
+import { Search, Star } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { sanitizeSearchTerm } from "@/lib/search-term"
 import { DeleteCustomerButton } from "./delete-customer-button"
 import { deleteCustomer } from "./actions"
+import { Alert, Badge, ButtonLink, EmptyState, PageHeader, StatStrip, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, linkClass, rowLinkClass } from "../_components/ui"
+import { fmtDate, fmtNumber, plural, rs } from "../_components/format"
 
 // Force fresh data on every load — admin pages should never show a
 // customer's stale phone/address/etc. after they've just updated it.
@@ -27,8 +29,6 @@ interface CustomerRow {
   orders: Array<{ total: number | null; status: string; payment_status: string }> | null
 }
 
-const rs = (n: number) => `Rs ${n.toLocaleString("en-PK")}`
-
 export default async function AdminCustomersPage({ searchParams }: AdminCustomersPageProps) {
   const { q } = await searchParams
   const query = sanitizeSearchTerm(q).toLowerCase()
@@ -39,7 +39,14 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
     .order("created_at", { ascending: false })
 
   if (error) {
-    return <p className="text-red-600">Error loading customers: {error.message}</p>
+    return (
+      <>
+        <PageHeader title="Customers" />
+        <Alert tone="danger" title="Couldn't load customers">
+          {error.message}
+        </Alert>
+      </>
+    )
   }
 
   // Lifetime spend = money actually received: paid orders that weren't cancelled afterwards.
@@ -67,117 +74,103 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif">Customers ({customerData.length})</h1>
-      </div>
+      <PageHeader
+        title="Customers"
+        description={query ? `${plural(customerData.length, "match", "matches")} for “${query}”` : `${plural(allCustomers.length, "customer")}`}
+      />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-neutral-500">Signed-up clients</p>
-          <p className="text-2xl font-semibold mt-1">{signedUpCount}</p>
-          <p className="text-[11px] text-neutral-500 mt-1">Unique accounts created on the website</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-neutral-500">Guest customers</p>
-          <p className="text-2xl font-semibold mt-1">{guestCount}</p>
-          <p className="text-[11px] text-neutral-500 mt-1">Ordered without creating an account</p>
-        </div>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <p className="text-xs uppercase tracking-wide text-amber-800">Spent over {rs(HIGH_SPENDER_THRESHOLD_PKR)}</p>
-          <p className="text-2xl font-semibold mt-1 text-amber-900">{highSpenderCount}</p>
-          <p className="text-[11px] text-amber-800/80 mt-1">Highlighted in the list below</p>
-        </div>
-      </div>
+      <StatStrip
+        items={[
+          { label: "Signed up", value: fmtNumber(signedUpCount), hint: "Created an account on the website" },
+          { label: "Guests", value: fmtNumber(guestCount), hint: "Ordered without an account" },
+          { label: `Spent over ${rs(HIGH_SPENDER_THRESHOLD_PKR)}`, value: fmtNumber(highSpenderCount), hint: "Marked in the list below" },
+        ]}
+      />
 
-      {/* Search Bar */}
-      <form className="mb-6" action="/admin/customers" method="GET">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+      <form className="mt-6 flex gap-2" action="/admin/customers" method="GET" role="search">
+        <div className="relative w-full max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <input
             type="search"
             name="q"
-            placeholder="Search by name, email, or phone..."
+            aria-label="Search customers"
+            placeholder="Search by name, email or phone"
             defaultValue={query}
-            className="w-full h-10 pl-10 pr-4 rounded-md border border-neutral-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D2C] focus:ring-offset-1"
+            className={`${inputClass} pl-9`}
           />
-          {query && (
-            <Link
-              href="/admin/customers"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 text-sm"
-            >
-              Clear
-            </Link>
-          )}
         </div>
+        <button type="submit" className={buttonClass()}>
+          Search
+        </button>
+        {query && (
+          <Link href="/admin/customers" className={`${linkClass} inline-flex items-center px-2 text-[13px]`}>
+            Clear
+          </Link>
+        )}
       </form>
 
-      <div className="bg-white rounded-lg border overflow-hidden overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
-            <tr>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Phone</th>
-              <th className="px-4 py-3">Account</th>
-              <th className="px-4 py-3">Signup Date</th>
-              <th className="px-4 py-3">Orders</th>
-              <th className="px-4 py-3">Total spent</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {customerData.map((c) => (
-              <tr key={c.id} className={`border-t align-top ${c.isHighSpender ? "bg-amber-50 hover:bg-amber-100/70" : "hover:bg-neutral-50"}`}>
-                <td className="px-4 py-3 font-medium">
-                  {c.name || "-"}
-                  {c.isHighSpender && (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-amber-200 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
-                      ★ Top spender
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">{c.email}</td>
-                <td className="px-4 py-3">{c.phone || "-"}</td>
-                <td className="px-4 py-3">
-                  {c.auth_id ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {c.email_verified ? "Signed up · verified" : "Signed up"}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
-                      Guest
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}
-                </td>
-                <td className="px-4 py-3">{c.orderCount}</td>
-                <td className={`px-4 py-3 ${c.isHighSpender ? "font-semibold text-amber-900" : ""}`}>{rs(c.spent)}</td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-start justify-end gap-4">
-                    <Link href={`/admin/customers/${c.id}`} className="text-[#E85D2C] hover:underline">
-                      View
-                    </Link>
-                    <DeleteCustomerButton
-                      email={c.email}
-                      orderCount={c.orderCount}
-                      action={deleteCustomer.bind(null, c.id)}
-                      label="Delete"
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {customerData.length === 0 && (
+      <div className="mt-4">
+        {customerData.length === 0 ? (
+          <EmptyState title="No customers found" description={query ? "Try a different name, email or phone number." : "Customers appear here after their first order."} />
+        ) : (
+          <TableShell minWidth="min-w-[860px]">
+            <Thead>
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-neutral-500">
-                  No customers found.
-                </td>
+                <Th>Customer</Th>
+                <Th>Phone</Th>
+                <Th>Account</Th>
+                <Th>Joined</Th>
+                <Th align="right">Orders</Th>
+                <Th align="right">Spent</Th>
+                <Th />
               </tr>
-            )}
-          </tbody>
-        </table>
+            </Thead>
+            <tbody>
+              {customerData.map((c) => (
+                <Tr key={c.id} className={c.isHighSpender ? "bg-amber-50/60 hover:bg-amber-50" : undefined}>
+                  <Td>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <Link href={`/admin/customers/${c.id}`} className={rowLinkClass}>
+                        {c.name || "Unnamed"}
+                      </Link>
+                      {c.isHighSpender && (
+                        <Badge tone="warning" dot={false}>
+                          <Star className="h-3 w-3 fill-current" aria-hidden />
+                          Top spender
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-[13px] text-muted-foreground">{c.email}</p>
+                  </Td>
+                  <Td className="whitespace-nowrap text-foreground/80">{c.phone || "—"}</Td>
+                  <Td>
+                    {c.auth_id ? (
+                      <Badge tone="success">{c.email_verified ? "Signed up · verified" : "Signed up"}</Badge>
+                    ) : (
+                      <Badge>Guest</Badge>
+                    )}
+                  </Td>
+                  <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(c.created_at)}</Td>
+                  <Td align="right" className="tabular-nums">{c.orderCount}</Td>
+                  <Td align="right" className={`tabular-nums ${c.isHighSpender ? "font-semibold" : ""}`}>{rs(c.spent)}</Td>
+                  <Td align="right">
+                    <div className="flex items-center justify-end gap-2">
+                      <ButtonLink href={`/admin/customers/${c.id}`} size="sm">
+                        View
+                      </ButtonLink>
+                      <DeleteCustomerButton
+                        email={c.email}
+                        orderCount={c.orderCount}
+                        action={deleteCustomer.bind(null, c.id)}
+                        label="Delete"
+                      />
+                    </div>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </TableShell>
+        )}
       </div>
     </div>
   )

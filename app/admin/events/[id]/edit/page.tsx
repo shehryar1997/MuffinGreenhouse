@@ -1,8 +1,8 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { requireAdmin } from "@/lib/admin-auth"
 import { toKarachiInputValue } from "@/lib/event-format"
+import { ButtonLink, PageHeader } from "../../../_components/ui"
 import { EventForm } from "../../event-form"
 import { DeleteEventButton } from "../../delete-event-button"
 import { deleteEvent, updateEvent } from "../../actions"
@@ -17,15 +17,17 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif">Edit event</h1>
-        <div className="flex items-center gap-4">
-          <Link href={`/admin/events/${id}`} className="text-sm text-neutral-600 hover:text-neutral-900">
-            ← Attendees
-          </Link>
-          <DeleteEventButton title={event.title} action={deleteEvent.bind(null, id)} />
-        </div>
-      </div>
+      <PageHeader
+        title="Edit event"
+        description={event.title}
+        back={{ href: "/admin/events", label: "Events" }}
+        actions={
+          <>
+            <ButtonLink href={`/admin/events/${id}`}>Attendees</ButtonLink>
+            <DeleteEventButton title={event.title} action={deleteEvent.bind(null, id)} />
+          </>
+        }
+      />
       <EventForm
         action={updateEvent.bind(null, id)}
         submitLabel="Save changes"

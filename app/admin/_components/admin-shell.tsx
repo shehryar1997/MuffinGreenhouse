@@ -1,33 +1,33 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { motion, AnimatePresence } from "framer-motion"
-import {
-  Package,
-  Users,
-  ShoppingCart,
-  Mail,
-  CalendarDays,
-  BookOpen,
-  LogOut,
-  Sprout,
-  ChevronRight,
-  Menu,
-  X,
-  LayoutDashboard,
-} from "lucide-react"
-import { useState } from "react"
+import * as Dialog from "@radix-ui/react-dialog"
+import { toast } from "sonner"
+import { BookOpen, CalendarDays, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, Package, ShoppingBag, Users, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, color: "#E85D2C" },
-  { href: "/admin/products", label: "Products", icon: Package, color: "#E85D2C" },
-  { href: "/admin/customers", label: "Customers", icon: Users, color: "#3f6b3f" },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingCart, color: "#7EC8E3" },
-  { href: "/admin/events", label: "Events", icon: CalendarDays, color: "#8B5CF6" },
-  { href: "/admin/journal", label: "Journal", icon: BookOpen, color: "#0EA5A4" },
-  { href: "/admin/email", label: "Email", icon: Mail, color: "#D4F542" },
+type NavEntry = { href: string; label: string; icon: React.ElementType }
+
+const NAV: Array<{ heading?: string; items: NavEntry[] }> = [
+  { items: [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard }] },
+  {
+    heading: "Store",
+    items: [
+      { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+      { href: "/admin/products", label: "Products", icon: Package },
+      { href: "/admin/customers", label: "Customers", icon: Users },
+    ],
+  },
+  {
+    heading: "Content",
+    items: [
+      { href: "/admin/events", label: "Events", icon: CalendarDays },
+      { href: "/admin/journal", label: "Journal", icon: BookOpen },
+    ],
+  },
+  { heading: "Tools", items: [{ href: "/admin/email", label: "Email", icon: Mail }] },
 ]
 
 async function logout() {
@@ -41,7 +41,7 @@ async function logout() {
     // fall through to the message below
   }
   // Used to fail silently, which is why "Log out" looked broken.
-  window.alert("Couldn't log out. Check your connection and try again.")
+  toast.error("Couldn't log out. Check your connection and try again.")
 }
 
 // "/admin" (Dashboard) must match exactly: every admin URL starts with it.
@@ -49,184 +49,112 @@ function isNavActive(pathname: string, href: string) {
   return href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(href + "/")
 }
 
-function NavLink({ href, icon: Icon, label, color }: { href: string; icon: React.ElementType; label: string; color: string }) {
-  const pathname = usePathname()
-  const isActive = isNavActive(pathname, href)
+const itemBase =
+  "relative flex h-9 w-full items-center gap-3 rounded-md px-3 text-[13.5px] transition-colors focus-visible:ring-offset-ink"
 
+function NavItem({ entry, active, onNavigate }: { entry: NavEntry; active: boolean; onNavigate?: () => void }) {
+  const Icon = entry.icon
   return (
-    <Link href={href} className="group relative">
-      <motion.div
-        className={cn(
-          "flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300",
-          isActive
-            ? "bg-white/90 text-neutral-900 shadow-sm"
-            : "text-neutral-600 hover:text-neutral-900 hover:bg-white/60"
-        )}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <motion.div
-          initial={false}
-          animate={{
-            backgroundColor: isActive ? color : "transparent",
-            color: isActive ? "white" : "currentColor",
-          }}
-          className={cn(
-            "p-1.5 rounded-lg transition-all duration-300",
-            !isActive && "group-hover:text-white"
-          )}
-          style={{ backgroundColor: isActive ? color : "transparent" }}
-        >
-          <Icon className="h-4 w-4" />
-        </motion.div>
-        <span className={cn(isActive && "text-neutral-900")}>{label}</span>
-        {isActive && (
-          <motion.div
-            layoutId="activeNav"
-            className="absolute bottom-0 left-4 right-4 h-0.5 rounded-full"
-            style={{ backgroundColor: color }}
-            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-          />
-        )}
-      </motion.div>
+    <Link
+      href={entry.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={cn(itemBase, active ? "bg-white/10 font-medium text-paper" : "text-paper/75 hover:bg-white/[0.06] hover:text-paper")}
+    >
+      {active && <span aria-hidden className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-sprout-300" />}
+      <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+      {entry.label}
     </Link>
   )
 }
 
+function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  return (
+    <div className="flex h-full flex-col">
+      <Link href="/admin" onClick={onNavigate} className="mx-1 mb-6 mt-1 block rounded px-2 focus-visible:ring-offset-ink">
+        <span className="block font-serif text-[22px] leading-none tracking-tight text-paper">Muffin</span>
+        <span className="mt-1.5 block text-xs text-paper/60">Greenhouse admin</span>
+      </Link>
+
+      <nav aria-label="Admin sections" className="flex-1 space-y-5 overflow-y-auto">
+        {NAV.map((group, i) => (
+          <div key={group.heading ?? i}>
+            {group.heading && <p className="mb-1.5 px-3 text-[11px] font-medium text-paper/55">{group.heading}</p>}
+            <div className="space-y-0.5">
+              {group.items.map((entry) => (
+                <NavItem key={entry.href} entry={entry} active={isNavActive(pathname, entry.href)} onNavigate={onNavigate} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      <div className="mt-4 space-y-0.5 border-t border-white/10 pt-3">
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(itemBase, "text-paper/75 hover:bg-white/[0.06] hover:text-paper")}
+        >
+          <ExternalLink className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+          View storefront
+        </a>
+        <button type="button" onClick={logout} className={cn(itemBase, "text-paper/75 hover:bg-white/[0.06] hover:text-paper")}>
+          <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />
+          Log out
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function AdminShell({ children }: { children: React.ReactNode }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  // The phone menu remembers which page it was opened on, so any navigation (links, back/forward) closes it.
+  const [openOn, setOpenOn] = useState<string | null>(null)
+  const menuOpen = openOn === pathname
+  const setMenuOpen = (open: boolean) => setOpenOn(open ? pathname : null)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F7F3EA] via-[#FAF7F2] to-[#F0EBE3]">
-      <motion.header
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-sm"
-      >
-        <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
-          <Link href="/admin/products" className="flex items-center gap-3 group">
-            <motion.div
-              whileHover={{ rotate: 360, scale: 1.1 }}
-              transition={{ duration: 0.5 }}
-              className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E85D2C] to-[#d45124] flex items-center justify-center shadow-lg shadow-orange-500/20"
+    <div className="admin-scope min-h-screen bg-background text-sm text-foreground antialiased">
+      {/* Desktop sidebar */}
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 bg-ink px-3 py-5 print:hidden lg:block">
+        <SidebarBody pathname={pathname} />
+      </aside>
+
+      {/* Phone top bar + slide-out menu */}
+      <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 print:hidden lg:hidden">
+        <Link href="/admin" className="font-serif text-xl tracking-tight text-paper focus-visible:ring-offset-ink">
+          Muffin <span className="font-sans text-xs text-paper/60">admin</span>
+        </Link>
+        <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
+          <Dialog.Trigger
+            aria-label="Open menu"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-paper transition-colors hover:bg-white/10 focus-visible:ring-offset-ink"
+          >
+            <Menu className="h-5 w-5" aria-hidden />
+          </Dialog.Trigger>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-40 bg-ink/60 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+            <Dialog.Content
+              aria-describedby={undefined}
+              className="admin-scope fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-ink px-3 py-5 text-paper duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left"
             >
-              <Sprout className="h-5 w-5 text-white" />
-            </motion.div>
-            <div className="hidden sm:block">
-              <h1 className="font-serif text-lg font-semibold text-neutral-900 leading-tight">Muffin Admin</h1>
-              <p className="text-[10px] text-neutral-500 tracking-wider uppercase">Dashboard</p>
-            </div>
-          </Link>
+              <Dialog.Title className="sr-only">Menu</Dialog.Title>
+              <Dialog.Close
+                aria-label="Close menu"
+                className="absolute right-3 top-4 flex h-8 w-8 items-center justify-center rounded-md text-paper/75 transition-colors hover:bg-white/10 hover:text-paper focus-visible:ring-offset-ink"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </Dialog.Close>
+              <SidebarBody pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      </div>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <NavLink key={item.href} {...item} />
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl text-neutral-600 hover:bg-neutral-100 transition-colors"
-            >
-              <AnimatePresence mode="wait">
-                {mobileMenuOpen ? (
-                  <motion.div
-                    key="close"
-                    initial={{ rotate: -90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: 90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <X className="h-5 w-5" />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="menu"
-                    initial={{ rotate: 90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: -90, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Menu className="h-5 w-5" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={logout}
-              className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-neutral-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Log out</span>
-            </motion.button>
-          </div>
-        </div>
-
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.nav
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="md:hidden border-t border-neutral-200/50 overflow-hidden bg-white/95 backdrop-blur-xl"
-            >
-              <div className="px-4 py-3 space-y-1">
-                {navItems.map((item, index) => (
-                  <motion.div
-                    key={item.href}
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Link
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
-                        isNavActive(pathname, item.href)
-                          ? "bg-[#E85D2C]/10 text-[#E85D2C]"
-                          : "text-neutral-600 hover:bg-neutral-100"
-                      )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {item.label}
-                      <ChevronRight className="h-4 w-4 ml-auto opacity-50" />
-                    </Link>
-                  </motion.div>
-                ))}
-                <motion.button
-                  initial={{ x: -20, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: navItems.length * 0.1 }}
-                  onClick={logout}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-all"
-                >
-                  <LogOut className="h-5 w-5" />
-                  Log out
-                </motion.button>
-              </div>
-            </motion.nav>
-          )}
-        </AnimatePresence>
-      </motion.header>
-
-      <main className="px-4 sm:px-6 lg:px-8 py-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-          className="max-w-7xl mx-auto"
-        >
-          {children}
-        </motion.div>
+      <main id="main-content" tabIndex={-1} className="focus:outline-none lg:pl-60 print:pl-0">
+        <div className="mx-auto max-w-[1180px] px-4 py-8 sm:px-6 lg:px-10 print:max-w-none print:p-0">{children}</div>
       </main>
     </div>
   )

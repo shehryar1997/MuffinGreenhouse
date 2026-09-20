@@ -1,0 +1,77 @@
+/*
+ * Admin panel theme.
+ *
+ * The storefront switches to a dark palette when someone picks dark mode there. The admin is built on white
+ * surfaces, so in that state its text would go light-on-light. Everything inside .admin-scope therefore
+ * re-declares the light tokens from globals.css (plus a stronger input border, which the storefront doesn't
+ * need). Portalled content (dialogs) has to carry the class itself.
+ */
+.admin-scope {
+  color-scheme: light;
+
+  --background: 45 33% 96%;
+  --foreground: 0 0% 10%;
+  --card: 45 33% 96%;
+  --card-foreground: 0 0% 10%;
+  --surface: 0 0% 100%;
+  --popover: 45 33% 96%;
+  --popover-foreground: 0 0% 10%;
+  --primary: 14 78% 42%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 75 90% 60%;
+  --secondary-foreground: 0 0% 10%;
+  --muted: 40 20% 92%;
+  --muted-foreground: 30 10% 40%;
+  --accent: 14 78% 42%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 40 15% 85%;
+  /* Form-control edges need 3:1 against the white surface; the decorative hairline above is too pale for that. */
+  --input: 40 9% 58%;
+  --ring: 14 78% 42%;
+
+  --cream-50: 253 252 248;
+  --cream-100: 247 243 234;
+  --cream-200: 237 228 214;
+  --cream-300: 226 214 193;
+  --cream-400: 215 200 172;
+  --cream-500: 204 185 151;
+  --forest-50: 243 247 239;
+  --forest-100: 229 238 221;
+  --forest-200: 204 219 194;
+  --forest-300: 169 192 155;
+  --forest-400: 127 158 112;
+  --forest-500: 86 116 74;
+  --forest-600: 67 94 57;
+  --forest-700: 52 73 45;
+  --forest-800: 38 55 36;
+  --forest-900: 26 38 26;
+  --forest-950: 18 22 14;
+  --sprout-50: 251 254 214;
+  --sprout-100: 242 252 171;
+  --sprout-200: 229 249 138;
+  --sprout-600: 97 120 26;
+  --sprout-700: 76 94 20;
+  --sprout-800: 58 72 16;
+}
+
+/* Prices, counts and dates line up in columns. */
+.admin-scope table,
+.admin-scope .tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keep the <details> "Mark paid" popover trigger free of the browser's disclosure triangle. */
+.admin-scope summary {
+  list-style: none;
+}
+.admin-scope summary::-webkit-details-marker {
+  display: none;
+}
+
+@media print {
+  .admin-scope {
+    background: #fff !important;
+  }
+}

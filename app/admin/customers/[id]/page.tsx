@@ -4,6 +4,9 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 import { requireAdmin } from "@/lib/admin-auth"
 import { DeleteCustomerButton } from "../delete-customer-button"
 import { deleteCustomer } from "../actions"
+import { Badge, Field, OrderStatusBadge, PageHeader, Panel, PaymentStatusBadge, inputClass, linkClass, rowLinkClass } from "../../_components/ui"
+import { SubmitButton } from "../../_components/submit-button"
+import { fmtDate, fmtDateTime, rs } from "../../_components/format"
 
 // Force fresh data on every load — a dynamic route param alone doesn't
 // reliably opt this page out of caching, and this page needs to reflect
@@ -85,198 +88,116 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif">{customer.name || "Unnamed Customer"}</h1>
-        <div className="flex items-center gap-6">
+      <PageHeader
+        title={customer.name || "Unnamed customer"}
+        description={customer.email}
+        back={{ href: "/admin/customers", label: "Customers" }}
+        badges={customer.email_verified ? <Badge tone="success">Verified</Badge> : <Badge>Unverified</Badge>}
+        actions={
           <DeleteCustomerButton
             email={customer.email}
             orderCount={orders?.length ?? 0}
             action={deleteCustomer.bind(null, customer.id)}
             label="Delete profile"
           />
-          <Link
-            href="/admin/customers"
-            className="text-sm text-neutral-600 hover:text-neutral-900"
-          >
-            ← Back to customers
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile & Orders Section */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-serif mb-4">Profile</h2>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        {/* Profile & orders */}
+        <div className="space-y-6">
+          <Panel title="Profile">
             <form action={updateCustomer} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Name">
+                  <input id="name" name="name" type="text" defaultValue={customer.name || ""} className={inputClass} />
+                </Field>
+                <Field label="Email" hint="The sign-in email can't be changed here.">
+                  <input id="email" name="email" type="email" defaultValue={customer.email} disabled className={inputClass} />
+                </Field>
+                <Field label="Phone">
+                  <input id="phone" name="phone" type="tel" defaultValue={customer.phone || ""} className={inputClass} />
+                </Field>
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-1">
-                    Name
-                  </label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    defaultValue={customer.name || ""}
-                    className="w-full h-10 px-3 rounded-md border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-[#E85D2C] focus:ring-offset-1"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-neutral-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    defaultValue={customer.email}
-                    disabled
-                    className="w-full h-10 px-3 rounded-md border border-neutral-200 bg-neutral-50 text-neutral-500 cursor-not-allowed"
-                  />
+                  <p className="mb-1.5 text-[13px] font-medium">Signed up</p>
+                  <p className="flex h-9 items-center text-sm text-muted-foreground">{fmtDateTime(customer.created_at)}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-neutral-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    defaultValue={customer.phone || ""}
-                    className="w-full h-10 px-3 rounded-md border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-[#E85D2C] focus:ring-offset-1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-1">
-                    Signup Date
-                  </label>
-                  <p className="text-sm text-neutral-600 py-2">
-                    {customer.created_at ? new Date(customer.created_at).toLocaleString() : "—"}
-                  </p>
-                </div>
-              </div>
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="bg-[#E85D2C] text-white rounded px-4 py-2 text-sm font-medium hover:bg-[#d45124]"
-                >
-                  Save Changes
-                </button>
-                <span className="ml-3 text-sm">
-                  {customer.email_verified ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      ✓ Verified
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
-                      Unverified
-                    </span>
-                  )}
-                </span>
+              <div>
+                <SubmitButton pendingLabel="Saving…">Save changes</SubmitButton>
               </div>
             </form>
+          </Panel>
 
-
-          {/* Order History */}
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-serif mb-4">
-              Order History ({orders?.length ?? 0})
-            </h2>
+          <Panel title={`Order history (${orders?.length ?? 0})`} flush={!!orders?.length}>
             {orders?.length === 0 ? (
-              <p className="text-neutral-500 text-sm">No orders yet.</p>
+              <p className="text-sm text-muted-foreground">No orders yet.</p>
             ) : (
-              <div className="space-y-4">
-                {orders?.map((order) => (
-                  <div key={order.id} className="border rounded p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <span className="font-medium">{order.order_number}</span>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            order.status === "delivered"
-                              ? "bg-green-100 text-green-800"
-                              : order.status === "cancelled"
-                              ? "bg-red-100 text-red-800"
-                              : order.status === "shipped"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {order.status}
-                        </span>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            order.payment_status === "paid"
-                              ? "bg-green-100 text-green-800"
-                              : order.payment_status === "failed"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-neutral-100 text-neutral-600"
-                          }`}
-                        >
-                          {order.payment_status}
-                        </span>
+              <ul className="divide-y divide-border">
+                {orders?.map((order) => {
+                  const orderItems = (order.order_items as unknown as OrderItemRow[]) ?? []
+                  return (
+                    <li key={order.id} className="px-5 py-4">
+                      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link href={`/admin/orders/${order.id}`} className={`${rowLinkClass} font-mono text-[13px]`}>
+                            {order.order_number}
+                          </Link>
+                          <OrderStatusBadge status={order.status} />
+                          <PaymentStatusBadge status={order.payment_status} />
+                        </div>
+                        <p className="text-[13px] text-muted-foreground">
+                          {fmtDate(order.created_at)} · <span className="font-medium text-foreground tabular-nums">{rs(order.total)}</span>
+                        </p>
                       </div>
-                      <span className="text-sm text-neutral-500">
-                        {order.created_at ? new Date(order.created_at).toLocaleDateString() : "—"}
-                      </span>
-                    </div>
-                    <div className="text-sm font-medium mb-2">
-                      Total: Rs {order.total}
-                    </div>
-                    {/* Order items */}
-                    {(order.order_items as unknown as OrderItemRow[])?.length > 0 && (
-                      <div className="mt-3 space-y-1 text-sm text-neutral-600">
-                        {(order.order_items as unknown as OrderItemRow[]).map((item) => (
-                          <div key={item.id} className="flex justify-between">
-                            <span>
-                              {item.quantity}× {item.product_name}
-                              {item.variant_name && ` (${item.variant_name})`}
-                            </span>
-                            <span>Rs {item.total_price}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      {orderItems.length > 0 && (
+                        <ul className="mt-2.5 space-y-1 text-[13px] text-muted-foreground">
+                          {orderItems.map((item) => (
+                            <li key={item.id} className="flex justify-between gap-4">
+                              <span>
+                                {item.quantity}× {item.product_name}
+                                {item.variant_name && ` (${item.variant_name})`}
+                              </span>
+                              <span className="shrink-0 tabular-nums">{rs(item.total_price)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
             )}
-          </div>
+          </Panel>
         </div>
 
         {/* Sidebar: login info, wishlist, addresses */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-serif mb-4">Login</h2>
-            <dl className="text-sm space-y-2">
+          <Panel title="Login">
+            <dl className="space-y-2 text-sm">
               <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">Account</dt>
-                <dd>{customer.auth_id ? "Signed up on the website" : "Guest (no account)"}</dd>
+                <dt className="text-muted-foreground">Account</dt>
+                <dd className="text-right">{customer.auth_id ? "Signed up on the website" : "Guest (no account)"}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">Sign-in email</dt>
+                <dt className="text-muted-foreground">Sign-in email</dt>
                 <dd className="break-all text-right">{customer.email}</dd>
               </div>
               <div className="flex justify-between gap-4">
-                <dt className="text-neutral-500">Password</dt>
-                <dd className="text-right text-neutral-600">••••••••</dd>
+                <dt className="text-muted-foreground">Password</dt>
+                <dd className="text-right text-muted-foreground">••••••••</dd>
               </div>
             </dl>
-            <p className="mt-3 text-xs text-neutral-500">
+            <p className="mt-4 text-xs leading-5 text-muted-foreground">
               Passwords can&apos;t be viewed: the sign-in system stores only a one-way scrambled version, so nobody — including you and us —
               can read a customer&apos;s password. To help someone who&apos;s locked out, ask them to use a password reset, or delete the
               profile so they can sign up again.
             </p>
-          </div>
+          </Panel>
 
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-serif mb-4">Wishlist ({wishlist.length})</h2>
+          <Panel title={`Wishlist (${wishlist.length})`}>
             {wishlist.length === 0 ? (
-              <p className="text-neutral-500 text-sm">Nothing saved to their wishlist.</p>
+              <p className="text-sm text-muted-foreground">Nothing saved to their wishlist.</p>
             ) : (
               <ul className="space-y-2 text-sm">
                 {wishlist.map((item) =>
@@ -284,68 +205,58 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
                     <li key={item.id} className="flex items-start justify-between gap-3">
                       <span>
                         {item.product.published_at ? (
-                          <Link href={`/shop/product/${item.product.slug}`} className="text-[#E85D2C] hover:underline" target="_blank">
+                          <Link href={`/shop/product/${item.product.slug}`} className={linkClass} target="_blank">
                             {item.product.name}
                           </Link>
                         ) : (
                           <>
-                            {item.product.name} <span className="text-xs text-neutral-400">(unpublished)</span>
+                            {item.product.name} <span className="text-xs text-muted-foreground">(unpublished)</span>
                           </>
                         )}
                       </span>
-                      <span className="shrink-0 text-neutral-500">Rs {item.product.price}</span>
+                      <span className="shrink-0 tabular-nums text-muted-foreground">{rs(item.product.price)}</span>
                     </li>
                   ) : (
-                    <li key={item.id} className="text-neutral-400">
+                    <li key={item.id} className="text-muted-foreground">
                       (product no longer available)
                     </li>
                   )
                 )}
               </ul>
             )}
-          </div>
+          </Panel>
 
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-serif mb-4">Saved Addresses</h2>
+          <Panel title="Saved addresses">
             {addresses?.length === 0 ? (
-              <p className="text-neutral-500 text-sm">No addresses saved.</p>
+              <p className="text-sm text-muted-foreground">No addresses saved.</p>
             ) : (
-              <div className="space-y-4">
+              <ul className="space-y-3">
                 {addresses?.map((addr) => (
-                  <div key={addr.id} className="border rounded p-3 text-sm">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium">
+                  <li key={addr.id} className="rounded-md border border-border p-3 text-sm">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 font-medium">
                         {addr.label}
-                        {addr.is_default && (
-                          <span className="ml-2 text-xs px-1.5 py-0.5 bg-neutral-100 rounded text-neutral-600">
-                            Default
-                          </span>
-                        )}
+                        {addr.is_default && <Badge dot={false}>Default</Badge>}
                       </span>
-                      <span
-                        className={`text-xs ${addr.is_active ? "text-green-600" : "text-neutral-400"}`}
-                      >
+                      <span className={`text-xs ${addr.is_active ? "text-forest-700" : "text-muted-foreground"}`}>
                         {addr.is_active ? "Active" : "Inactive"}
                       </span>
                     </div>
-                    <p className="text-neutral-600">{addr.street}</p>
-                    <p className="text-neutral-600">
+                    <p className="text-muted-foreground">{addr.street}</p>
+                    <p className="text-muted-foreground">
                       {addr.city}, {addr.province} {addr.postal_code}
                     </p>
-                    {addr.phone && <p className="text-neutral-600">{addr.phone}</p>}
+                    {addr.phone && <p className="text-muted-foreground">{addr.phone}</p>}
                     {addr.delivery_instructions && (
-                      <p className="text-neutral-500 text-xs mt-1 italic">
-                        {addr.delivery_instructions}
-                      </p>
+                      <p className="mt-1 text-xs italic text-muted-foreground">{addr.delivery_instructions}</p>
                     )}
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
-          </div>
+          </Panel>
         </div>
       </div>
     </div>
-  </div>
-)
+  )
 }

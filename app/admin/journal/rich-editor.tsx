@@ -70,7 +70,7 @@ function ToolButton({
       disabled={disabled}
       onClick={onClick}
       className={`inline-flex h-8 w-8 items-center justify-center rounded transition-colors disabled:opacity-40 ${
-        active ? "bg-neutral-900 text-white" : "text-neutral-700 hover:bg-neutral-200"
+        active ? "bg-forest-700 text-white" : "text-foreground/80 hover:bg-muted"
       }`}
     >
       {children}
@@ -78,7 +78,7 @@ function ToolButton({
   )
 }
 
-const Divider = () => <span className="mx-1 h-5 w-px bg-neutral-300" aria-hidden />
+const Divider = () => <span className="mx-1 h-5 w-px bg-border" aria-hidden />
 
 function closestBlock(node: Node | null, root: HTMLElement): HTMLElement | null {
   let cur: Node | null = node
@@ -364,14 +364,14 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
   const isEmpty = markdown.trim() === ""
 
   return (
-    <div className="rounded-lg border bg-white">
+    <div className="rounded-md border border-input bg-surface">
       <input type="hidden" name={name} value={markdown} />
 
       {/* Buttons must not take focus from the text, or the selection they act on is lost. */}
       <div
         role="toolbar"
         aria-label="Formatting"
-        className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-t-lg border-b bg-neutral-50 px-2 py-1.5"
+        className="sticky top-14 z-10 flex flex-wrap items-center gap-0.5 rounded-t-md border-b bg-muted px-2 py-1.5 lg:top-0"
         onMouseDown={(e) => {
           if (!(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLSelectElement)) e.preventDefault()
         }}
@@ -388,7 +388,7 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
           aria-label="Text style"
           value={active.block}
           onChange={(e) => setBlock(e.target.value as BlockKind)}
-          className="h-8 rounded border bg-white px-2 text-sm text-neutral-800"
+          className="h-8 rounded border border-input bg-surface px-2 text-sm text-foreground"
         >
           <option value="p">Normal text</option>
           <option value="h2">Heading</option>
@@ -451,8 +451,8 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
       </div>
 
       {panel === "link" && (
-        <div className="flex flex-wrap items-center gap-2 border-b bg-amber-50/60 px-3 py-2 text-sm">
-          <label htmlFor="link-url" className="font-medium text-neutral-700">
+        <div className="flex flex-wrap items-center gap-2 border-b bg-muted/50 px-3 py-2 text-sm">
+          <label htmlFor="link-url" className="font-medium text-foreground">
             Link address
           </label>
           <input
@@ -467,17 +467,17 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
               } else if (e.key === "Escape") setPanel(null)
             }}
             placeholder="https://…"
-            className="min-w-[14rem] flex-1 rounded border bg-white px-2 py-1"
+            className="min-w-[14rem] flex-1 rounded border border-input bg-surface px-2 py-1"
           />
-          <button type="button" onClick={applyLink} className="inline-flex items-center gap-1 rounded bg-neutral-900 px-3 py-1 text-white">
+          <button type="button" onClick={applyLink} className="inline-flex items-center gap-1 rounded bg-forest-700 px-3 py-1 text-white hover:bg-forest-800">
             <Check className="h-3.5 w-3.5" /> Apply
           </button>
-          <button type="button" onClick={() => setPanel(null)} className="rounded border bg-white px-3 py-1">
+          <button type="button" onClick={() => setPanel(null)} className="rounded border border-input bg-surface px-3 py-1 hover:bg-muted">
             Cancel
           </button>
-          <p className="basis-full text-xs text-neutral-500">Select some text first to turn it into a link. With nothing selected, the address itself is inserted.</p>
+          <p className="basis-full text-xs text-muted-foreground">Select some text first to turn it into a link. With nothing selected, the address itself is inserted.</p>
           {panelError && (
-            <p role="alert" className="basis-full text-xs text-red-600">
+            <p role="alert" className="basis-full text-xs text-red-700">
               {panelError}
             </p>
           )}
@@ -485,24 +485,24 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
       )}
 
       {panel === "image" && (
-        <div className="space-y-2 border-b bg-amber-50/60 px-3 py-2 text-sm">
+        <div className="space-y-2 border-b bg-muted/50 px-3 py-2 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-1.5 rounded border bg-white px-3 py-1 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded border border-input bg-surface px-3 py-1 hover:bg-muted disabled:opacity-50"
             >
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
               Upload image
             </button>
-            <span className="text-neutral-500">or</span>
+            <span className="text-muted-foreground">or</span>
             <input
               aria-label="Image address"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="paste an image address (https://…)"
-              className="min-w-[14rem] flex-1 rounded border bg-white px-2 py-1"
+              className="min-w-[14rem] flex-1 rounded border border-input bg-surface px-2 py-1"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -517,12 +517,12 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
                 } else if (e.key === "Escape") setPanel(null)
               }}
               placeholder="Caption (optional, also read aloud to screen-reader users)"
-              className="min-w-[14rem] flex-1 rounded border bg-white px-2 py-1"
+              className="min-w-[14rem] flex-1 rounded border border-input bg-surface px-2 py-1"
             />
-            <button type="button" onClick={insertImage} disabled={uploading || !imageUrl} className="inline-flex items-center gap-1 rounded bg-neutral-900 px-3 py-1 text-white disabled:opacity-50">
+            <button type="button" onClick={insertImage} disabled={uploading || !imageUrl} className="inline-flex items-center gap-1 rounded bg-forest-700 px-3 py-1 text-white hover:bg-forest-800 disabled:opacity-50">
               <Check className="h-3.5 w-3.5" /> Insert
             </button>
-            <button type="button" onClick={() => setPanel(null)} className="inline-flex items-center gap-1 rounded border bg-white px-3 py-1">
+            <button type="button" onClick={() => setPanel(null)} className="inline-flex items-center gap-1 rounded border border-input bg-surface px-3 py-1 hover:bg-muted">
               <X className="h-3.5 w-3.5" /> Cancel
             </button>
           </div>
@@ -531,7 +531,7 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
             <img src={imageUrl} alt="" className="max-h-32 rounded border" />
           )}
           {panelError && (
-            <p role="alert" className="text-xs text-red-600">
+            <p role="alert" className="text-xs text-red-700">
               {panelError}
             </p>
           )}
@@ -541,7 +541,7 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
 
       <div className="relative">
         {isEmpty && (
-          <p className="pointer-events-none absolute left-5 top-5 text-[1.0625rem] text-neutral-400" aria-hidden>
+          <p className="pointer-events-none absolute left-5 top-5 text-[1.0625rem] text-muted-foreground" aria-hidden>
             Start writing your article. Press Enter for a new paragraph.
           </p>
         )}

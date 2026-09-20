@@ -1,11 +1,15 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { MessageCircle, Printer } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { markPaid, markDelivered, cancelOrder } from "./actions"
 import { MarkShippedDialog } from "./mark-shipped-dialog"
 import { ConfirmSubmitButton } from "../../_components/confirm-submit-button"
+import { Alert, ButtonLink, OrderStatusBadge, PageHeader, Panel, PaymentStatusBadge, buttonClass, linkClass, waButtonClass } from "../../_components/ui"
+import { fmtDateTime, rs } from "../../_components/format"
 import { whatsAppLink } from "@/lib/whatsapp-link"
 import { paymentAccountsAsText } from "@/config/payment-accounts"
+import { cn } from "@/lib/utils"
 
 // Force fresh data on every load — same reasoning as the orders list page.
 export const dynamic = "force-dynamic"
@@ -51,155 +55,226 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     : `Hi ${customerFirstName ?? "there"}! This is Muffin Plants, writing about your order ${order.order_number}.`
   const whatsappHref = whatsAppLink(whatsappPhone, whatsappMessage)
 
+  const cancelled = order.status === "cancelled"
+  const canMarkPaid = order.payment_status !== "paid" && !cancelled
+  const canShip = order.status !== "shipped" && order.status !== "delivered" && !cancelled
+  const canDeliver = order.status !== "delivered" && !cancelled
+  // Shipped plants have left the greenhouse, so their stock can't be returned: no cancel from here on.
+  const canCancel = !cancelled && order.status !== "delivered" && order.status !== "shipped"
+
+  const steps = [
+    { label: "Placed", done: true },
+    { label: "Paid", done: order.payment_status === "paid" },
+    { label: "Shipped", done: order.status === "shipped" || order.status === "delivered" },
+    { label: "Delivered", done: order.status === "delivered" },
+  ]
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif">Order {order.order_number}</h1>
-        <Link href="/admin/orders" className="text-sm text-neutral-600 hover:text-neutral-900">
-          ← Back to orders
-        </Link>
-      </div>
+      <PageHeader
+        title={`Order ${order.order_number}`}
+        description={`Placed ${fmtDateTime(order.created_at)} · ${order.delivery_type === "pickup" ? "Pickup" : "Delivery"}`}
+        back={{ href: "/admin/orders", label: "Orders" }}
+        badges={
+          <>
+            <OrderStatusBadge status={order.status} />
+            <PaymentStatusBadge status={order.payment_status} />
+          </>
+        }
+        actions={
+          <ButtonLink href={`/admin/orders/${order.id}/print`}>
+            <Printer className="h-4 w-4" aria-hidden />
+            Packing slip
+          </ButtonLink>
+        }
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Status & actions */}
-          <div className="bg-white rounded-lg border p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
-                Status: {order.status}
-              </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700">
-                Payment: {order.payment_status}
-              </span>
-              {order.payment_method && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700 capitalize">
-                  {order.payment_method.replace("_", " ")}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-6">
+          <Panel title="Fulfilment">
+            {cancelled ? (
+              <Alert tone="danger" title="This order was cancelled." />
+            ) : (
+              <ol className="grid grid-cols-4 gap-2">
+                {steps.map((s) => (
+                  <li key={s.label}>
+                    <div className={cn("h-1 rounded-full", s.done ? "bg-forest-600" : "bg-border")} />
+                    <p className={cn("mt-2 text-[13px]", s.done ? "font-medium text-foreground" : "text-muted-foreground")}>
+                      {s.label}
+                      <span className="sr-only">{s.done ? " (done)" : " (not yet)"}</span>
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            )}
+
+            {order.tracking_number && (
+              <p className="mt-5 text-sm">
+                <span className="text-muted-foreground">{order.courier || "Courier"} tracking</span>{" "}
+                <span className="ml-1 font-mono font-medium">{order.tracking_number}</span>
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-5">
               {/* Confirmation added: this e-mails the customer and can't be undone. Hidden on cancelled orders. */}
-              {order.payment_status !== "paid" && order.status !== "cancelled" && (
+              {canMarkPaid && (
                 <form action={markPaidForOrder}>
                   <ConfirmSubmitButton
+                    title="Mark as paid?"
+                    confirmLabel="Mark as paid"
                     message={`Mark order ${order.order_number} as paid? The customer will be e-mailed an order confirmation. This can't be undone.`}
-                    className="bg-[#E85D2C] text-white rounded px-4 py-2 text-sm font-medium hover:bg-[#d45124]"
+                    className={buttonClass({ variant: "primary" })}
                   >
-                    Mark as Paid
+                    Mark as paid
                   </ConfirmSubmitButton>
                 </form>
               )}
-              {order.status !== "shipped" && order.status !== "delivered" && order.status !== "cancelled" && (
-                <MarkShippedDialog orderId={order.id} />
-              )}
-              {order.status !== "delivered" && order.status !== "cancelled" && (
+              {canShip && <MarkShippedDialog orderId={order.id} />}
+              {canDeliver && (
                 <form action={markDeliveredForOrder}>
                   <ConfirmSubmitButton
+                    title="Mark as delivered?"
+                    confirmLabel="Mark as delivered"
                     message={`Mark order ${order.order_number} as delivered?`}
-                    className="bg-white border rounded px-4 py-2 text-sm font-medium hover:bg-neutral-50"
+                    className={buttonClass()}
                   >
-                    Mark as Delivered
+                    Mark as delivered
                   </ConfirmSubmitButton>
                 </form>
               )}
-              {/* Shipped plants have left the greenhouse, so their stock can't be returned: no cancel from here on. */}
-              {order.status !== "cancelled" && order.status !== "delivered" && order.status !== "shipped" && (
-                <form action={cancelOrderForOrder}>
+              {canCancel && (
+                <form action={cancelOrderForOrder} className="sm:ml-auto">
                   <ConfirmSubmitButton
+                    title="Cancel this order?"
+                    confirmLabel="Cancel order"
+                    cancelLabel="Keep order"
+                    tone="danger"
                     message={`Cancel order ${order.order_number}? Its plants go back in stock.${order.payment_status !== "paid" ? " The customer will be e-mailed that the order was cancelled because the invoice wasn't cleared." : " This order is already paid, so no cancellation e-mail will be sent."}`}
-                    className="bg-white border border-red-200 text-red-700 rounded px-4 py-2 text-sm font-medium hover:bg-red-50"
+                    className={buttonClass({ variant: "danger" })}
                   >
-                    Cancel Order
+                    Cancel order
                   </ConfirmSubmitButton>
                 </form>
               )}
+              {!canMarkPaid && !canShip && !canDeliver && !canCancel && (
+                <p className="text-sm text-muted-foreground">Nothing left to do on this order.</p>
+              )}
             </div>
-            {order.tracking_number && (
-              <div className="mt-4 pt-4 border-t text-sm text-neutral-600">
-                <span className="font-medium text-neutral-900">{order.courier || "Courier"} tracking:</span>{" "}
-                <span className="font-mono">{order.tracking_number}</span>
-              </div>
-            )}
-          </div>
+          </Panel>
 
-          {/* Items */}
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-serif mb-4">Items ({items.length})</h2>
-            <div className="space-y-2 text-sm">
-              {items.map((item) => (
-                <div key={item.id} className="flex justify-between border-b last:border-b-0 pb-2 last:pb-0">
-                  <span>
-                    {item.quantity}× {item.product_name}
-                    {item.variant_name && ` (${item.variant_name})`}
-                  </span>
-                  <span>Rs {item.total_price}</span>
-                </div>
-              ))}
-            </div>
-            <div className="border-t mt-4 pt-4 space-y-1 text-sm">
-              <div className="flex justify-between text-neutral-600">
-                <span>Subtotal</span>
-                <span>Rs {order.subtotal}</span>
+          <Panel title={`Items (${items.length})`} flush>
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-muted/50">
+                <tr>
+                  <th scope="col" className="px-5 py-2.5 text-left text-xs font-medium text-muted-foreground">Item</th>
+                  <th scope="col" className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground">Qty</th>
+                  <th scope="col" className="px-3 py-2.5 text-right text-xs font-medium text-muted-foreground">Price</th>
+                  <th scope="col" className="px-5 py-2.5 text-right text-xs font-medium text-muted-foreground">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id} className="border-b border-border last:border-0">
+                    <td className="px-5 py-3">
+                      <p className="font-medium">{item.product_name}</p>
+                      {item.variant_name && <p className="text-[13px] text-muted-foreground">{item.variant_name}</p>}
+                    </td>
+                    <td className="px-3 py-3 text-right tabular-nums">{item.quantity}</td>
+                    <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{rs(item.unit_price)}</td>
+                    <td className="px-5 py-3 text-right font-medium tabular-nums">{rs(item.total_price)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <dl className="ml-auto max-w-xs space-y-1.5 border-t border-border px-5 py-4 text-sm tabular-nums">
+              <div className="flex justify-between text-muted-foreground">
+                <dt>Subtotal</dt>
+                <dd>{rs(order.subtotal)}</dd>
               </div>
-              <div className="flex justify-between text-neutral-600">
-                <span>Delivery</span>
-                <span>Rs {order.delivery_fee}</span>
+              <div className="flex justify-between text-muted-foreground">
+                <dt>Delivery</dt>
+                <dd>{rs(order.delivery_fee)}</dd>
               </div>
-              <div className="flex justify-between font-medium">
-                <span>Total</span>
-                <span>Rs {order.total}</span>
+              <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
+                <dt>Total</dt>
+                <dd>{rs(order.total)}</dd>
               </div>
-            </div>
+            </dl>
             {order.customer_notes && (
-              <p className="text-sm text-neutral-500 mt-4 italic">Note from customer: {order.customer_notes}</p>
+              <div className="border-t border-border px-5 py-4">
+                <p className="text-[13px] font-medium">Note from the customer</p>
+                <p className="mt-1 text-sm italic text-muted-foreground">{order.customer_notes}</p>
+              </div>
             )}
-          </div>
+          </Panel>
         </div>
 
-        {/* Sidebar: customer + delivery */}
+        {/* Sidebar: customer, delivery, payment */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-serif mb-4">Customer</h2>
+          <Panel title="Customer">
             {customer ? (
-              <div className="text-sm space-y-1">
+              <div className="space-y-1 text-sm">
                 <p className="font-medium">{customer.name || "—"}</p>
-                <p className="text-neutral-600">{customer.email}</p>
-                <p className="text-neutral-600">{customer.phone || "—"}</p>
-                <Link href={`/admin/customers/${customer.id}`} className="text-[#E85D2C] hover:underline text-xs">
-                  View customer profile
-                </Link>
+                <p>
+                  <a href={`mailto:${customer.email}`} className="break-all text-muted-foreground hover:text-foreground hover:underline">
+                    {customer.email}
+                  </a>
+                </p>
+                <p className="text-muted-foreground">{customer.phone || "—"}</p>
+                <p className="pt-1">
+                  <Link href={`/admin/customers/${customer.id}`} className={cn(linkClass, "text-[13px]")}>
+                    View customer profile
+                  </Link>
+                </p>
                 {whatsappHref ? (
-                  <a
-                    href={whatsappHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-2 rounded bg-[#25D366] px-3 py-2 text-xs font-medium text-white hover:bg-[#128C7E]"
-                  >
+                  <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className={cn(waButtonClass, "mt-3 w-full")}>
+                    <MessageCircle className="h-4 w-4" aria-hidden />
                     {awaitingPayment ? "WhatsApp payment details" : "Message on WhatsApp"}
                   </a>
                 ) : (
-                  <p className="mt-3 text-xs text-neutral-500">No phone number on file for WhatsApp.</p>
+                  <p className="pt-3 text-[13px] text-muted-foreground">No phone number on file for WhatsApp.</p>
                 )}
               </div>
             ) : (
-              <p className="text-sm text-neutral-500">Guest order — no linked account.</p>
+              <p className="text-sm text-muted-foreground">Guest order — no linked account.</p>
             )}
-          </div>
+          </Panel>
 
-          <div className="bg-white rounded-lg border p-6">
-            <h2 className="text-lg font-serif mb-4">Delivery</h2>
-            <p className="text-sm text-neutral-600 capitalize mb-2">{order.delivery_type}</p>
+          <Panel title={order.delivery_type === "pickup" ? "Pickup" : "Delivery"}>
             {address ? (
-              <div className="text-sm space-y-1">
+              <address className="space-y-0.5 text-sm not-italic">
                 <p className="font-medium">{address.label}</p>
-                <p className="text-neutral-600">{address.street}</p>
-                <p className="text-neutral-600">{address.city}, {address.province}</p>
-                {address.phone && <p className="text-neutral-600">{address.phone}</p>}
-              </div>
+                <p className="text-muted-foreground">{address.street}</p>
+                <p className="text-muted-foreground">
+                  {address.city}, {address.province}
+                </p>
+                {address.phone && <p className="text-muted-foreground">{address.phone}</p>}
+              </address>
             ) : (
-              <p className="text-sm text-neutral-500">Self pickup — no delivery address.</p>
+              <p className="text-sm text-muted-foreground">Self pickup — no delivery address.</p>
             )}
-          </div>
+          </Panel>
+
+          <Panel title="Payment">
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Method</dt>
+                <dd className="capitalize">{order.payment_method ? order.payment_method.replace(/_/g, " ") : "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <dt className="text-muted-foreground">Status</dt>
+                <dd>
+                  <PaymentStatusBadge status={order.payment_status} />
+                </dd>
+              </div>
+            </dl>
+          </Panel>
+
+          {order.internal_notes && (
+            <Panel title="Internal notes">
+              <p className="whitespace-pre-line text-sm text-muted-foreground">{order.internal_notes}</p>
+            </Panel>
+          )}
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { ProductForm } from "../../product-form"
 import { DeleteProductButton } from "../../delete-product-button"
 import { getFormLookups, updateProduct, deleteProduct } from "../../actions"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { PageHeader } from "../../../_components/ui"
 
 // Force fresh data on every load — an edit form must always prefill with
 // the product's current values, never a stale cached version.
@@ -38,10 +39,12 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-serif">Edit {product.name}</h1>
-        <DeleteProductButton productName={product.name} action={deleteWithId} />
-      </div>
+      <PageHeader
+        title={product.name}
+        description={<span className="font-mono text-[13px]">{product.sku}</span>}
+        back={{ href: "/admin/products", label: "Products" }}
+        actions={<DeleteProductButton productName={product.name} action={deleteWithId} />}
+      />
       <ProductForm lookups={lookups} product={visibleProduct} action={updateWithId} />
     </div>
   )

@@ -1,13 +1,16 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
-import { Camera, ImageIcon, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { Camera, ImageIcon, Loader2, Plus } from "lucide-react"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { uploadAdminImage } from "@/lib/admin-upload"
+import { cn } from "@/lib/utils"
+import { Alert, Badge, CheckField, Field, FormActions, FormSection, buttonClass, inputClass, textareaClass } from "../_components/ui"
 import { findProductsByName, type PrefillProduct, type ProductActionResult } from "./actions"
 
-const inputClass = "w-full border rounded px-3 py-2 text-sm"
-const highlightInputClass = "w-full border-2 border-[#E85D2C] rounded px-3 py-2 text-sm bg-orange-50"
+// Weight is mandatory for Tools & Equipment, so its input is tinted to stand out.
+const highlightInputClass = cn(inputClass, "border-primary bg-clay-50")
 
 type Lookups = {
   categories: string[]
@@ -302,163 +305,157 @@ export function ProductForm({
         const { name } = e.target as unknown as { name?: string }
         if (name) touched.current.add(name)
       }}
-      className="space-y-8 bg-white rounded-lg border p-6"
+      className="max-w-5xl"
     >
-      {saveError && (
-        <div role="alert" className="border border-red-300 bg-red-50 text-red-800 text-sm rounded p-3">
-          {saveError}
-        </div>
-      )}
-      <section className="space-y-4">
-        <h2 className="font-semibold text-lg border-b pb-2">Basics</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Product Name">
-            <input name="name" defaultValue={product?.name} required onBlur={handleNameBlur} className={inputClass} />
-          </Field>
-          <Field label="SKU">
-            <input name="sku" defaultValue={product?.sku} required className={inputClass} />
-          </Field>
-          <Field label="Slug">
-            <input name="slug" defaultValue={product?.slug} required className={inputClass} />
-          </Field>
-          <Field label="Category">
-            <select
-              name="category_name"
-              defaultValue={product?.category_name ?? ""}
-              required
-              className={inputClass}
-              onChange={(e) => setCategoryName(e.target.value)}
-            >
-              <option value="">Select...</option>
-              {lookups.categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        {lookupBusy && <p className="text-xs text-neutral-500">Checking existing products…</p>}
-        {lookupError && (
-          <p role="alert" className="text-xs text-red-600">
-            Couldn&apos;t check existing products: {lookupError}
-          </p>
-        )}
-        {candidates && (
-          <div className="border rounded p-3 bg-orange-50 text-sm space-y-2">
-            <p className="font-medium">
-              {candidates.length} existing products share this name. Copy details from one? (SKU, slug and image are never copied.)
-            </p>
-            <ul className="space-y-1">
-              {candidates.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => applyPrefill(c)}
-                    className="w-full text-left border rounded bg-white px-3 py-2 hover:border-[#E85D2C]"
-                  >
-                    <span className="font-medium">{c.sku}</span>
-                    <span className="text-neutral-600">
-                      {" "}
-                      · {c.category_name ?? "no category"} · size {c.size ?? "?"} · PKR {c.price} · stock {c.stock_count ?? 0}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <button type="button" onClick={() => setCandidates(null)} className="text-xs text-neutral-600 underline">
-              None — start blank
-            </button>
-          </div>
-        )}
-        {prefillNote && (
-          <div className="border rounded p-3 bg-green-50 text-sm flex items-start justify-between gap-3">
-            <p>
-              Filled {prefillNote.filled} fields from existing product “{prefillNote.source}” ({prefillNote.sku}). All are editable.
-              {prefillNote.kept.length > 0 && (
-                <> Kept what you had already edited: {prefillNote.kept.map((k) => k.replace(/_/g, " ")).join(", ")}.</>
-              )}{" "}
-              <strong>SKU and slug were not copied</strong> — both must be unique, so set new ones.
-            </p>
-            <button type="button" onClick={() => setPrefillNote(null)} className="text-xs text-neutral-600 underline shrink-0">
-              Dismiss
-            </button>
-          </div>
-        )}
-        <Field label="Short Description">
-          <input name="short_description" defaultValue={product?.short_description ?? ""} className={inputClass} />
-        </Field>
-        <Field label="Full Description">
-          <textarea name="description" defaultValue={product?.description} required rows={3} className={inputClass} />
-        </Field>
-      </section>
+      {saveError && <Alert tone="danger" className="mb-6">{saveError}</Alert>}
 
-      <section className="space-y-4">
-        <h2 className="font-semibold text-lg border-b pb-2">Pricing & Stock</h2>
-        <div className="grid grid-cols-4 gap-4">
-          <Field label="Price (PKR)">
-            <input type="number" name="price" defaultValue={product?.price} required className={inputClass} />
-          </Field>
-          <Field label="Compare-at Price">
-            <input type="number" name="compare_at_price" defaultValue={product?.compare_at_price ?? ""} className={inputClass} />
-          </Field>
-          <Field label="Stock Count">
-            <input type="number" name="stock_count" defaultValue={product?.stock_count ?? 0} required className={inputClass} />
-          </Field>
-          <Field label="Low Stock Threshold">
-            <input
-              type="number"
-              name="low_stock_threshold"
-              defaultValue={product?.low_stock_threshold ?? 10}
-              required
-              className={inputClass}
-            />
-          </Field>
-        </div>
-        <p className="text-xs text-neutral-500">Stock status (In Stock / Low Stock / Out of Stock) is derived automatically.</p>
-        <div className="grid grid-cols-4 gap-4">
-          {/* Box dimensions only apply to plants; hidden (not unmounted) for Tools & Equipment so values survive a category switch. */}
-          <div className={isPlantCategory ? "contents" : "hidden"}>
-            <Field label="Box Height (cm)">
-              <input type="number" name="box_height_cm" defaultValue={product?.box_height_cm ?? ""} className={inputClass} />
+      <div>
+        <FormSection title="Basics" description="What the product is called and how it's identified.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Product name" required>
+              <input name="name" defaultValue={product?.name} required onBlur={handleNameBlur} className={inputClass} />
             </Field>
-            <Field label="Box Width (cm)">
-              <input type="number" name="box_width_cm" defaultValue={product?.box_width_cm ?? ""} className={inputClass} />
+            <Field label="SKU" required>
+              <input name="sku" defaultValue={product?.sku} required className={cn(inputClass, "font-mono")} />
             </Field>
-            <Field label="Box Breadth (cm)">
-              <input type="number" name="box_breadth_cm" defaultValue={product?.box_breadth_cm ?? ""} className={inputClass} />
+            <Field label="Slug" required>
+              <input name="slug" defaultValue={product?.slug} required className={cn(inputClass, "font-mono")} />
+            </Field>
+            <Field label="Category" required>
+              <select
+                name="category_name"
+                defaultValue={product?.category_name ?? ""}
+                required
+                className={inputClass}
+                onChange={(e) => setCategoryName(e.target.value)}
+              >
+                <option value="">Select…</option>
+                {lookups.categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             </Field>
           </div>
-          <Field label={weightRequired ? "Weight (kg) *" : "Weight (kg)"}>
-            <input
-              type="number"
-              name="weight_kg"
-              defaultValue={product?.weight_kg ?? ""}
-              step="0.01"
-              min={weightRequired ? "0.01" : "0"}
-              required={weightRequired}
-              className={weightRequired ? highlightInputClass : inputClass}
-            />
+          {lookupBusy && <p className="text-xs text-muted-foreground">Checking existing products…</p>}
+          {lookupError && (
+            <p role="alert" className="text-xs text-red-700">
+              Couldn&apos;t check existing products: {lookupError}
+            </p>
+          )}
+          {candidates && (
+            <div className="space-y-2 rounded-md border border-clay-200 bg-clay-50 p-3 text-sm">
+              <p className="font-medium">
+                {candidates.length} existing products share this name. Copy details from one? (SKU, slug and image are never copied.)
+              </p>
+              <ul className="space-y-1">
+                {candidates.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => applyPrefill(c)}
+                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-left transition-colors hover:border-primary"
+                    >
+                      <span className="font-mono text-[13px] font-medium">{c.sku}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {c.category_name ?? "no category"} · size {c.size ?? "?"} · PKR {c.price} · stock {c.stock_count ?? 0}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" onClick={() => setCandidates(null)} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+                None — start blank
+              </button>
+            </div>
+          )}
+          {prefillNote && (
+            <div className="flex items-start justify-between gap-3 rounded-md border border-forest-200 bg-forest-50 p-3 text-sm">
+              <p>
+                Filled {prefillNote.filled} fields from existing product “{prefillNote.source}” ({prefillNote.sku}). All are editable.
+                {prefillNote.kept.length > 0 && (
+                  <> Kept what you had already edited: {prefillNote.kept.map((k) => k.replace(/_/g, " ")).join(", ")}.</>
+                )}{" "}
+                <strong>SKU and slug were not copied</strong> — both must be unique, so set new ones.
+              </p>
+              <button type="button" onClick={() => setPrefillNote(null)} className="shrink-0 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+                Dismiss
+              </button>
+            </div>
+          )}
+          <Field label="Short description">
+            <input name="short_description" defaultValue={product?.short_description ?? ""} className={inputClass} />
           </Field>
-        </div>
-        {weightRequired && (
-          <p className="text-xs text-neutral-500">
-            Weight is required for {categoryName}: delivery for these products is charged at 120 PKR per kg (weight × quantity).
-          </p>
-        )}
-      </section>
+          <Field label="Full description" required>
+            <textarea name="description" defaultValue={product?.description} required rows={4} className={textareaClass} />
+          </Field>
+        </FormSection>
 
-      <section className="space-y-4">
-        <h2 className="font-semibold text-lg border-b pb-2">{isPlantCategory ? "Plant Attributes" : "Attributes"}</h2>
-        {!isPlantCategory && (
-          <p className="text-xs text-neutral-500">
-            Care requirements, size, box dimensions and use-case / mood tags don&apos;t apply to {categoryName}, so they&apos;re hidden
-            here and won&apos;t appear on the website.
-          </p>
-        )}
-        <div className="grid grid-cols-4 gap-4">
+        <FormSection title="Pricing & stock" description="Stock status (In stock / Low stock / Out of stock) is worked out automatically.">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Price (PKR)" required>
+              <input type="number" name="price" defaultValue={product?.price} required className={inputClass} />
+            </Field>
+            <Field label="Compare-at price">
+              <input type="number" name="compare_at_price" defaultValue={product?.compare_at_price ?? ""} className={inputClass} />
+            </Field>
+            <Field label="Stock count" required>
+              <input type="number" name="stock_count" defaultValue={product?.stock_count ?? 0} required className={inputClass} />
+            </Field>
+            <Field label="Low-stock threshold" required>
+              <input
+                type="number"
+                name="low_stock_threshold"
+                defaultValue={product?.low_stock_threshold ?? 10}
+                required
+                className={inputClass}
+              />
+            </Field>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Box dimensions only apply to plants; hidden (not unmounted) for Tools & Equipment so values survive a category switch. */}
+            <div className={isPlantCategory ? "contents" : "hidden"}>
+              <Field label="Box height (cm)">
+                <input type="number" name="box_height_cm" defaultValue={product?.box_height_cm ?? ""} className={inputClass} />
+              </Field>
+              <Field label="Box width (cm)">
+                <input type="number" name="box_width_cm" defaultValue={product?.box_width_cm ?? ""} className={inputClass} />
+              </Field>
+              <Field label="Box breadth (cm)">
+                <input type="number" name="box_breadth_cm" defaultValue={product?.box_breadth_cm ?? ""} className={inputClass} />
+              </Field>
+            </div>
+            <Field label="Weight (kg)" required={weightRequired}>
+              <input
+                type="number"
+                name="weight_kg"
+                defaultValue={product?.weight_kg ?? ""}
+                step="0.01"
+                min={weightRequired ? "0.01" : "0"}
+                required={weightRequired}
+                className={weightRequired ? highlightInputClass : inputClass}
+              />
+            </Field>
+          </div>
+          {weightRequired && (
+            <p className="text-xs text-muted-foreground">
+              Weight is required for {categoryName}: delivery for these products is charged at 120 PKR per kg (weight × quantity).
+            </p>
+          )}
+        </FormSection>
+
+        <FormSection
+          title={isPlantCategory ? "Plant attributes" : "Attributes"}
+          description={
+            isPlantCategory
+              ? "Care level, size and how the product is listed."
+              : `Care requirements, size, box dimensions and use-case / mood tags don't apply to ${categoryName}, so they're hidden here and won't appear on the website.`
+          }
+        >
           {/* Hidden (not unmounted) for Tools & Equipment so values survive a category switch; the server clears them on save. */}
-          <div className={isPlantCategory ? "contents" : "hidden"}>
+          <div className={isPlantCategory ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4" : "hidden"}>
             <Field label="Difficulty">
               <select name="difficulty" defaultValue={product?.difficulty ?? "beginner"} className={inputClass}>
                 <option value="beginner">Beginner</option>
@@ -466,15 +463,15 @@ export function ProductForm({
                 <option value="expert">Expert</option>
               </select>
             </Field>
-            <Field label="Light Requirement">
+            <Field label="Light requirement" required>
               <select name="light_requirement" defaultValue={product?.light_requirement ?? "medium"} required className={inputClass}>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="bright">Bright</option>
-                <option value="full_sun">Full Sun</option>
+                <option value="full_sun">Full sun</option>
               </select>
             </Field>
-            <Field label="Water Requirement">
+            <Field label="Water requirement">
               <select name="water_requirement" defaultValue={product?.water_requirement ?? "medium"} className={inputClass}>
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -489,151 +486,144 @@ export function ProductForm({
               </select>
             </Field>
           </div>
-        </div>
-        <div className="flex gap-6 flex-wrap">
-          <Checkbox name="is_new_arrival" label="New Arrival? (the “New” tag is removed automatically 14 days after publishing)" defaultChecked={product?.is_new_arrival} />
-          <div className={isPlantCategory ? "contents" : "hidden"}>
-            <Checkbox name="is_pet_safe" label="Pet Safe?" defaultChecked={product?.is_pet_safe} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CheckField
+              name="is_new_arrival"
+              label="New arrival"
+              description="The “New” tag is removed automatically 14 days after publishing."
+              defaultChecked={product?.is_new_arrival}
+            />
+            <div className={isPlantCategory ? "contents" : "hidden"}>
+              <CheckField name="is_pet_safe" label="Pet safe" defaultChecked={product?.is_pet_safe} />
+            </div>
+            <CheckField name="is_featured" label="Featured" defaultChecked={product?.is_featured} />
+            <CheckField name="published" label="Published" description="Untick to keep it as a draft." defaultChecked={!!product?.published_at} />
           </div>
-          <Checkbox name="is_featured" label="Featured?" defaultChecked={product?.is_featured} />
-          <Checkbox name="published" label="Published?" defaultChecked={!!product?.published_at} />
-        </div>
-      </section>
+        </FormSection>
 
-      <section className={isPlantCategory ? "space-y-4" : "hidden"}>
-        <h2 className="font-semibold text-lg border-b pb-2">Use Case & Mood Tags</h2>
-        <div>
-          <p className="text-sm font-medium mb-2">Use Case Tags</p>
-          <div className="flex flex-wrap gap-4">
-            {lookups.useCaseTags.map((tag) => (
-              <label key={tag} className="flex items-center gap-1.5 text-sm">
-                <input type="checkbox" name="use_case_tags" value={tag} defaultChecked={product?.use_case_tags?.includes(tag)} />
-                {tag}
-              </label>
+        <FormSection title="Use case & mood tags" description="Used for filtering in the shop." className={isPlantCategory ? undefined : "hidden"}>
+          <TagGroup legend="Use case" name="use_case_tags" tags={lookups.useCaseTags} selected={product?.use_case_tags} />
+          <TagGroup legend="Mood" name="mood_tags" tags={lookups.moodTags} selected={product?.mood_tags} />
+        </FormSection>
+
+        <FormSection title="Care info" description="Shown on the product page." className={isPlantCategory ? undefined : "hidden"}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Light summary (short)">
+              <input name="light_summary" defaultValue={product?.light_summary ?? ""} className={inputClass} />
+            </Field>
+            <Field label="Water summary (short)">
+              <input name="water_summary" defaultValue={product?.water_summary ?? ""} className={inputClass} />
+            </Field>
+          </div>
+          <Field label="Light (detail)">
+            <textarea name="light" defaultValue={product?.light ?? ""} rows={2} className={textareaClass} />
+          </Field>
+          <Field label="Water (detail)">
+            <textarea name="water" defaultValue={product?.water ?? ""} rows={2} className={textareaClass} />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Humidity">
+              <textarea name="humidity" defaultValue={product?.humidity ?? ""} rows={2} className={textareaClass} />
+            </Field>
+            <Field label="Temperature">
+              <textarea name="temperature" defaultValue={product?.temperature ?? ""} rows={2} className={textareaClass} />
+            </Field>
+            <Field label="Soil">
+              <textarea name="soil" defaultValue={product?.soil ?? ""} rows={2} className={textareaClass} />
+            </Field>
+            <Field label="Fertilizer">
+              <textarea name="fertilizer" defaultValue={product?.fertilizer ?? ""} rows={2} className={textareaClass} />
+            </Field>
+          </div>
+          <Field label="Toxicity">
+            <textarea name="toxicity" defaultValue={product?.toxicity ?? ""} rows={2} className={textareaClass} />
+          </Field>
+          <Field label="Pet safe note">
+            <input name="pet_safe_note" defaultValue={product?.pet_safe_note ?? ""} className={inputClass} />
+          </Field>
+        </FormSection>
+
+        <FormSection title="Search listing" description="How the product appears in search results.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Meta title">
+              <input name="meta_title" defaultValue={product?.meta_title ?? ""} className={inputClass} />
+            </Field>
+            <Field label="Meta description">
+              <input name="meta_description" defaultValue={product?.meta_description ?? ""} className={inputClass} />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection
+          title="Photos"
+          description="Take a photo or pick from your gallery (converted to AVIF and stored in Cloudflare R2), or paste an image URL. The first row is the primary photo. Replaced or removed photos are deleted from storage when you save."
+        >
+          <div className="space-y-3">
+            {images.map((img, i) => (
+              <ImageRow
+                key={img.id}
+                row={img}
+                primary={i === 0}
+                onUrlChange={(url) => updateRow(img.id, { url })}
+                onPickFiles={(files) => replaceRowImage(img.id, files)}
+                onRemove={() => setImages((rows) => rows.filter((r) => r.id !== img.id))}
+              />
             ))}
           </div>
-        </div>
-        <div>
-          <p className="text-sm font-medium mb-2">Mood Tags</p>
-          <div className="flex flex-wrap gap-4">
-            {lookups.moodTags.map((tag) => (
-              <label key={tag} className="flex items-center gap-1.5 text-sm">
-                <input type="checkbox" name="mood_tags" value={tag} defaultChecked={product?.mood_tags?.includes(tag)} />
-                {tag}
-              </label>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className={isPlantCategory ? "space-y-4" : "hidden"}>
-        <h2 className="font-semibold text-lg border-b pb-2">Care Info</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Light Summary (short)">
-            <input name="light_summary" defaultValue={product?.light_summary ?? ""} className={inputClass} />
-          </Field>
-          <Field label="Water Summary (short)">
-            <input name="water_summary" defaultValue={product?.water_summary ?? ""} className={inputClass} />
-          </Field>
-        </div>
-        <Field label="Light (detail)">
-          <textarea name="light" defaultValue={product?.light ?? ""} rows={2} className={inputClass} />
-        </Field>
-        <Field label="Water (detail)">
-          <textarea name="water" defaultValue={product?.water ?? ""} rows={2} className={inputClass} />
-        </Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Humidity">
-            <textarea name="humidity" defaultValue={product?.humidity ?? ""} rows={2} className={inputClass} />
-          </Field>
-          <Field label="Temperature">
-            <textarea name="temperature" defaultValue={product?.temperature ?? ""} rows={2} className={inputClass} />
-          </Field>
-          <Field label="Soil">
-            <textarea name="soil" defaultValue={product?.soil ?? ""} rows={2} className={inputClass} />
-          </Field>
-          <Field label="Fertilizer">
-            <textarea name="fertilizer" defaultValue={product?.fertilizer ?? ""} rows={2} className={inputClass} />
-          </Field>
-        </div>
-        <Field label="Toxicity">
-          <textarea name="toxicity" defaultValue={product?.toxicity ?? ""} rows={2} className={inputClass} />
-        </Field>
-        <Field label="Pet Safe Note">
-          <input name="pet_safe_note" defaultValue={product?.pet_safe_note ?? ""} className={inputClass} />
-        </Field>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="font-semibold text-lg border-b pb-2">SEO</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Meta Title">
-            <input name="meta_title" defaultValue={product?.meta_title ?? ""} className={inputClass} />
-          </Field>
-          <Field label="Meta Description">
-            <input name="meta_description" defaultValue={product?.meta_description ?? ""} className={inputClass} />
-          </Field>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="font-semibold text-lg border-b pb-2">Images</h2>
-        <p className="text-xs text-neutral-500">
-          Take a photo or pick from your gallery (converted to AVIF and stored in Cloudflare R2), or paste an image URL yourself.
-          First row is the primary photo. Replaced or removed photos are deleted from storage when you save.
-        </p>
-        {images.map((img) => (
-          <ImageRow
-            key={img.id}
-            row={img}
-            onUrlChange={(url) => updateRow(img.id, { url })}
-            onPickFiles={(files) => replaceRowImage(img.id, files)}
-            onRemove={() => setImages((rows) => rows.filter((r) => r.id !== img.id))}
-          />
-        ))}
-        <div className="flex flex-wrap items-center gap-3">
-          <PickButton icon={<Camera className="h-4 w-4" />} label="Add photo" capture onFiles={addImages} />
-          <PickButton icon={<ImageIcon className="h-4 w-4" />} label="Add from gallery" multiple onFiles={addImages} />
-          <button type="button" onClick={() => setImages((rows) => [...rows, newImageRow()])} className="text-sm text-[#E85D2C]">
-            + Add URL manually
-          </button>
-        </div>
-        {pickNotice && <p className="text-xs text-neutral-600">{pickNotice}</p>}
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="font-semibold text-lg border-b pb-2">Variants (optional)</h2>
-        {variants.map((v) => (
-          <div key={v.key} className="flex gap-3 items-start">
-            <input type="hidden" name="variant_id" value={v.id} />
-            <input name="variant_name" defaultValue={v.name} placeholder='e.g. Medium - 8" pot' className={`${inputClass} flex-1`} />
-            <input name="variant_sku" defaultValue={v.sku} placeholder="SKU" className={`${inputClass} flex-1`} />
-            <input type="number" name="variant_price" defaultValue={v.price} placeholder="Price" className={`${inputClass} w-28`} />
-            <input type="number" name="variant_stock" defaultValue={v.stock_count} placeholder="Stock" className={`${inputClass} w-24`} />
-            <button
-              type="button"
-              onClick={() => setVariants(variants.filter((row) => row.key !== v.key))}
-              className="text-red-600 text-sm px-2 py-2 shrink-0"
-            >
-              Remove
+          <div className="flex flex-wrap items-center gap-2">
+            <PickButton icon={<Camera className="h-4 w-4" />} label="Add photo" capture onFiles={addImages} />
+            <PickButton icon={<ImageIcon className="h-4 w-4" />} label="Add from gallery" multiple onFiles={addImages} />
+            <button type="button" onClick={() => setImages((rows) => [...rows, newImageRow()])} className={buttonClass({ variant: "ghost", size: "sm" })}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Add URL manually
             </button>
           </div>
-        ))}
-        <button
-          type="button"
-          onClick={() => setVariants([...variants, newVariantRow()])}
-          className="text-sm text-[#E85D2C]"
-        >
-          + Add variant
-        </button>
-      </section>
+          {pickNotice && <p className="text-xs text-muted-foreground">{pickNotice}</p>}
+        </FormSection>
 
-      <div className="pt-4 border-t flex justify-end">
-        <button
-          type="submit"
-          disabled={uploadingCount > 0 || isSaving}
-          className="bg-[#E85D2C] text-white rounded px-6 py-3 font-medium disabled:opacity-50"
-        >
+        <FormSection title="Variants" description="Optional. Add these if the product comes in different sizes or pot types.">
+          {variants.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No variants.</p>
+          ) : (
+            <div className="space-y-2">
+              <div className={`hidden gap-2 px-0.5 text-xs font-medium text-muted-foreground sm:grid ${VARIANT_COLUMNS}`} aria-hidden>
+                <span>Name</span>
+                <span>SKU</span>
+                <span>Price</span>
+                <span>Stock</span>
+                <span />
+              </div>
+              {variants.map((v) => (
+                <div key={v.key} className={`grid items-center gap-2 ${VARIANT_COLUMNS}`}>
+                  <input type="hidden" name="variant_id" value={v.id} />
+                  <input name="variant_name" aria-label="Variant name" defaultValue={v.name} placeholder='e.g. Medium - 8" pot' className={inputClass} />
+                  <input name="variant_sku" aria-label="Variant SKU" defaultValue={v.sku} placeholder="SKU" className={cn(inputClass, "font-mono")} />
+                  <input type="number" name="variant_price" aria-label="Variant price" defaultValue={v.price} placeholder="Price" className={inputClass} />
+                  <input type="number" name="variant_stock" aria-label="Variant stock" defaultValue={v.stock_count} placeholder="Stock" className={inputClass} />
+                  <button
+                    type="button"
+                    onClick={() => setVariants(variants.filter((row) => row.key !== v.key))}
+                    className={buttonClass({ variant: "ghost", size: "sm", className: "text-red-700 hover:bg-red-50 hover:text-red-800" })}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button type="button" onClick={() => setVariants([...variants, newVariantRow()])} className={buttonClass({ variant: "secondary", size: "sm" })}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Add variant
+          </button>
+        </FormSection>
+      </div>
+
+      <FormActions className="justify-end">
+        <Link href="/admin/products" className={buttonClass({ variant: "ghost", size: "lg" })}>
+          Cancel
+        </Link>
+        <button type="submit" disabled={uploadingCount > 0 || isSaving} className={buttonClass({ variant: "primary", size: "lg" })}>
+          {(uploadingCount > 0 || isSaving) && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
           {uploadingCount > 0
             ? `Uploading ${uploadingCount} image${uploadingCount > 1 ? "s" : ""}…`
             : isSaving
@@ -642,26 +632,31 @@ export function ProductForm({
                 ? "Save changes"
                 : "Create product"}
         </button>
-      </div>
+      </FormActions>
     </form>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="block text-sm font-medium mb-1">{label}</span>
-      {children}
-    </label>
-  )
-}
+// Name | SKU | price | stock | remove: shared by the header row and every variant row so the columns line up.
+const VARIANT_COLUMNS = "sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_7rem_6rem_4.5rem]"
 
-function Checkbox({ name, label, defaultChecked }: { name: string; label: string; defaultChecked?: boolean }) {
+// Tag checkboxes drawn as toggle chips. The real checkbox stays in the DOM (visually hidden) so the form and the
+// name-prefill code keep working exactly as before.
+function TagGroup({ legend, name, tags, selected }: { legend: string; name: string; tags: string[]; selected?: string[] }) {
   return (
-    <label className="flex items-center gap-2 text-sm">
-      <input type="checkbox" name={name} defaultChecked={defaultChecked} />
-      {label}
-    </label>
+    <fieldset>
+      <legend className="mb-2 text-[13px] font-medium">{legend}</legend>
+      <div className="flex flex-wrap gap-2">
+        {tags.map((tag) => (
+          <label key={tag} className="cursor-pointer">
+            <input type="checkbox" name={name} value={tag} defaultChecked={selected?.includes(tag)} className="peer sr-only" />
+            <span className="inline-flex items-center rounded-full border border-input bg-surface px-3 py-1 text-[13px] transition-colors hover:bg-muted peer-checked:border-forest-700 peer-checked:bg-forest-700 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2">
+              {tag}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   )
 }
 
@@ -684,9 +679,11 @@ function PickButton({
 }) {
   return (
     <label
-      className={`shrink-0 inline-flex items-center gap-1.5 border rounded px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-[#E85D2C] ${
-        disabled ? "opacity-60 cursor-wait" : "cursor-pointer hover:border-[#E85D2C]"
-      }`}
+      className={cn(
+        buttonClass({ variant: "secondary", size: "sm" }),
+        "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+        disabled ? "cursor-wait opacity-60" : "cursor-pointer"
+      )}
     >
       {icon}
       {label}
@@ -710,11 +707,13 @@ function PickButton({
 
 function ImageRow({
   row,
+  primary,
   onUrlChange,
   onPickFiles,
   onRemove,
 }: {
   row: ImageRowState
+  primary: boolean
   onUrlChange: (url: string) => void
   onPickFiles: (files: File[]) => void
   onRemove: () => void
@@ -724,45 +723,56 @@ function ImageRow({
   const { url, uploading, error } = row
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
   const isHttp = /^https?:\/\//i.test(url)
+  const showPreview = isHttp && brokenUrl !== url
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-3 items-start">
-        <input
-          name="image_url"
-          value={url}
-          onChange={(e) => onUrlChange(e.target.value)}
-          placeholder="https://images.muffinplants.com/..."
-          className={`${inputClass} flex-[2_1_16rem]`}
-        />
-        <PickButton
-          icon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-          label={uploading ? "Uploading…" : "Camera"}
-          capture
-          disabled={uploading}
-          onFiles={onPickFiles}
-        />
-        <PickButton icon={<ImageIcon className="h-4 w-4" />} label="Gallery" disabled={uploading} onFiles={onPickFiles} />
-        <input name="image_alt" defaultValue={row.alt_text} placeholder="Alt text" className={`${inputClass} flex-[1_1_10rem]`} />
-        <button type="button" onClick={onRemove} className="text-red-600 text-sm px-2 py-2 shrink-0">
-          Remove
-        </button>
+    <div className="flex gap-3 rounded-md border border-border p-3">
+      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">
+        {showPreview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="Preview" onError={() => setBrokenUrl(url)} className="h-full w-full object-cover" />
+        ) : (
+          <ImageIcon className="h-6 w-6 text-muted-foreground/60" aria-hidden />
+        )}
+        {uploading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface/70">
+            <Loader2 className="h-5 w-5 animate-spin text-foreground/70" aria-label="Uploading" />
+          </div>
+        )}
       </div>
-      {error && (
-        <p role="alert" className="text-xs text-red-600">
-          {error}
-        </p>
-      )}
-      {isHttp && brokenUrl !== url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={url}
-          alt="Preview"
-          onError={() => setBrokenUrl(url)}
-          className="h-20 w-20 object-cover rounded border bg-neutral-50"
-        />
-      )}
-      {isHttp && brokenUrl === url && <p className="text-xs text-neutral-500">Preview unavailable for this URL.</p>}
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <input
+            name="image_url"
+            aria-label="Image URL"
+            value={url}
+            onChange={(e) => onUrlChange(e.target.value)}
+            placeholder="https://images.muffinplants.com/..."
+            className={inputClass}
+          />
+          <input name="image_alt" aria-label="Alt text" defaultValue={row.alt_text} placeholder="Alt text" className={inputClass} />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <PickButton
+            icon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            label={uploading ? "Uploading…" : "Camera"}
+            capture
+            disabled={uploading}
+            onFiles={onPickFiles}
+          />
+          <PickButton icon={<ImageIcon className="h-4 w-4" />} label="Gallery" disabled={uploading} onFiles={onPickFiles} />
+          <button type="button" onClick={onRemove} className={buttonClass({ variant: "ghost", size: "sm", className: "text-red-700 hover:bg-red-50 hover:text-red-800" })}>
+            Remove
+          </button>
+          {primary && <Badge tone="info" dot={false} className="ml-auto">Primary photo</Badge>}
+        </div>
+        {error && (
+          <p role="alert" className="text-xs text-red-700">
+            {error}
+          </p>
+        )}
+        {isHttp && brokenUrl === url && <p className="text-xs text-muted-foreground">Preview unavailable for this URL.</p>}
+      </div>
     </div>
   )
 }

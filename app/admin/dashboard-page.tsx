@@ -3,23 +3,26 @@
 import Link from "next/link"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { Clock, Package, AlertTriangle, ShoppingCart, TrendingUp, ArrowRight, CreditCard, CalendarDays } from "lucide-react"
+import { AlertTriangle, BookOpen, CalendarDays, ChevronRight, Clock, Mail, Package, Plus, ShoppingBag, Truck, Wallet } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { isValidSessionCookie, COOKIE_NAME } from "@/lib/admin-session"
+import { Panel, PageHeader, StatStrip } from "./_components/ui"
+import { fmtNumber, plural, rs } from "./_components/format"
 
 const KARACHI_OFFSET_MS = 5 * 60 * 60 * 1000
 function getKarachiNow(): Date { return new Date(new Date().getTime() + KARACHI_OFFSET_MS) }
 function startOfDayKarachi(d: Date): Date { const k = new Date(d.getTime()); k.setUTCHours(0,0,0,0); return new Date(k.getTime() - KARACHI_OFFSET_MS) }
 function startOfMonthKarachi(d: Date): Date { const m = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)); return new Date(m.getTime() - KARACHI_OFFSET_MS) }
-function rs(n: number): string { return `Rs ${n.toLocaleString("en-PK")}` }
 
-const colorClasses: Record<string, { bg: string; iconBg: string; text: string }> = {
-  amber: { bg: "bg-amber-50/80", iconBg: "bg-amber-500", text: "text-amber-700" },
-  emerald: { bg: "bg-emerald-50/80", iconBg: "bg-emerald-500", text: "text-emerald-700" },
-  rose: { bg: "bg-rose-50/80", iconBg: "bg-rose-500", text: "text-rose-700" },
-  blue: { bg: "bg-blue-50/80", iconBg: "bg-blue-500", text: "text-blue-700" },
-  violet: { bg: "bg-violet-50/80", iconBg: "bg-violet-500", text: "text-violet-700" },
-}
+const todayLabel = () =>
+  new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", weekday: "long", day: "numeric", month: "long" }).format(new Date())
+
+const SHORTCUTS = [
+  { href: "/admin/products/new", label: "Add a product", icon: Package },
+  { href: "/admin/events/new", label: "Create an event", icon: CalendarDays },
+  { href: "/admin/journal/new", label: "Write a journal post", icon: BookOpen },
+  { href: "/admin/email", label: "Send an email", icon: Mail },
+]
 
 export async function AdminDashboardPage() {
   const ck = await cookies()
@@ -46,10 +49,77 @@ export async function AdminDashboardPage() {
   const rm = (r7.data ?? []).reduce((s: number, o: any) => s + Number(o.total ?? 0), 0)
   const ue = r8.count ?? 0, ep = r9.count ?? 0
 
-  const Card = ({ label, value, icon: Icon, color, href, subtitle }: { label: string; value: string | number; icon: any; color: string; href: string; subtitle?: string }) => {
-    const c = colorClasses[color]
-    return <Link href={href} className="group"><div className={`rounded-2xl p-5 border hover:shadow-md transition-all ${c.bg} border-white/50`}><div className="flex items-start justify-between"><div className="min-w-0"><p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{label}</p><p className="text-3xl font-bold text-neutral-900 mt-2">{value}</p>{subtitle && <p className={`text-xs mt-1 ${c.text}`}>{subtitle}</p>}</div><div className={`p-2.5 rounded-xl ${c.iconBg} shadow-sm shrink-0`}><Icon className="h-5 w-5 text-white" /></div></div><div className="mt-3 flex items-center gap-1 text-xs text-neutral-400 group-hover:text-neutral-600 transition-colors"><span>View details</span><ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" /></div></div></Link>
-  }
+  // Work waiting on someone, most urgent first. A zero means nothing to do, and the row says so.
+  const queue = [
+    { href: "/admin/orders?payment=pending", icon: Clock, count: ap, title: "Orders awaiting payment", detail: op > 0 ? `${op} older than 12 hours` : "Customers who haven't paid yet", urgent: op > 0 },
+    { href: "/admin/orders?status=confirmed", icon: Truck, count: ps, title: "Paid orders to ship", detail: "Paid and ready to go out" },
+    { href: "/admin/products", icon: AlertTriangle, count: lsp + lsv, title: "Low on stock", detail: `${plural(lsp, "product")} and ${plural(lsv, "variant")}` },
+    { href: "/admin/events", icon: Wallet, count: ep, title: "Event bookings awaiting payment", detail: "Spots held until they pay" },
+  ]
+  const openItems = queue.filter((q) => q.count > 0).length
 
-  return <div className="space-y-6"><div><h1 className="text-2xl font-serif font-bold text-neutral-900">Dashboard</h1><p className="text-sm text-neutral-500 mt-1">Overview of your store today</p></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-4"><Card label="Awaiting Payment" value={ap} icon={Clock} color="amber" href="/admin/orders?payment=pending" subtitle={op > 0 ? `${op} older than 12 hours` : undefined} /><Card label="Paid, Not Shipped" value={ps} icon={Package} color="emerald" href="/admin/orders?status=confirmed" /><Card label="Low Stock" value={lsp + lsv} icon={AlertTriangle} color="rose" href="/admin/products" subtitle={`${lsp} products, ${lsv} variants`} /><Card label="Orders Today" value={ot} icon={ShoppingCart} color="blue" href="/admin/orders" /><Card label="Revenue This Month" value={rs(rm)} icon={TrendingUp} color="violet" href="/admin/orders?payment=paid" /><Card label="Upcoming Events" value={ue} icon={CalendarDays} color="blue" href="/admin/events" subtitle={ep > 0 ? `${ep} booking${ep === 1 ? "" : "s"} awaiting payment` : undefined} /></div><div className="bg-white rounded-2xl border p-6"><h2 className="text-lg font-medium text-neutral-900 mb-4">Quick Actions</h2><div className="flex flex-wrap gap-3"><Link href="/admin/products/new" className="inline-flex items-center gap-2 px-4 py-2 bg-forest-600 text-white rounded-lg hover:bg-forest-700 text-sm font-medium"><Package className="h-4 w-4" /> Add Product</Link><Link href="/admin/orders" className="inline-flex items-center gap-2 px-4 py-2 bg-white border text-neutral-700 rounded-lg hover:bg-neutral-50 text-sm font-medium"><ShoppingCart className="h-4 w-4" /> View Orders</Link><Link href="/admin/events/new" className="inline-flex items-center gap-2 px-4 py-2 bg-white border text-neutral-700 rounded-lg hover:bg-neutral-50 text-sm font-medium"><CalendarDays className="h-4 w-4" /> New Event</Link><Link href="/admin/email" className="inline-flex items-center gap-2 px-4 py-2 bg-white border text-neutral-700 rounded-lg hover:bg-neutral-50 text-sm font-medium"><CreditCard className="h-4 w-4" /> Send Email</Link></div></div></div>
+  return (
+    <div>
+      <PageHeader title="Dashboard" description={todayLabel()} />
+
+      <StatStrip
+        items={[
+          { label: "Orders today", value: fmtNumber(ot), href: "/admin/orders" },
+          { label: "Revenue this month", value: rs(rm), hint: "Paid orders, not cancelled", href: "/admin/orders?payment=paid" },
+          { label: "Upcoming events", value: fmtNumber(ue), href: "/admin/events" },
+        ]}
+      />
+
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <Panel
+          title="Needs attention"
+          description={openItems === 0 ? "Nothing is waiting on you." : `${plural(openItems, "thing")} waiting on you.`}
+          flush
+        >
+          <ul className="divide-y divide-border">
+            {queue.map((q) => {
+              const Icon = q.icon
+              return (
+                <li key={q.title}>
+                  <Link href={q.href} className="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-muted/40">
+                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+                    <div className="min-w-0 flex-1">
+                      <p className={q.count > 0 ? "font-medium text-foreground" : "text-muted-foreground"}>{q.title}</p>
+                      <p className={`text-[13px] ${q.urgent ? "text-amber-800" : "text-muted-foreground"}`}>{q.count > 0 ? q.detail : "Nothing waiting"}</p>
+                    </div>
+                    <span className={`w-10 text-right text-xl font-semibold tabular-nums ${q.count > 0 ? "text-foreground" : "text-muted-foreground/60"}`}>{fmtNumber(q.count)}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </Panel>
+
+        <Panel title="Shortcuts" flush>
+          <ul className="divide-y divide-border">
+            {SHORTCUTS.map((s) => {
+              const Icon = s.icon
+              return (
+                <li key={s.href}>
+                  <Link href={s.href} className="flex items-center gap-3 px-5 py-3 text-sm transition-colors hover:bg-muted/40">
+                    <Icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+                    {s.label}
+                    <Plus className="ml-auto h-3.5 w-3.5 text-muted-foreground/60" aria-hidden />
+                  </Link>
+                </li>
+              )
+            })}
+            <li>
+              <Link href="/admin/orders" className="flex items-center gap-3 px-5 py-3 text-sm transition-colors hover:bg-muted/40">
+                <ShoppingBag className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+                All orders
+                <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/60" aria-hidden />
+              </Link>
+            </li>
+          </ul>
+        </Panel>
+      </div>
+    </div>
+  )
 }

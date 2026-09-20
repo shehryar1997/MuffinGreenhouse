@@ -1,12 +1,14 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Download, ExternalLink, Pencil } from "lucide-react"
+import { Check, Download, ExternalLink, MessageCircle, Pencil } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { requireAdmin } from "@/lib/admin-auth"
 import { ConfirmSubmitButton } from "@/app/admin/_components/confirm-submit-button"
+import { Badge, ButtonLink, EmptyState, FilterTabs, PageHeader, Panel, StatStrip, buttonClass, inputClass, waButtonClass, type Tone } from "@/app/admin/_components/ui"
+import { rs } from "@/app/admin/_components/format"
 import { EVENT_TYPE_LABEL, formatEventDate, formatEventPrice, formatEventTime } from "@/lib/event-format"
 import { whatsAppLink } from "@/lib/whatsapp-link"
 import { nowMs } from "@/lib/now"
+import { cn } from "@/lib/utils"
 import { AddAttendeeForm } from "../add-attendee-form"
 import { cancelRegistration, markRegistrationPaid, saveRegistrationNote, setRegistrationPayment, toggleAttended } from "../actions"
 
@@ -34,16 +36,15 @@ interface Registration {
 
 type Filter = "all" | "awaiting" | "paid" | "cancelled"
 
-const rs = (n: number) => `Rs ${Math.round(n).toLocaleString("en-PK")}`
 const methodLabel: Record<string, string> = { bank_transfer: "Bank transfer", jazzcash: "JazzCash", easypaisa: "Easypaisa", cash: "Cash", other: "Other" }
 const shortWhen = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true })
 
-function paymentBadge(r: Registration): { text: string; style: string } {
-  if (r.cancelled_at) return { text: r.cancel_reason === "payment_expired" ? "Expired (unpaid)" : "Cancelled", style: "bg-red-50 text-red-700 border-red-200" }
-  if (Number(r.amount_due) === 0) return { text: "Free", style: "bg-slate-50 text-slate-600 border-slate-200" }
-  if (r.payment_status === "paid") return { text: "Paid", style: "bg-emerald-50 text-emerald-700 border-emerald-200" }
-  if (r.payment_status === "refunded") return { text: "Refunded", style: "bg-sky-50 text-sky-700 border-sky-200" }
-  return { text: "Awaiting payment", style: "bg-amber-50 text-amber-700 border-amber-200" }
+function paymentBadge(r: Registration): { text: string; tone: Tone } {
+  if (r.cancelled_at) return { text: r.cancel_reason === "payment_expired" ? "Expired (unpaid)" : "Cancelled", tone: "danger" }
+  if (Number(r.amount_due) === 0) return { text: "Free", tone: "neutral" }
+  if (r.payment_status === "paid") return { text: "Paid", tone: "success" }
+  if (r.payment_status === "refunded") return { text: "Refunded", tone: "info" }
+  return { text: "Awaiting payment", tone: "warning" }
 }
 
 export default async function EventAttendeesPage({
@@ -91,82 +92,77 @@ export default async function EventAttendeesPage({
     return true
   })
 
-  const filters: Array<{ key: Filter; label: string }> = [
-    { key: "all", label: `All (${all.length})` },
-    { key: "awaiting", label: `Awaiting payment (${awaiting.length})` },
-    { key: "paid", label: `Confirmed (${live.length - awaiting.length})` },
-    { key: "cancelled", label: `Cancelled (${all.length - live.length})` },
+  const filters: Array<{ key: Filter; label: string; count: number }> = [
+    { key: "all", label: "All", count: all.length },
+    { key: "awaiting", label: "Awaiting payment", count: awaiting.length },
+    { key: "paid", label: "Confirmed", count: live.length - awaiting.length },
+    { key: "cancelled", label: "Cancelled", count: all.length - live.length },
   ]
 
+  const statusBadge =
+    event.status === "draft" ? <Badge>Draft · hidden from customers</Badge> : event.status === "cancelled" ? <Badge tone="danger">Cancelled</Badge> : <Badge tone="success">Live · {formatEventPrice(Number(event.price))} per person</Badge>
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link href="/admin/events" className="text-sm text-neutral-600 hover:text-neutral-900">
-            ← All events
-          </Link>
-          <h1 className="text-2xl font-serif font-bold text-neutral-900 mt-2">{event.title}</h1>
-          <p className="text-neutral-500 mt-1">
-            {EVENT_TYPE_LABEL[event.type as keyof typeof EVENT_TYPE_LABEL]} · {formatEventDate(event.datetime)} · {formatEventTime(event.datetime, event.end_datetime)} · {event.location}
-          </p>
-          <p className="text-sm text-neutral-500 mt-1">
-            {event.status === "draft" ? "Draft: not visible to customers." : event.status === "cancelled" ? "This event is cancelled." : `Live: ${formatEventPrice(Number(event.price))} per person.`}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {event.status !== "draft" && (
-            <Link href={`/events/${event.slug}`} target="_blank" className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50">
-              <ExternalLink className="h-4 w-4" aria-hidden />
-              View page
-            </Link>
-          )}
-          <a href={`/admin/events/${id}/export`} className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-50">
-            <Download className="h-4 w-4" aria-hidden />
-            Export CSV
-          </a>
-          <Link href={`/admin/events/${id}/edit`} className="inline-flex items-center gap-2 px-3 py-2 bg-[#E85D2C] text-white rounded-lg text-sm font-medium hover:bg-[#d45124]">
-            <Pencil className="h-4 w-4" aria-hidden />
-            Edit event
-          </Link>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title={event.title}
+        description={`${EVENT_TYPE_LABEL[event.type as keyof typeof EVENT_TYPE_LABEL]} · ${formatEventDate(event.datetime)} · ${formatEventTime(event.datetime, event.end_datetime)} · ${event.location}`}
+        back={{ href: "/admin/events", label: "All events" }}
+        badges={statusBadge}
+        actions={
+          <>
+            {event.status !== "draft" && (
+              <ButtonLink href={`/events/${event.slug}`} target="_blank">
+                <ExternalLink className="h-4 w-4" aria-hidden />
+                View page
+              </ButtonLink>
+            )}
+            <a href={`/admin/events/${id}/export`} className={buttonClass()}>
+              <Download className="h-4 w-4" aria-hidden />
+              Export CSV
+            </a>
+            <ButtonLink href={`/admin/events/${id}/edit`} variant="primary">
+              <Pencil className="h-4 w-4" aria-hidden />
+              Edit event
+            </ButtonLink>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {[
+      <StatStrip
+        items={[
           { label: "Spots booked", value: `${people} / ${event.spots_total}` },
-          { label: "Bookings", value: String(live.length) },
+          { label: "Bookings", value: live.length },
           { label: "Collected", value: rs(collected) },
-          { label: "Awaiting payment", value: `${rs(outstanding)}`, sub: `${awaiting.length} booking${awaiting.length === 1 ? "" : "s"}`, warn: awaiting.length > 0 },
+          {
+            label: "Awaiting payment",
+            value: rs(outstanding),
+            hint: `${awaiting.length} booking${awaiting.length === 1 ? "" : "s"}`,
+            warn: awaiting.length > 0,
+          },
           { label: "Checked in", value: `${attended} / ${people}` },
-        ].map((c) => (
-          <div key={c.label} className={`rounded-2xl p-4 border bg-white ${c.warn ? "border-amber-200" : ""}`}>
-            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">{c.label}</p>
-            <p className="text-2xl font-bold text-neutral-900 mt-1.5">{c.value}</p>
-            {c.sub && <p className="text-xs text-amber-700 mt-0.5">{c.sub}</p>}
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
-      <div className="grid lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex gap-2 flex-wrap">
-            {filters.map((f) => (
-              <Link
-                key={f.key}
-                href={f.key === "all" ? `/admin/events/${id}` : `/admin/events/${id}?filter=${f.key}`}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${filter === f.key ? "bg-[#E85D2C] text-white" : "bg-white border text-neutral-600 hover:bg-neutral-50"}`}
-              >
-                {f.label}
-              </Link>
-            ))}
-          </div>
+      <div className="mt-8 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="space-y-4">
+          <FilterTabs
+            label="Bookings"
+            items={filters.map((f) => ({
+              href: f.key === "all" ? `/admin/events/${id}` : `/admin/events/${id}?filter=${f.key}`,
+              label: f.label,
+              count: f.count,
+              active: filter === f.key,
+            }))}
+          />
 
           {shown.length === 0 ? (
-            <div className="bg-white rounded-lg border border-dashed p-10 text-center text-sm text-neutral-500">
-              {all.length === 0 ? "No bookings yet. They appear here as customers reserve spots, or add one yourself." : "Nothing matches this filter."}
-            </div>
+            <EmptyState
+              title={all.length === 0 ? "No bookings yet" : "Nothing matches this filter"}
+              description={all.length === 0 ? "They appear here as customers reserve spots, or add one yourself." : undefined}
+            />
           ) : (
-            <ul className="space-y-3">
+            <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
               {shown.map((r) => {
                 const badge = paymentBadge(r)
                 const cancelled = !!r.cancelled_at
@@ -176,26 +172,26 @@ export default async function EventAttendeesPage({
                     : `Hi ${r.guest_name.split(" ")[0]}! This is Muffin Greenhouse about "${event.title}" (${r.reference}).`
                 const wa = whatsAppLink(r.guest_phone, waMessage)
                 return (
-                  <li key={r.id} className={`bg-white rounded-lg border p-4 ${cancelled ? "opacity-60" : ""}`}>
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-neutral-900">
+                  <li key={r.id} className={cn("p-5", cancelled && "bg-muted/30")}>
+                    <div className={cn("flex flex-wrap items-start justify-between gap-3", cancelled && "opacity-70")}>
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground">
                           {r.guest_name}{" "}
-                          <span className="text-xs font-mono text-neutral-400">{r.reference}</span>
+                          <span className="ml-1 font-mono text-xs font-normal text-muted-foreground">{r.reference}</span>
                         </p>
-                        <p className="text-sm text-neutral-600">
+                        <p className="mt-0.5 text-[13px] text-muted-foreground">
                           {r.guest_phone}
                           {r.guest_email ? ` · ${r.guest_email}` : ""}
                         </p>
-                        <p className="text-xs text-neutral-500 mt-0.5">
+                        <p className="mt-0.5 text-[13px] text-muted-foreground">
                           {r.spots_reserved} {r.spots_reserved === 1 ? "person" : "people"} · {Number(r.amount_due) === 0 ? "Free" : rs(Number(r.amount_due))} · booked {shortWhen.format(new Date(r.created_at))}
                         </p>
                       </div>
-                      <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border ${badge.style}`}>{badge.text}</span>
+                      <Badge tone={badge.tone}>{badge.text}</Badge>
                     </div>
 
                     {r.payment_status === "paid" && Number(r.amount_due) > 0 && !cancelled && (
-                      <p className="text-xs text-neutral-500 mt-2">
+                      <p className="mt-2 text-[13px] text-muted-foreground">
                         Paid{r.payment_method ? ` via ${methodLabel[r.payment_method] ?? r.payment_method}` : ""}
                         {r.payment_reference ? ` · ref ${r.payment_reference}` : ""}
                         {r.paid_at ? ` · ${shortWhen.format(new Date(r.paid_at))}` : ""}
@@ -203,20 +199,20 @@ export default async function EventAttendeesPage({
                     )}
 
                     {!cancelled && (
-                      <div className="mt-3 pt-3 border-t flex flex-wrap items-center gap-2">
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
                         {Number(r.amount_due) > 0 && r.payment_status !== "paid" && r.payment_status !== "refunded" && (
                           <details className="relative">
-                            <summary className="cursor-pointer list-none px-3 py-1.5 rounded bg-[#E85D2C] text-white text-sm font-medium hover:bg-[#d45124]">Mark paid</summary>
-                            <form action={markRegistrationPaid.bind(null, r.id)} className="absolute z-10 mt-2 w-64 rounded-lg border bg-white p-3 shadow-lg space-y-2">
-                              <select name="payment_method" defaultValue="bank_transfer" className="w-full border rounded px-2 py-1.5 text-sm">
+                            <summary className={cn(buttonClass({ variant: "primary", size: "sm" }), "cursor-pointer")}>Mark paid</summary>
+                            <form action={markRegistrationPaid.bind(null, r.id)} className="absolute left-0 z-10 mt-2 w-72 space-y-2 rounded-lg border border-border bg-surface p-3 shadow-lg">
+                              <select name="payment_method" aria-label="Payment method" defaultValue="bank_transfer" className={inputClass}>
                                 {Object.entries(methodLabel).map(([value, label]) => (
                                   <option key={value} value={value}>
                                     {label}
                                   </option>
                                 ))}
                               </select>
-                              <input name="payment_reference" placeholder="Receipt / transaction ref (optional)" className="w-full border rounded px-2 py-1.5 text-sm" />
-                              <button type="submit" className="w-full px-3 py-1.5 rounded bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800">
+                              <input name="payment_reference" aria-label="Receipt or transaction reference" placeholder="Receipt / transaction ref (optional)" className={inputClass} />
+                              <button type="submit" className={buttonClass({ variant: "primary", size: "sm", className: "w-full" })}>
                                 Confirm payment of {rs(Number(r.amount_due))}
                               </button>
                             </form>
@@ -225,31 +221,45 @@ export default async function EventAttendeesPage({
                         {r.payment_status === "paid" && Number(r.amount_due) > 0 && (
                           <>
                             <form action={setRegistrationPayment.bind(null, r.id, "pending")}>
-                              <ConfirmSubmitButton message="Mark this booking as unpaid again?" className="px-3 py-1.5 rounded border bg-white text-sm hover:bg-neutral-50">
+                              <ConfirmSubmitButton title="Mark as unpaid?" confirmLabel="Mark unpaid" message="Mark this booking as unpaid again?" className={buttonClass({ size: "sm" })}>
                                 Mark unpaid
                               </ConfirmSubmitButton>
                             </form>
                             <form action={setRegistrationPayment.bind(null, r.id, "refunded")}>
-                              <ConfirmSubmitButton message="Record this booking as refunded? (Cancel it afterwards to free the spots.)" className="px-3 py-1.5 rounded border bg-white text-sm hover:bg-neutral-50">
+                              <ConfirmSubmitButton
+                                title="Record as refunded?"
+                                confirmLabel="Record refund"
+                                message="Record this booking as refunded? (Cancel it afterwards to free the spots.)"
+                                className={buttonClass({ size: "sm" })}
+                              >
                                 Refunded
                               </ConfirmSubmitButton>
                             </form>
                           </>
                         )}
                         <form action={toggleAttended.bind(null, r.id, !r.attended)}>
-                          <button type="submit" className={`px-3 py-1.5 rounded border text-sm ${r.attended ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-white hover:bg-neutral-50"}`}>
-                            {r.attended ? "✓ Checked in" : eventStarted ? "Check in" : "Check in (event day)"}
+                          <button
+                            type="submit"
+                            className={cn(buttonClass({ size: "sm" }), r.attended && "border-forest-300 bg-forest-50 text-forest-800 hover:bg-forest-100")}
+                          >
+                            {r.attended && <Check className="h-3.5 w-3.5" aria-hidden />}
+                            {r.attended ? "Checked in" : eventStarted ? "Check in" : "Check in (event day)"}
                           </button>
                         </form>
                         {wa && (
-                          <a href={wa} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded bg-[#25D366] text-white text-sm font-medium hover:bg-[#128C7E]">
+                          <a href={wa} target="_blank" rel="noopener noreferrer" className={cn(waButtonClass, "h-8 px-3 text-[13px]")}>
+                            <MessageCircle className="h-3.5 w-3.5" aria-hidden />
                             WhatsApp
                           </a>
                         )}
                         <form action={cancelRegistration.bind(null, r.id)} className="ml-auto">
                           <ConfirmSubmitButton
-                            message={`Cancel ${r.guest_name}'s booking? Their ${r.spots_reserved} spot${r.spots_reserved === 1 ? "" : "s"} will be released. No e-mail is sent, so message them yourself.`}
-                            className="px-3 py-1.5 rounded border border-red-200 bg-white text-sm text-red-700 hover:bg-red-50"
+                            title={`Cancel ${r.guest_name}'s booking?`}
+                            confirmLabel="Cancel booking"
+                            cancelLabel="Keep booking"
+                            tone="danger"
+                            message={`Their ${r.spots_reserved} spot${r.spots_reserved === 1 ? "" : "s"} will be released. No e-mail is sent, so message them yourself.`}
+                            className={buttonClass({ variant: "danger", size: "sm" })}
                           >
                             Cancel booking
                           </ConfirmSubmitButton>
@@ -258,8 +268,15 @@ export default async function EventAttendeesPage({
                     )}
 
                     <form action={saveRegistrationNote.bind(null, r.id)} className="mt-3 flex gap-2">
-                      <input name="admin_notes" defaultValue={r.admin_notes ?? ""} maxLength={1000} placeholder="Private note (dietary needs, plant they're bringing…)" className="flex-1 border rounded px-2 py-1.5 text-sm" />
-                      <button type="submit" className="px-3 py-1.5 rounded border bg-white text-sm hover:bg-neutral-50">
+                      <input
+                        name="admin_notes"
+                        aria-label={`Private note for ${r.guest_name}`}
+                        defaultValue={r.admin_notes ?? ""}
+                        maxLength={1000}
+                        placeholder="Private note (dietary needs, plant they're bringing…)"
+                        className={cn(inputClass, "h-8 flex-1 text-[13px]")}
+                      />
+                      <button type="submit" className={buttonClass({ size: "sm" })}>
                         Save note
                       </button>
                     </form>
@@ -269,16 +286,12 @@ export default async function EventAttendeesPage({
             </ul>
           )}
 
-          {paidRegs.length > 0 && awaiting.length === 0 && (
-            <p className="text-xs text-neutral-500">All payments received.</p>
-          )}
+          {paidRegs.length > 0 && awaiting.length === 0 && <p className="text-[13px] text-muted-foreground">All payments received.</p>}
         </div>
 
-        <aside className="bg-white rounded-lg border p-5">
-          <h2 className="text-lg font-serif mb-1">Add an attendee</h2>
-          <p className="text-xs text-neutral-500 mb-4">For bookings made on WhatsApp, Instagram or in person.</p>
+        <Panel title="Add an attendee" description="For bookings made on WhatsApp, Instagram or in person.">
           <AddAttendeeForm eventId={id} price={Number(event.price)} spotsLeft={event.spots_remaining} />
-        </aside>
+        </Panel>
       </div>
     </div>
   )
