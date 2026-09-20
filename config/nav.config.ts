@@ -94,6 +94,11 @@ export const mainNav: NavItem[] = [
     href: "/events",
   },
   {
+    id: "services",
+    label: "Services",
+    href: "/services",
+  },
+  {
     id: "journal",
     label: "Journal",
     href: "/journal",
@@ -136,5 +141,6 @@ export const mobileNav: NavItem[] = [
   { id: "mobile-by-need", label: "By Need", href: "/shop-by-need", children: shopByNeedCategories },
   { id: "mobile-muffin", label: askMuffin.name, href: "/muffin", isAi: true },
   { id: "mobile-events", label: "Events", href: "/events" },
+  { id: "mobile-services", label: "Services", href: "/services" },
   { id: "mobile-journal", label: "Journal", href: "/journal" },
 ]

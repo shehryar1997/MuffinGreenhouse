@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic"
 import { MetadataRoute } from "next"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { shopByNeedCategories } from "@/config/nav.config"
+import { services } from "@/lib/services"
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com"
 
@@ -50,6 +51,18 @@ const staticRoutes: MetadataRoute.Sitemap = [
     changeFrequency: "weekly",
     priority: 0.7,
   },
+  {
+    url: `${siteUrl}/services`,
+    lastModified: new Date(),
+    changeFrequency: "monthly",
+    priority: 0.7,
+  },
+  ...services.map((s) => ({
+    url: `${siteUrl}/services/${s.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  })),
   {
     url: `${siteUrl}/reviews`,
     lastModified: new Date(),
