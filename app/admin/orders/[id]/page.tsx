@@ -2,8 +2,10 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { MessageCircle, Printer } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
-import { markPaid, markDelivered, cancelOrder } from "./actions"
+import { markPaid, markDelivered, cancelOrder, deleteOrder } from "./actions"
 import { MarkShippedDialog } from "./mark-shipped-dialog"
+import { DeleteButton } from "../../_components/delete-button"
+import { deleteOrderDescription } from "../delete-order-description"
 import { ConfirmSubmitButton } from "../../_components/confirm-submit-button"
 import { Alert, ButtonLink, OrderStatusBadge, PageHeader, Panel, PaymentStatusBadge, buttonClass, linkClass, waButtonClass } from "../../_components/ui"
 import { fmtDateTime, rs } from "../../_components/format"
@@ -83,10 +85,20 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </>
         }
         actions={
-          <ButtonLink href={`/admin/orders/${order.id}/print`}>
-            <Printer className="h-4 w-4" aria-hidden />
-            Packing slip
-          </ButtonLink>
+          <>
+            <ButtonLink href={`/admin/orders/${order.id}/print`}>
+              <Printer className="h-4 w-4" aria-hidden />
+              Packing slip
+            </ButtonLink>
+            <DeleteButton
+              size="md"
+              title="Delete this order?"
+              description={deleteOrderDescription(order.order_number, order.status)}
+              confirmLabel="Delete order"
+              fallbackError="Couldn't delete the order. Check your connection and try again."
+              action={deleteOrder.bind(null, order.id, true)}
+            />
+          </>
         }
       />
 

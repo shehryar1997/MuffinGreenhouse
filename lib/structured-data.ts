@@ -6,18 +6,21 @@ import { siteConfig } from "@/config/nav.config"
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com"
 
 /**
- * Generates Organization schema for the site
- * Used in the root layout
+ * Generates the business schema for the site (Store = a LocalBusiness subtype). Used in the root layout.
+ * No streetAddress/geo/openingHours on purpose: there is no public street address (pickups are arranged over
+ * WhatsApp, see siteConfig). Add them here once a public address or Google Business Profile exists.
  */
 export function generateOrganizationSchema() {
   return {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": ["Store", "LocalBusiness"],
+    "@id": `${BASE_URL}/#business`,
     "name": "Muffin Greenhouse",
     "url": BASE_URL,
     "logo": `${BASE_URL}/logo-nav.png`, // /images/logo.svg never existed (404)
+    "image": `${BASE_URL}/opengraph-image.png`,
     "sameAs": [
-      "https://www.instagram.com/muffinsgreenhouse/"
+      siteConfig.social.instagram
     ],
     "description": siteConfig.description,
     "address": {
@@ -26,12 +29,38 @@ export function generateOrganizationSchema() {
       "addressRegion": "Sindh",
       "addressCountry": "PK"
     },
+    "areaServed": [
+      { "@type": "City", "name": siteConfig.address.city },
+      { "@type": "Country", "name": "Pakistan" }
+    ],
+    "currenciesAccepted": "PKR",
+    "email": siteConfig.email,
+    // E.164 ("+92..."): schema.org and Google expect the leading "+", which the old code stripped.
+    "telephone": siteConfig.whatsappNumber,
     "contactPoint": {
       "@type": "ContactPoint",
       "contactType": "customer service",
       "email": siteConfig.email,
-      "telephone": siteConfig.whatsappNumber.replace("+", "")
+      "telephone": siteConfig.whatsappNumber,
+      "areaServed": "PK",
+      "availableLanguage": ["English", "Urdu"]
     }
+  }
+}
+
+/**
+ * Generates WebSite schema (site name for search results). No SearchAction: the on-site search is a drawer
+ * without a crawlable results URL for that to point at.
+ */
+export function generateWebSiteSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${BASE_URL}/#website`,
+    "url": BASE_URL,
+    "name": "Muffin Greenhouse",
+    "inLanguage": "en-PK",
+    "publisher": { "@id": `${BASE_URL}/#business` }
   }
 }
 
@@ -39,7 +68,8 @@ export function generateOrganizationSchema() {
  * Generates Product schema for a single product
  */
 export function generateProductSchema(product: Product) {
-  const mainImage = product.images.length > 0 ? product.images[0].url : ""
+  // Google rejects an empty image: omit the field entirely when the product has no photo yet.
+  const mainImage = product.images.length > 0 ? product.images[0].url : undefined
   
   // Map stockStatus to schema.org availability
   const availabilityMap = {
@@ -63,8 +93,8 @@ export function generateProductSchema(product: Product) {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": product.name,
-    "description": product.description,
-    "image": mainImage,
+    ...(product.description ? { "description": product.description } : {}),
+    ...(mainImage ? { "image": product.images.map((img) => img.url) } : {}),
     "sku": product.variants.length > 0 ? product.variants[0].sku : product.id,
     "brand": {
       "@type": "Brand",

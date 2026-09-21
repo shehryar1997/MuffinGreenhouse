@@ -151,7 +151,6 @@ export function Hero({ latest }: { latest: Product[] }) {
   const reduced = useReducedMotion()
   const [state, setState] = useState<CarouselState>({ cur: 0, prev: -1, dir: 1, animate: false })
   const [userPaused, setUserPaused] = useState(false)
-  const [hovering, setHovering] = useState(false)
   const [focusWithin, setFocusWithin] = useState(false)
   const [touching, setTouching] = useState(false)
   const docHidden = useSyncExternalStore(subscribeVisibility, () => document.hidden, () => false)
@@ -165,7 +164,7 @@ export function Hero({ latest }: { latest: Product[] }) {
   const next = useCallback(() => setState((s) => ({ cur: (s.cur + 1) % SLIDE_COUNT, prev: s.cur, dir: 1, animate: true })), [])
   const previous = useCallback(() => setState((s) => ({ cur: (s.cur - 1 + SLIDE_COUNT) % SLIDE_COUNT, prev: s.cur, dir: -1, animate: true })), [])
 
-  const holding = userPaused || hovering || focusWithin || touching || docHidden
+  const holding = userPaused || focusWithin || touching || docHidden
   const autoplaying = !reduced && !holding
 
   const onTouchStart = (e: React.TouchEvent) => {
@@ -192,8 +191,6 @@ export function Hero({ latest }: { latest: Product[] }) {
       aria-roledescription="carousel"
       aria-label="Featured at Muffin"
       className="relative flex touch-pan-y flex-col justify-center overflow-hidden lg:min-h-[46rem]"
-      onPointerEnter={(e) => e.pointerType === "mouse" && setHovering(true)}
-      onPointerLeave={(e) => e.pointerType === "mouse" && setHovering(false)}
       onFocus={() => setFocusWithin(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) setFocusWithin(false)

@@ -7,7 +7,7 @@ import { SearchProvider } from "@/components/providers/search-provider"
 import { WishlistProvider } from "@/components/providers/wishlist-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { SiteChrome } from "@/components/layout/site-chrome"
-import { generateOrganizationSchema, serializeJsonLd } from "@/lib/structured-data"
+import { generateOrganizationSchema, generateWebSiteSchema, serializeJsonLd } from "@/lib/structured-data"
 import "./globals.css"
 
 const playfair = Playfair_Display({
@@ -41,7 +41,6 @@ export const metadata: Metadata = {
     template: "%s - Muffin Greenhouse",
   },
   description: "Healthy indoor plants sourced from around the world and propagated in Karachi. Pots, plant care supplies and honest care tips, delivered across Pakistan.",
-  keywords: ["plants", "nursery", "Karachi", "Pakistan", "succulents", "aroids", "hoya", "monstera", "indoor plants", "snake plant", "online plant shop"],
   openGraph: {
     title: "Muffin Greenhouse - Good Plants. Good Energy.",
     description: "Indoor plants sourced worldwide and propagated in Karachi. Delivery across Pakistan.",
@@ -61,6 +60,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   const organizationSchema = generateOrganizationSchema()
+  const webSiteSchema = generateWebSiteSchema()
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -70,6 +70,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(organizationSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(webSiteSchema) }}
         />
       </head>
       <body className={`${playfair.variable} ${inter.variable} ${jetbrains.variable} font-sans antialiased`}>

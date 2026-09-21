@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/terms-conditions" },
   title: "Terms & Conditions",
   description: "Terms of service for using Muffin Greenhouse website.",
 }

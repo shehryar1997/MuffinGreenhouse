@@ -1,6 +1,7 @@
 "use server"
 
 import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { sendOrderConfirmedEmail } from "@/lib/email/send-order-confirmed"
@@ -176,6 +177,40 @@ export async function markDelivered(orderId: string) {
     .eq("id", orderId)
   if (error) throw new Error(error.message)
   redirect(`/admin/orders/${orderId}`)
+}
+
+/**
+ * Permanently deletes an order and its line items (order_items cascade). It disappears from the order list,
+ * the customer's history and revenue totals. The customer is not e-mailed.
+ *
+ * Stock: an order that hasn't shipped is still holding plants, so it is cancelled first and they go back on
+ * the shelf. Shipped/delivered orders have left the greenhouse, and cancelled ones already gave theirs back.
+ */
+export async function deleteOrder(orderId: string, redirectToList: boolean): Promise<{ error: string } | undefined> {
+  await requireAdmin()
+
+  const { data: order, error: readError } = await supabaseAdmin
+    .from("orders")
+    .select("id, status")
+    .eq("id", orderId)
+    .maybeSingle()
+  if (readError) return { error: readError.message }
+  if (!order) return { error: "This order no longer exists." }
+
+  if (order.status !== "cancelled" && order.status !== "shipped" && order.status !== "delivered") {
+    const { error: releaseError } = await supabaseAdmin.rpc("cancel_order", { p_order_id: orderId, p_reason: "deleted" })
+    if (releaseError && !releaseError.message.includes("ORDER_NOT_FOUND")) {
+      return { error: `Couldn't return the order's stock, so nothing was deleted: ${releaseError.message}` }
+    }
+  }
+
+  const { error: deleteError } = await supabaseAdmin.from("orders").delete().eq("id", orderId)
+  if (deleteError) return { error: deleteError.message }
+
+  revalidatePath("/admin/orders")
+  revalidatePath("/admin/customers")
+  revalidatePath("/admin")
+  if (redirectToList) redirect("/admin/orders")
 }
 
 export async function cancelOrder(orderId: string) {

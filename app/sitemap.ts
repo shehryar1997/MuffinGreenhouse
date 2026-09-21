@@ -7,125 +7,75 @@ import { services } from "@/lib/services"
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.muffinplants.com"
 
-// Static routes with their change frequency and priority
+// Static routes. No lastmod/changefreq/priority: they were always "now" or guesses, and Google ignores such values.
 const staticRoutes: MetadataRoute.Sitemap = [
   {
     url: `${siteUrl}`,
-    lastModified: new Date(),
-    changeFrequency: "daily",
-    priority: 1.0,
-  },
-  {
-    url: `${siteUrl}/shop/all`,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 0.8,
-  },
-  {
-    url: `${siteUrl}/shop/tools-equipment`,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 0.7,
   },
   {
     url: `${siteUrl}/our-story`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.5,
   },
   {
     url: `${siteUrl}/faq`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.5,
   },
   {
     url: `${siteUrl}/contact`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.5,
   },
   {
     url: `${siteUrl}/journal`,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 0.7,
   },
   {
     url: `${siteUrl}/events`,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 0.7,
   },
   {
     url: `${siteUrl}/services`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.7,
   },
   ...services.map((s) => ({
     url: `${siteUrl}/services/${s.slug}`,
-    lastModified: new Date(),
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
   })),
   {
     url: `${siteUrl}/reviews`,
-    lastModified: new Date(),
-    changeFrequency: "weekly",
-    priority: 0.6,
   },
   {
     url: `${siteUrl}/plant-finder`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.5,
   },
   {
     url: `${siteUrl}/muffin`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.5,
   },
   {
     url: `${siteUrl}/shop-by-need`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.6,
   },
   {
     url: `${siteUrl}/visit-us`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.5,
   },
   {
     url: `${siteUrl}/delivery-and-pickup`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.5,
   },
   {
     url: `${siteUrl}/our-guarantee`,
-    lastModified: new Date(),
-    changeFrequency: "monthly",
-    priority: 0.5,
   },
   // Login/register were listed here: they are noindex-worthy utility pages, not landing pages. The shop-by-need
   // pages and the legal pages were missing.
-  ...shopByNeedCategories.map((c) => ({
-    url: `${siteUrl}${c.href}`,
-    lastModified: new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.6,
-  })),
   ...["terms-conditions", "privacy-policy", "refund-policy", "cookie-policy"].map((slug) => ({
     url: `${siteUrl}/${slug}`,
-    lastModified: new Date(),
-    changeFrequency: "yearly" as const,
-    priority: 0.2,
   })),
 ]
+
+// Listing pages are only worth crawling once something is on sale: while the catalogue is empty they are blank pages.
+async function getShopListingRoutes(): Promise<MetadataRoute.Sitemap> {
+  const { count, error } = await supabaseAdmin
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .not("published_at", "is", null)
+
+  if (error || !count) return []
+
+  return [
+    { url: `${siteUrl}/shop/all` },
+    { url: `${siteUrl}/shop/tools-equipment` },
+    ...shopByNeedCategories.map((c) => ({ url: `${siteUrl}${c.href}` })),
+  ]
+}
 
 async function getProductRoutes(): Promise<MetadataRoute.Sitemap> {
   const { data: products, error } = await supabaseAdmin
@@ -142,8 +92,6 @@ async function getProductRoutes(): Promise<MetadataRoute.Sitemap> {
   return (products || []).map((product) => ({
     url: `${siteUrl}/shop/product/${product.slug}`,
     lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
-    changeFrequency: "weekly",
-    priority: 0.8,
   }))
 }
 
@@ -165,8 +113,6 @@ async function getCategoryRoutes(): Promise<MetadataRoute.Sitemap> {
   return (categories || []).filter((category) => stockedSlugs.has(category.slug)).map((category) => ({
     url: `${siteUrl}/shop/${category.slug}`,
     lastModified: category.updated_at ? new Date(category.updated_at) : new Date(),
-    changeFrequency: "weekly",
-    priority: 0.7,
   }))
 }
 
@@ -186,8 +132,6 @@ async function getJournalRoutes(): Promise<MetadataRoute.Sitemap> {
   return (posts || []).map((post) => ({
     url: `${siteUrl}/journal/${post.slug}`,
     lastModified: post.updated_at ? new Date(post.updated_at) : new Date(),
-    changeFrequency: "monthly",
-    priority: 0.6,
   }))
 }
 
@@ -206,18 +150,17 @@ async function getEventRoutes(): Promise<MetadataRoute.Sitemap> {
   return (events || []).map((event) => ({
     url: `${siteUrl}/events/${event.slug}`,
     lastModified: event.updated_at ? new Date(event.updated_at) : new Date(),
-    changeFrequency: "weekly",
-    priority: 0.7,
   }))
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [productRoutes, categoryRoutes, journalRoutes, eventRoutes] = await Promise.all([
+  const [shopListingRoutes, productRoutes, categoryRoutes, journalRoutes, eventRoutes] = await Promise.all([
+    getShopListingRoutes(),
     getProductRoutes(),
     getCategoryRoutes(),
     getJournalRoutes(),
     getEventRoutes(),
   ])
 
-  return [...staticRoutes, ...categoryRoutes, ...productRoutes, ...journalRoutes, ...eventRoutes]
+  return [...staticRoutes, ...shopListingRoutes, ...categoryRoutes, ...productRoutes, ...journalRoutes, ...eventRoutes]
 }

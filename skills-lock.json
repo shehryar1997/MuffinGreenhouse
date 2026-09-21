@@ -1,6 +1,156 @@
 {
   "version": 1,
   "skills": {
+    "seo": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo/SKILL.md",
+      "computedHash": "f6d3177c2c0de9e7e8620e27a18bf88d9285bf484f74365ae281279c8d49a1ac"
+    },
+    "seo-audit": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-audit/SKILL.md",
+      "computedHash": "5c3e05fd9aaa494cc7a5758ef154328e1d1491f7e867ded2fc2f396be1b3ead0"
+    },
+    "seo-backlinks": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-backlinks/SKILL.md",
+      "computedHash": "62f26b3899024e93624d3d286c4ec4a30c27cacd1c15dd13bcefae9e407bc593"
+    },
+    "seo-cluster": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-cluster/SKILL.md",
+      "computedHash": "c993d49425ead790631cbafdda20bfb633bf4bc176c52eb6c6b11d23c9d384a9"
+    },
+    "seo-competitor-pages": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-competitor-pages/SKILL.md",
+      "computedHash": "6bd2ddba1720279aa3fe65a4783157c9c101c5b1354ed842ae3dce6d40e410fa"
+    },
+    "seo-content": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-content/SKILL.md",
+      "computedHash": "408e3cb08feda819f7fcc6321165cd696bbb66eeb1e0b872c470d2f121f14e74"
+    },
+    "seo-content-brief": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-content-brief/SKILL.md",
+      "computedHash": "d1d29ce79f14af2c3765f5621bb9500f147f35946e7905444623cfaf49c0b2d8"
+    },
+    "seo-dataforseo": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-dataforseo/SKILL.md",
+      "computedHash": "930c67f7c80c4033b861cb7dfc728f40f46a92f370e27b16fc8bdf42ff81d539"
+    },
+    "seo-drift": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-drift/SKILL.md",
+      "computedHash": "ce155f5f497b9eb03f790290d99c03e49564f2caa1144aa72bc85b50c6e8067a"
+    },
+    "seo-ecommerce": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-ecommerce/SKILL.md",
+      "computedHash": "3965394ccbe22abcf0287ccae2256b5952eec870705c80cb22aea7887b617a22"
+    },
+    "seo-flow": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-flow/SKILL.md",
+      "computedHash": "85a882f824d7182c29e2c078de260f7dc8ce11688c96d64c8bc7bf77dba74feb"
+    },
+    "seo-geo": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-geo/SKILL.md",
+      "computedHash": "e99f9f2d1452228436bfedddb4f31435aa1fc4703f6ea6ffb75120d67208b2e0"
+    },
+    "seo-google": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-google/SKILL.md",
+      "computedHash": "b88f1f55e35b6aeada0695744c319caaba5b13ab214e3cd5f0c0e4f6e4d7c89a"
+    },
+    "seo-hreflang": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-hreflang/SKILL.md",
+      "computedHash": "b87f59f7bdc69e33c8d04201e81fc84b7f999b30fcc63dbbb2371e2ad50327e0"
+    },
+    "seo-image-gen": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-image-gen/SKILL.md",
+      "computedHash": "0c01d9007f44f742987e917e64265a294d622627094e40f8e5ebf0d989b1cf2f"
+    },
+    "seo-images": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-images/SKILL.md",
+      "computedHash": "dd68970cf03fed0cee0045f1c9a5e0945685d66d9b49b10e69e0bba04c33c901"
+    },
+    "seo-local": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-local/SKILL.md",
+      "computedHash": "cc25d99262eb81d1e6b5d1beaf243a6b7fc48090c5f8454aa25e60e2bf8ec9d9"
+    },
+    "seo-maps": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-maps/SKILL.md",
+      "computedHash": "544bfffa1ee8f03ba795bb3cd059e88d0020e7f0d30ae2b6ba68a02e816817d1"
+    },
+    "seo-page": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-page/SKILL.md",
+      "computedHash": "3211c7c55cc27dad40cffd0c5ec3f6ea8cb5232a5d5b7259a0652e3a09d9c771"
+    },
+    "seo-plan": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-plan/SKILL.md",
+      "computedHash": "91f6ad011a70911f953589c649fa37850575adbfa7479ca85406111e9a04532f"
+    },
+    "seo-programmatic": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-programmatic/SKILL.md",
+      "computedHash": "a32e96f8b766d2a796c8e6cc2251316441ed2b7f626ca1c03c7f0e909c172b66"
+    },
+    "seo-schema": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-schema/SKILL.md",
+      "computedHash": "23b87c4f076a0082f2e5e813f711ba1e5231b3e34317f656403c4104dc65142e"
+    },
+    "seo-sitemap": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-sitemap/SKILL.md",
+      "computedHash": "30885f7df3221fc0dc8fa0821ad71893c76323d6ad460abe9a15d9d8a360ac96"
+    },
+    "seo-sxo": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-sxo/SKILL.md",
+      "computedHash": "3b94c6724d4b0264039c613a9610c3c8cf3b5a1760c9bd4b97de68818b1629b1"
+    },
+    "seo-technical": {
+      "source": "agricidaniel/claude-seo",
+      "sourceType": "github",
+      "skillPath": "skills/seo-technical/SKILL.md",
+      "computedHash": "952356607458e84646c054c060cd525cc5fd892a24602c80740a526e4b17542a"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",

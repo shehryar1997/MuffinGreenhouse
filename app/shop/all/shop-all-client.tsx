@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense } from "react"
+import Link from "next/link"
 import { ProductCard } from "@/components/ui/product-card"
 import { ProductFilters, FilterSidebar, MAX_PRICE } from "@/components/shop/product-filters"
 import { Pagination } from "@/components/shop/pagination"
@@ -68,7 +69,14 @@ export function ShopAllClient({ products, currentPage, totalPages, totalCount, f
                         </select>
                       </div>
                     </div>
-                    {products.length === 0 ? (
+                    {products.length === 0 && totalCount === 0 && !hasActiveFilters ? (
+                      // An empty shop is not a filter problem: say so instead of offering "clear filters".
+                      <div className="text-center py-20 bg-surface rounded-lg border border-forest-200">
+                        <p className="text-forest-800 text-lg mb-2">New plants are on their way.</p>
+                        <p className="text-forest-600 mb-4">We are getting the greenhouse ready. Ask us on WhatsApp what is coming next.</p>
+                        <Link href="/contact" className="text-clay-600 underline font-medium">Get in touch</Link>
+                      </div>
+                    ) : products.length === 0 ? (
                       <div className="text-center py-20 bg-surface rounded-lg border border-forest-200">
                         <p className="text-forest-600 text-lg mb-2">No plants match your filters.</p>
                         <button onClick={clearFilters} className="text-clay-500 hover:text-clay-600 underline font-medium">

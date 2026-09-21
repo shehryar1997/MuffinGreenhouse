@@ -5,6 +5,9 @@ import { requireAdmin } from "@/lib/admin-auth"
 import { Alert, ButtonLink, EmptyState, FilterTabs, OrderStatusBadge, PageHeader, PaymentStatusBadge, TableShell, Td, Th, Thead, Tr, buttonClass, rowLinkClass } from "../_components/ui"
 import { fmtDate, fmtNumber, plural, rs } from "../_components/format"
 import { realEmail } from "@/lib/manual-order"
+import { DeleteButton } from "../_components/delete-button"
+import { deleteOrder } from "./[id]/actions"
+import { deleteOrderDescription } from "./delete-order-description"
 
 export const dynamic = "force-dynamic"
 const PAGE_SIZE = 25
@@ -119,9 +122,18 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
                   <Td><OrderStatusBadge status={o.status} /></Td>
                   <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(o.created_at)}</Td>
                   <Td align="right">
-                    <Link href={`/admin/orders/${o.id}`} className={buttonClass({ size: "sm" })}>
-                      View
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`/admin/orders/${o.id}`} className={buttonClass({ size: "sm" })}>
+                        View
+                      </Link>
+                      <DeleteButton
+                        title="Delete this order?"
+                        description={deleteOrderDescription(o.order_number, o.status)}
+                        confirmLabel="Delete order"
+                        fallbackError="Couldn't delete the order. Check your connection and try again."
+                        action={deleteOrder.bind(null, o.id, false)}
+                      />
+                    </div>
                   </Td>
                 </Tr>
               )

@@ -30,12 +30,21 @@ function LogoChip({ className, imgClassName }: { className?: string; imgClassNam
 
 const TIP_KEY = "muffin-tip-seen"
 const TIP_DELAY_MS = 4000
-const TIP_VISIBLE_MS = 16000
+const TIP_STEP_MS = 4000
+
+// The bubble walks through these, one every TIP_STEP_MS, then goes away for the rest of the visit.
+const TIPS = [
+  { title: "Not sure which plant?", body: "Ask Muffin for plant picks, care tips or an order update." },
+  { title: "Low light or pet at home?", body: "Tell Muffin and get plants that suit the space." },
+  { title: "New to plants?", body: "Ask for beginner-friendly picks that are hard to kill." },
+  { title: "Wondering where your order is?", body: "Muffin can check on it for you." },
+]
 
 /** Floating "Ask Muffin" button. Text shows from sm up; phones get just the logo so it doesn't cover the buy bar.
  *  A small speech bubble beside it says what Muffin can do; it shows once per visit, then stays out of the way. */
 export function AskMuffinLauncher({ onClick }: { onClick: () => void }) {
   const [tipOpen, setTipOpen] = useState(false)
+  const [tipIndex, setTipIndex] = useState(0)
 
   useEffect(() => {
     try {
@@ -52,11 +61,15 @@ export function AskMuffinLauncher({ onClick }: { onClick: () => void }) {
     } catch {}
   }
 
+  // Each tip stays for TIP_STEP_MS, then the next one replaces it. After the last, the bubble closes.
   useEffect(() => {
     if (!tipOpen) return
-    const hide = setTimeout(hideTip, TIP_VISIBLE_MS)
-    return () => clearTimeout(hide)
-  }, [tipOpen])
+    const next = setTimeout(() => {
+      if (tipIndex >= TIPS.length - 1) hideTip()
+      else setTipIndex(tipIndex + 1)
+    }, TIP_STEP_MS)
+    return () => clearTimeout(next)
+  }, [tipOpen, tipIndex])
 
   return (
     <div className="relative">
@@ -71,8 +84,10 @@ export function AskMuffinLauncher({ onClick }: { onClick: () => void }) {
               }}
               className="block rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <span className="block font-serif text-sm leading-tight text-foreground">Not sure which plant?</span>
-              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">Ask Muffin for plant picks, care tips or an order update.</span>
+              <span key={tipIndex} className="block animate-fade-in" aria-live="polite">
+                <span className="block font-serif text-sm leading-tight text-foreground">{TIPS[tipIndex].title}</span>
+                <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{TIPS[tipIndex].body}</span>
+              </span>
             </button>
             <button
               type="button"

@@ -1,0 +1,76 @@
+{
+  "summary": {
+    "health_score": 47,
+    "business_type": "E-commerce (plants) + local service business, Karachi, Pakistan",
+    "top_findings": [
+      "Test/junk content live in products and journal (and in sitemap)",
+      "Only 5 products, 1 journal post, 1 event indexable",
+      "Zero GSC impressions in 90 days; sitemap not submitted; product URLs unknown to Google",
+      "No LocalBusiness entity, no GBP link, phone not E.164",
+      "Homepage H1 has no keyword; category/product pages thin (100-170 words)"
+    ],
+    "quick_wins": [
+      "Unpublish test products and junk journal post",
+      "Submit sitemap in GSC and request indexing",
+      "Create Google Business Profile and collect reviews",
+      "Add Karachi/Pakistan keyword to homepage H1/intro",
+      "Add real product images; never emit empty Product image"
+    ]
+  },
+  "categories": [
+    {"name": "Technical SEO", "score": 62, "what_works": ["HTTPS+HSTS preload", "valid robots.txt and sitemap", "real 404s", "canonicals on most templates"],
+     "findings": [
+       {"title": "Sitemap not submitted in GSC", "severity": "High", "description": "GSC reports no sitemaps; product URL unknown to Google", "recommendation": "Submit sitemap.xml and request indexing"},
+       {"title": "Missing canonicals on 8 pages", "severity": "High", "description": "/contact, /faq, /delivery-and-pickup, /visit-us, /our-story, /reviews, /muffin, /plant-finder", "recommendation": "Add alternates.canonical in metadata"},
+       {"title": "Inconsistent server response", "severity": "Medium", "description": "TTFB 0.36-1.35s home; inner pages 5-16s during crawl", "recommendation": "Use ISR/static rendering; check Supabase cold starts"},
+       {"title": "Sitemap lastmod always now", "severity": "Medium", "description": "force-dynamic sitemap sets new Date() for static routes", "recommendation": "Use real dates, drop changefreq/priority"},
+       {"title": "Two-hop redirect http apex to www", "severity": "Medium", "description": "http://muffinplants.com -> https://muffinplants.com -> https://www.muffinplants.com", "recommendation": "Single redirect at domain level"},
+       {"title": "Missing nosniff and Permissions-Policy", "severity": "Low", "description": "Security score 91/100", "recommendation": "Add headers in next.config.mjs"}
+     ]},
+    {"name": "Content Quality", "score": 25, "what_works": ["Strong brand voice", "Detailed Our Story page (774 words)"],
+     "findings": [
+       {"title": "Test/junk content published", "severity": "Critical", "description": "Product descriptions 'adsfhdsavfasf', 'scasasf'; journal post keyboard-mash body", "recommendation": "Unpublish/delete and rewrite"},
+       {"title": "No informational content", "severity": "Critical", "description": "1 journal post (junk), 1 event", "recommendation": "Publish 2 quality guides per week for Pakistani conditions"},
+       {"title": "Thin product and category pages", "severity": "High", "description": "100-170 words, no care info, no reviews", "recommendation": "250+ word unique copy, FAQs, care specs"},
+       {"title": "Weak E-E-A-T", "severity": "Medium", "description": "No named author, credentials or nursery photos", "recommendation": "Add founder bio and author pages"}
+     ]},
+    {"name": "On-Page SEO", "score": 55, "what_works": ["One H1 per page", "Consistent title pattern", "Clean URLs", "og:locale en_PK"],
+     "findings": [
+       {"title": "Homepage H1 lacks keyword", "severity": "High", "description": "H1 is the slogan only", "recommendation": "Add 'indoor plants in Karachi / Pakistan' in H1 or intro"},
+       {"title": "Junk meta descriptions", "severity": "High", "description": "Product descriptions prefixed with gibberish; journal description 20 chars", "recommendation": "Rewrite, 120-155 chars"},
+       {"title": "Generic titles", "severity": "Medium", "description": "/shop/all 'All Plants - Muffin Greenhouse'", "recommendation": "Keyword-led titles with Pakistan"}
+     ]},
+    {"name": "Schema / Structured Data", "score": 45, "what_works": ["Organization, Breadcrumb, Product, BlogPosting, Service present"],
+     "findings": [
+       {"title": "Product image empty", "severity": "High", "description": "Product JSON-LD image is empty string", "recommendation": "Skip or fall back to real image"},
+       {"title": "No LocalBusiness", "severity": "High", "description": "Organization only, no street/geo/hours", "recommendation": "Extend to LocalBusiness/Store with areaServed Pakistan"},
+       {"title": "Phone not E.164", "severity": "Medium", "description": "telephone '923095360009'", "recommendation": "+923095360009"},
+       {"title": "Missing WebSite, FAQPage, Event, return/shipping policy schema", "severity": "Medium", "description": "Not present", "recommendation": "Add"}
+     ]},
+    {"name": "Performance (CWV)", "score": 65, "what_works": ["next/font preloads", "AVIF hero", "Vercel CDN"],
+     "findings": [
+       {"title": "Lab data unavailable", "severity": "Info", "description": "PSI API key invalid and quota exhausted", "recommendation": "Replace key and re-run"},
+       {"title": "Heavy hero image", "severity": "Medium", "description": "443 KB AVIF at 1080w; srcset up to 3840", "recommendation": "Compress to <=150 KB, cap widths"},
+       {"title": "JS 415 KB compressed, Sentry 100% sample rate", "severity": "Low", "description": "21 scripts", "recommendation": "Lower Sentry sampling, drop unused font"}
+     ]},
+    {"name": "AI Search Readiness", "score": 40, "what_works": ["AI crawlers not blocked"],
+     "findings": [
+       {"title": "Little citable content", "severity": "Medium", "description": "No guides, FAQ, or named author", "recommendation": "Question-headed guides with facts; FAQ schema"},
+       {"title": "Weak brand footprint", "severity": "Medium", "description": "Instagram only", "recommendation": "Add Facebook, YouTube, GBP, directories"}
+     ]},
+    {"name": "Images", "score": 30, "what_works": ["next/image with srcset", "product image alt present"],
+     "findings": [
+       {"title": "Placeholder product image and stock sources", "severity": "High", "description": "placeholder-plant.png used; CSP allows Unsplash/Pexels", "recommendation": "Use own photos with descriptive names and alt"},
+       {"title": "Logo alt empty", "severity": "Low", "description": "8 of 13 homepage images alt=''", "recommendation": "alt='Muffin Greenhouse' on logo"}
+     ]}
+  ],
+  "action_plan": {
+    "phases": [
+      {"name": "Phase 1: Critical Fixes", "timeframe": "Week 1", "items": ["Remove test data", "Submit sitemap in GSC/Bing", "Create GBP and get reviews", "Keyword in homepage H1", "Add canonicals", "Fix empty product image in schema"]},
+      {"name": "Phase 2: High-Impact Improvements", "timeframe": "Weeks 2-3", "items": ["30-50 real products with photos", "Category intros and FAQs", "LocalBusiness/FAQ/Event/WebSite schema", "ISR and hero image optimization", "Security headers, redirects, sitemap lastmod"]},
+      {"name": "Phase 3: Content & Authority", "timeframe": "Month 2", "items": ["16 Pakistan-specific guides", "Karachi hub page and service page depth", "Reviews with schema", "Citations and local backlinks"]},
+      {"name": "Phase 4: Monitoring & Iteration", "timeframe": "Ongoing", "items": ["Weekly GSC review filtered to Pakistan", "Monthly content refresh", "Quarterly re-audit"]}
+    ]
+  },
+  "artifacts": {"findings_dir": "findings/", "screenshots_dir": "screenshots/"}
+}
