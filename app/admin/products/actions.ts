@@ -5,8 +5,10 @@ import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { deleteUnreferencedProductImages } from "@/lib/product-images"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { isAllowedImageUrl } from "@/lib/image-hosts"
+import { recordToFormData, type ImportRecord } from "@/lib/product-import"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
+import { afterProductSaved } from "@/lib/stock-alerts"
 
 // Fields copied when prefilling a new product from an existing one. Deliberately
 // excludes id, sku and slug (sku/slug are UNIQUE), image data (kept as-is in the
@@ -292,8 +294,8 @@ function revalidateStorefront() {
   revalidatePath("/", "layout")
 }
 
-export async function createProduct(formData: FormData): Promise<ProductActionResult> {
-  await requireAdmin()
+// Validates and inserts one product with its images and variants. Shared by the form and the CSV import.
+async function insertProduct(formData: FormData): Promise<{ error: string } | { id: string }> {
   const parsed = parseProductFields(formData, null)
   if ("error" in parsed) return { error: parsed.error }
 
@@ -306,10 +308,94 @@ export async function createProduct(formData: FormData): Promise<ProductActionRe
     await supabaseAdmin.from("products").delete().eq("id", data.id)
     return { error: syncError }
   }
+  return { id: data.id }
+}
+
+export async function createProduct(formData: FormData): Promise<ProductActionResult> {
+  await requireAdmin()
+  const created = await insertProduct(formData)
+  if ("error" in created) return { error: created.error }
 
   revalidatePath("/admin/products")
   revalidateStorefront()
   redirect("/admin/products")
+}
+
+export type ImportRowInput = { line: number; values: ImportRecord }
+export type ImportRowResult = { line: number; ok: boolean; message?: string }
+
+const MAX_ROWS_PER_CALL = 25
+
+// CSV import, one batch at a time (the browser sends a few rows per call so a big sheet never hits a request
+// size or time limit). Each row is turned into the same FormData the product form submits and saved through the
+// same code, so it obeys every rule the form does. With `dryRun` nothing is written: rows are only checked,
+// including against products already in the shop.
+export async function importProductRows(rows: ImportRowInput[], dryRun: boolean): Promise<{ results: ImportRowResult[]; error?: string }> {
+  if (!(await isAdminRequest())) return { results: [], error: "Your admin session has expired. Log in again." }
+  if (rows.length > MAX_ROWS_PER_CALL) return { results: [], error: `Too many rows in one batch (max ${MAX_ROWS_PER_CALL}).` }
+
+  const lookups = await getFormLookups()
+  const results = new Map<number, ImportRowResult>()
+  const fail = (line: number, message: string) => results.set(line, { line, ok: false, message })
+
+  const checked: { line: number; formData: FormData; sku: string; slug: string; variantSkus: string[] }[] = []
+  for (const { line, values } of rows) {
+    const built = recordToFormData(values, lookups)
+    if ("error" in built) {
+      fail(line, built.error)
+      continue
+    }
+    const parsed = parseProductFields(built.formData, null)
+    if ("error" in parsed) {
+      fail(line, parsed.error)
+      continue
+    }
+    checked.push({ line, formData: built.formData, sku: parsed.fields.sku as string, slug: parsed.fields.slug as string, variantSkus: built.variantSkus })
+  }
+
+  // SKUs and slugs are UNIQUE: report a clash by name up front instead of as a database error.
+  if (checked.length > 0) {
+    const [{ data: skuHits, error: e1 }, { data: slugHits, error: e2 }, { data: variantHits, error: e3 }] = await Promise.all([
+      supabaseAdmin.from("products").select("sku").in("sku", checked.map((c) => c.sku)),
+      supabaseAdmin.from("products").select("slug").in("slug", checked.map((c) => c.slug)),
+      supabaseAdmin.from("product_variants").select("sku").in("sku", checked.flatMap((c) => c.variantSkus)),
+    ])
+    if (e1 || e2 || e3) return { results: [], error: (e1 ?? e2 ?? e3)?.message ?? "Could not check existing products." }
+    const usedSkus = new Set((skuHits ?? []).map((r) => r.sku as string))
+    const usedSlugs = new Set((slugHits ?? []).map((r) => r.slug as string))
+    const usedVariantSkus = new Set((variantHits ?? []).map((r) => r.sku as string))
+
+    for (const c of checked) {
+      const clash = usedSkus.has(c.sku)
+        ? `SKU “${c.sku}” is already used by another product.`
+        : usedSlugs.has(c.slug)
+          ? `Slug “${c.slug}” is already used by another product.`
+          : c.variantSkus.find((s) => usedVariantSkus.has(s))
+            ? `Variant SKU “${c.variantSkus.find((s) => usedVariantSkus.has(s))}” is already in use.`
+            : null
+      if (clash) {
+        fail(c.line, clash)
+        continue
+      }
+      if (dryRun) {
+        results.set(c.line, { line: c.line, ok: true })
+        continue
+      }
+      try {
+        const created = await insertProduct(c.formData)
+        if ("error" in created) fail(c.line, created.error)
+        else results.set(c.line, { line: c.line, ok: true })
+      } catch (err) {
+        fail(c.line, err instanceof Error ? err.message : "Unexpected error while saving this row.")
+      }
+    }
+  }
+
+  if (!dryRun && [...results.values()].some((r) => r.ok)) {
+    revalidatePath("/admin/products")
+    revalidateStorefront()
+  }
+  return { results: rows.map((r) => results.get(r.line) ?? { line: r.line, ok: false, message: "Row was not processed." }) }
 }
 
 export async function updateProduct(productId: string, formData: FormData): Promise<ProductActionResult> {
@@ -317,7 +403,7 @@ export async function updateProduct(productId: string, formData: FormData): Prom
 
   const { data: existing, error: readError } = await supabaseAdmin
     .from("products")
-    .select("published_at")
+    .select("published_at, price, stock_status")
     .eq("id", productId)
     .maybeSingle()
   if (readError) return { error: readError.message }
@@ -332,6 +418,14 @@ export async function updateProduct(productId: string, formData: FormData): Prom
 
   const syncError = await syncImagesAndVariants(productId, formData)
   if (syncError) return { error: `Your product details were saved, but: ${syncError}` }
+
+  // Tell people waiting on this plant (back in stock) or who wishlisted it (back in stock / price drop).
+  // A failure here must never undo or block the save.
+  try {
+    await afterProductSaved(productId, { price: Number(existing.price), stock_status: String(existing.stock_status) })
+  } catch (alertError) {
+    console.error("Stock/price alerts failed:", alertError)
+  }
 
   revalidatePath("/admin/products")
   revalidateStorefront()

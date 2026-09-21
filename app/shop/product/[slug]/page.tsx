@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getProductBySlug } from "@/lib/data/products"
 import { ProductDetailClient } from "./product-detail-client"
+import { ProductReviews } from "@/components/shop/product-reviews"
+import { getProductReviews } from "@/lib/reviews"
 
 export const revalidate = 300
 
@@ -32,5 +34,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     notFound()
   }
 
-  return <ProductDetailClient product={product} />
+  const { reviews, average, count } = await getProductReviews(product.id)
+  return (
+    <ProductDetailClient
+      product={product}
+      rating={{ average, count }}
+      reviewsSlot={<ProductReviews reviews={reviews} average={average} count={count} />}
+    />
+  )
 }

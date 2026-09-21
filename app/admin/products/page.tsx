@@ -1,7 +1,7 @@
 import Link from "next/link"
-import { ImageIcon, Plus, Search } from "lucide-react"
+import { Download, ImageIcon, Plus, Search } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
-import { sanitizeSearchTerm } from "@/lib/search-term"
+import { matchesProductFilters, parseProductFilters, type ProductFilter } from "@/lib/admin-product-filters"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { DeleteProductButton } from "./delete-product-button"
 import { ProductPhotoButton } from "./product-photo-button"
@@ -12,9 +12,7 @@ import { fmtNumber, rs } from "../_components/format"
 
 export const dynamic = "force-dynamic"
 
-type StockFilter = "out_of_stock" | "unpublished" | "published"
-const FILTERS: StockFilter[] = ["out_of_stock", "unpublished", "published"]
-const FILTER_LABEL: Record<StockFilter, string> = { out_of_stock: "Out of stock", unpublished: "Draft", published: "Published" }
+const FILTER_LABEL: Record<ProductFilter, string> = { out_of_stock: "Out of stock", unpublished: "Draft", published: "Published" }
 
 interface AdminProductsPageProps {
   searchParams: Promise<{ q?: string; filter?: string; category?: string }>
@@ -34,9 +32,7 @@ interface ProductRow {
 
 export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
   const { q, filter: rawFilter, category: rawCategory } = await searchParams
-  const query = sanitizeSearchTerm(q).toLowerCase()
-  const filter = FILTERS.find((f) => f === rawFilter)
-  const categoryFilter = rawCategory?.slice(0, 80) || undefined
+  const { query, filter, category: categoryFilter } = parseProductFilters({ q, filter: rawFilter, category: rawCategory })
 
   const [{ data, error }, { data: categoryRows }, { data: imageRows }] = await Promise.all([
     supabaseAdmin
@@ -80,24 +76,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
     (p) => isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
   ).length
 
-  let products = allProducts
-  if (query) {
-    products = products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(query) ||
-        p.sku.toLowerCase().includes(query)
-    )
-  }
-  if (filter === "out_of_stock") {
-    products = products.filter((p) => p.stock_status === "out_of_stock")
-  } else if (filter === "unpublished") {
-    products = products.filter((p) => !p.published_at)
-  } else if (filter === "published") {
-    products = products.filter((p) => p.published_at)
-  }
-  if (categoryFilter) {
-    products = products.filter((p) => p.category_name === categoryFilter)
-  }
+  const products = allProducts.filter((p) => matchesProductFilters(p, { query, filter, category: categoryFilter }))
 
   const uniqueCategories = [...new Set(categories)]
   const filtersActive = filter || query || categoryFilter
@@ -109,6 +88,8 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
     const qs = search.toString()
     return qs ? `/admin/products?${qs}` : "/admin/products"
   }
+  // The export follows the list: with filters on, it downloads just the products shown.
+  const exportHref = listHref({ q: query, filter, category: categoryFilter }).replace("/admin/products", "/admin/products/export")
 
   return (
     <div>
@@ -116,10 +97,19 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
         title="Products"
         description={`${fmtNumber(allProducts.length)} in the catalog`}
         actions={
-          <ButtonLink href="/admin/products/new" variant="primary">
-            <Plus className="h-4 w-4" aria-hidden />
-            Add product
-          </ButtonLink>
+          <>
+            {products.length > 0 && (
+              // A plain link, not next/link: this is a file download, not a page navigation.
+              <a href={exportHref} download className={buttonClass({ variant: "secondary" })}>
+                <Download className="h-4 w-4" aria-hidden />
+                {filtersActive ? `Export ${products.length} shown` : "Export CSV"}
+              </a>
+            )}
+            <ButtonLink href="/admin/products/new" variant="primary">
+              <Plus className="h-4 w-4" aria-hidden />
+              Add product
+            </ButtonLink>
+          </>
         }
       />
 

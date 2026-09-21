@@ -3,12 +3,7 @@
 import { Review } from "@/types"
 import ReviewsGrid from "./reviews-grid"
 
-// No reviews table/backend exists yet (reviews ship with orders in a later
-// phase) -- this stays an honest empty array rather than mock data, so the
-// page shows a real "no reviews yet" state instead of fabricated ratings.
-const reviews: Review[] = []
-
-export function ReviewsPageClient() {
+export function ReviewsPageClient({ reviews }: { reviews: Review[] }) {
   const totalReviews = reviews.length
   const avgRating = totalReviews > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews : 0
 

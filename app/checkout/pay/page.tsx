@@ -210,6 +210,7 @@ function CheckoutPayContent() {
           )}
           <div className='border-t border-forest-100 pt-4 space-y-2'>
             <div className='flex justify-between text-sm'><span className='text-forest-500'>Subtotal</span><span className='font-mono'>{formatPrice(paymentDetails.subtotal)}</span></div>
+            {!!paymentDetails.discount && <div className='flex justify-between text-sm'><span className='text-forest-500'>Discount</span><span className='font-mono'>-{formatPrice(paymentDetails.discount)}</span></div>}
             <div className='flex justify-between text-sm'><span className='text-forest-500'>Delivery</span><span className='font-mono'>{paymentDetails.deliveryType === 'pickup' ? 'Free' : formatPrice(paymentDetails.deliveryFee)}</span></div>
             <div className='flex justify-between text-base font-medium pt-2 border-t border-forest-100'><span className='text-forest-900'>Total</span><span className='font-mono'>{formatPrice(paymentDetails.total)}</span></div>
           </div>

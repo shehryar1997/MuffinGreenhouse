@@ -30,11 +30,7 @@ function safeReturnTo(returnTo: string | null | undefined): string {
 
 const GENERIC_ERROR = "Incorrect email/phone or password"
 
-export async function loginWithPassword(
-  emailOrPhone: string,
-  password: string,
-  returnTo?: string | null
-): Promise<LoginResult> {
+async function attemptLogin(emailOrPhone: string, password: string): Promise<LoginResult> {
   if (!emailOrPhone.trim() || !password) {
     return { success: false, error: GENERIC_ERROR }
   }
@@ -94,7 +90,25 @@ export async function loginWithPassword(
     return { success: false, error: GENERIC_ERROR }
   }
 
+  return { success: true }
+}
+
+export async function loginWithPassword(
+  emailOrPhone: string,
+  password: string,
+  returnTo?: string | null
+): Promise<LoginResult> {
+  let result: LoginResult
+  try {
+    result = await attemptLogin(emailOrPhone, password)
+  } catch (err) {
+    // Any unexpected failure (database, mail, cookies) used to surface as Next's "server-side exception" page.
+    console.error("Sign-in failed unexpectedly:", err)
+    return { success: false, error: "Something went wrong signing you in. Please try again." }
+  }
+  if (!result.success) return result
+
   // Success - redirect back to where the user started (e.g. /checkout), or
-  // the account page by default.
+  // the account page by default. Outside the try/catch: redirect() works by throwing.
   redirect(safeReturnTo(returnTo))
 }

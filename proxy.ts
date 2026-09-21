@@ -31,7 +31,12 @@ async function refreshSupabaseSession(request: NextRequest, response: NextRespon
 
   // Refresh session by validating it and refreshing if needed
   // This sets the auth cookie and refreshes the session if expired
-  await supabase.auth.getUser()
+  try {
+    await supabase.auth.getUser()
+  } catch (err) {
+    // A stale/invalid auth cookie or a Supabase Auth outage must not take every page down.
+    console.error("Session refresh failed:", err)
+  }
 
   return response
 }

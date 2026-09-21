@@ -7,7 +7,7 @@ export type AdminUploadFolder = "products" | "events" | "journal"
 const MAX_EDGE_PX = 2000
 const SKIP_DOWNSCALE_BYTES = 3.5 * 1024 * 1024
 
-async function downscaleForUpload(file: File): Promise<Blob> {
+export async function downscaleForUpload(file: File): Promise<Blob> {
   try {
     const bitmap = await createImageBitmap(file) // honours EXIF orientation
     const scale = Math.min(1, MAX_EDGE_PX / Math.max(bitmap.width, bitmap.height))

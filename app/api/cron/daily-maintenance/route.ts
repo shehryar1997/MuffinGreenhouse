@@ -6,6 +6,8 @@ import { safeEqual } from '@/lib/safe-compare'
 import { newArrivalCutoff, NEW_ARRIVAL_DAYS } from '@/lib/new-arrival'
 import { deleteR2Keys, listUploadedObjects } from '@/lib/r2'
 import { loadReferencedImageKeys } from '@/lib/product-images'
+import { sendPaymentReminders } from '@/lib/payment-reminders'
+import { sweepRestockAlerts } from '@/lib/stock-alerts'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,6 +86,22 @@ export async function GET(request: NextRequest) {
     console.error('Orphan image sweep failed:', err)
     Sentry.captureException(err)
     result.orphanUploadsError = 'failed'
+  }
+
+  try {
+    result.paymentReminders = await sendPaymentReminders()
+  } catch (err) {
+    console.error('Payment reminders failed:', err)
+    Sentry.captureException(err)
+    result.paymentRemindersError = 'failed'
+  }
+
+  try {
+    result.restockProductsChecked = await sweepRestockAlerts()
+  } catch (err) {
+    console.error('Restock alert sweep failed:', err)
+    Sentry.captureException(err)
+    result.restockAlertsError = 'failed'
   }
 
   return NextResponse.json({ message: 'Daily maintenance completed (New tag window: ' + NEW_ARRIVAL_DAYS + ' days)', ...result })

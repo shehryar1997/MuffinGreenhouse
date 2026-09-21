@@ -34,7 +34,7 @@ export default async function OrderPrintPage({ params }: OrderPrintPageProps) {
     .from("orders")
     .select(
       `id, order_number, status, payment_status, payment_method, delivery_type, subtotal,
-       delivery_fee, discount_amount, total, customer_notes, internal_notes, created_at,
+       delivery_fee, discount_amount, coupon_code, total, customer_notes, internal_notes, created_at,
        tracking_number, courier,
        customer:customers(id, name, email, phone),
        address:addresses(label, street, city, province, phone),
@@ -172,7 +172,7 @@ export default async function OrderPrintPage({ params }: OrderPrintPageProps) {
               )}
               {Number(order.discount_amount) > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-neutral-600">Discount</dt>
+                  <dt className="text-neutral-600">Discount{order.coupon_code ? ` (${order.coupon_code})` : ""}</dt>
                   <dd>− {rs(order.discount_amount)}</dd>
                 </div>
               )}

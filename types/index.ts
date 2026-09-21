@@ -75,6 +75,8 @@ export interface Review {
   text: string
   verifiedPurchase: boolean
   createdAt: string
+  productName?: string
+  imageUrl?: string | null
 }
 
 export interface CartItem {

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
-import { BookOpen, CalendarDays, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, Package, ShoppingBag, Users, X } from "lucide-react"
+import { BellRing, BookOpen, CalendarDays, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, Package, ShoppingBag, Star, Ticket, Users, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BrandLogo } from "./brand-logo"
 
@@ -19,6 +19,9 @@ const NAV: Array<{ heading?: string; items: NavEntry[] }> = [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/customers", label: "Customers", icon: Users },
+      { href: "/admin/coupons", label: "Coupons", icon: Ticket },
+      { href: "/admin/notify", label: "Notify list", icon: BellRing },
+      { href: "/admin/reviews", label: "Reviews", icon: Star },
     ],
   },
   {

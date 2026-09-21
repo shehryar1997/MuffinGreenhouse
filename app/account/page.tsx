@@ -6,6 +6,10 @@ import { User, Heart, ShoppingBag, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { createServerClient } from "@/lib/supabase/server-client"
 import { AccountDashboard } from "./account-dashboard"
+import { ReferralSection } from "./referral-section"
+import { nowMs } from "@/lib/now"
+import { supabaseAdmin } from "@/supabase/admin-client"
+import { REFERRAL_FRIEND_DISCOUNT, REFERRAL_MIN_ORDER, REFERRER_CODE_REWARD, REFERRER_EMAIL_REWARD, getOrCreateReferralCode } from "@/lib/referrals"
 
 export const metadata: Metadata = {
   title: "Your Account",
@@ -144,7 +148,7 @@ export default async function AccountPage() {
   }
 
   // Fetch addresses
-  const { data: addresses = [] } = await supabase
+  const { data: addresses, error: addressesError } = await supabase
     .from("addresses")
     .select("id, customer_id, label, street, city, province, is_default")
     .eq("customer_id", customer.id)
@@ -152,7 +156,7 @@ export default async function AccountPage() {
     .order("is_default", { ascending: false })
 
   // Fetch orders with order_items
-  const { data: orders = [] } = await supabase
+  const { data: orders, error: ordersError } = await supabase
     .from("orders")
     .select(`
       id, order_number, public_token, customer_id, status, payment_status, total, created_at,
@@ -162,7 +166,7 @@ export default async function AccountPage() {
     .order("created_at", { ascending: false })
 
   // Fetch wishlist items with their product (name, slug, price, first image)
-  const { data: wishlistRaw = [] } = await supabase
+  const { data: wishlistRaw, error: wishlistError } = await supabase
     .from("wishlist_items")
     .select(`
       id, product_id,
@@ -170,6 +174,11 @@ export default async function AccountPage() {
     `)
     .eq("customer_id", customer.id)
     .order("created_at", { ascending: false })
+
+  // A failed query used to leave `data` null and crash the page below ("server-side exception").
+  for (const [label, error] of [["addresses", addressesError], ["orders", ordersError], ["wishlist", wishlistError]] as const) {
+    if (error) console.error(`Account page: could not load ${label}:`, error.message)
+  }
 
   const wishlistItems: WishlistItem[] = ((wishlistRaw ?? []) as unknown as WishlistRow[]).map((item) => ({
     id: item.id,
@@ -187,11 +196,38 @@ export default async function AccountPage() {
       : null,
   }))
 
+  // Referral code, unused reward coupons, and the friends this customer referred by e-mail.
+  const referralCode = await getOrCreateReferralCode(customer.id)
+  const [{ data: couponRows }, { data: referralRows }] = await Promise.all([
+    supabaseAdmin
+      .from("coupons")
+      .select("code, fixed_amount, max_uses, times_used, expires_at")
+      .eq("owner_email", String(customer.email).toLowerCase())
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+    supabaseAdmin.from("referrals").select("referred_email, rewarded_at").eq("referrer_id", customer.id).order("created_at", { ascending: false }).limit(50),
+  ])
+  const coupons = (couponRows ?? [])
+    .filter((c) => c.fixed_amount != null && (c.max_uses == null || c.times_used < c.max_uses) && (!c.expires_at || new Date(c.expires_at).getTime() > nowMs()))
+    .map((c) => ({ code: c.code as string, amount: Number(c.fixed_amount) }))
+  const referrals = (referralRows ?? []).map((r) => ({ email: r.referred_email as string, rewarded: !!r.rewarded_at }))
+
   return (
     <AccountDashboard
+      referral={
+        <ReferralSection
+          code={referralCode}
+          friendDiscount={REFERRAL_FRIEND_DISCOUNT}
+          codeReward={REFERRER_CODE_REWARD}
+          emailReward={REFERRER_EMAIL_REWARD}
+          emailMinOrder={REFERRAL_MIN_ORDER}
+          coupons={coupons}
+          referrals={referrals}
+        />
+      }
       customer={customer}
-      addresses={addresses as Address[]}
-      orders={orders as Order[]}
+      addresses={(addresses ?? []) as Address[]}
+      orders={(orders ?? []) as Order[]}
       wishlistItems={wishlistItems}
     />
   )

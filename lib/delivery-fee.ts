@@ -106,3 +106,15 @@ export function calculateDeliveryFee(params: {
   const plantItems = params.items.filter((item) => !isEquipmentItem(item))
   return plantDeliveryFee(params.city, plantItems) + equipmentDeliveryFee(equipmentItems)
 }
+
+// ---------------------------------------------------------------------------
+// Free delivery: orders of FREE_DELIVERY_THRESHOLD or more, but only small ones
+// (fewer than 4 units), because big orders cost far more to ship.
+// ---------------------------------------------------------------------------
+export const FREE_DELIVERY_THRESHOLD = 10_000
+export const FREE_DELIVERY_MAX_ITEMS = 3
+
+/** `itemCount` is the total number of units in the cart (quantities added up). */
+export function qualifiesForFreeDelivery(subtotal: number, itemCount: number): boolean {
+  return subtotal >= FREE_DELIVERY_THRESHOLD && itemCount > 0 && itemCount <= FREE_DELIVERY_MAX_ITEMS
+}

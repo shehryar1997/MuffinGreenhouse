@@ -13,6 +13,7 @@ interface BookingReceivedData {
   total: number
   subtotal?: number
   deliveryFee?: number
+  discount?: number
   items: Array<{ productName: string; quantity: number; price: number }>
   deliveryType: 'delivery' | 'pickup'
   paymentDeadline: Date
@@ -35,6 +36,7 @@ export async function sendBookingReceivedEmail(data: BookingReceivedData): Promi
   const breakdown =
     data.subtotal !== undefined && data.deliveryFee !== undefined
       ? 'Subtotal: ' + formatEmailPrice(data.subtotal) + '\n' +
+        (data.discount ? 'Discount: -' + formatEmailPrice(data.discount) + '\n' : '') +
         (isDelivery ? 'Delivery: ' + formatEmailPrice(data.deliveryFee) : 'Pickup: Free') + '\n'
       : ''
 
@@ -72,6 +74,7 @@ ${emailSignOff()}`
   const breakdownHtml =
     data.subtotal !== undefined && data.deliveryFee !== undefined
       ? `<tr><td style="padding:8px 0;">Subtotal</td><td style="padding:8px 0;text-align:right;">${formatEmailPrice(data.subtotal)}</td></tr>
+         ${data.discount ? `<tr><td style="padding:8px 0;">Discount</td><td style="padding:8px 0;text-align:right;">-${formatEmailPrice(data.discount)}</td></tr>` : ''}
          <tr><td style="padding:8px 0;">${isDelivery ? 'Delivery' : 'Pickup'}</td><td style="padding:8px 0;text-align:right;">${isDelivery ? formatEmailPrice(data.deliveryFee) : 'Free'}</td></tr>`
       : ''
 

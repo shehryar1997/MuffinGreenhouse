@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import Image from "next/image"
 import { Star, CheckCircle } from "lucide-react"
 import { Review } from "@/types"
 
@@ -41,7 +42,11 @@ export default function ReviewsGrid({ reviews }: ReviewsGridProps) {
               </span>
             )}
           </div>
+          {review.productName && <p className="text-xs font-mono uppercase tracking-wider text-forest-500 mb-2">{review.productName}</p>}
           <p className="text-forest-800 mb-4">&quot;{review.text}&quot;</p>
+          {review.imageUrl && (
+            <Image src={review.imageUrl} alt="Photo from the customer's review" width={160} height={160} className="mb-4 h-40 w-40 rounded-lg object-cover" />
+          )}
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-forest-900">{review.customerName}</span>
             <span className="text-forest-500">{new Date(review.createdAt).toLocaleDateString()}</span>

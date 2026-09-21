@@ -17,12 +17,14 @@ import {
   KARACHI_DELIVERY_FEE,
   KARACHI_LARGE_ORDER_DELIVERY_FEE,
   KARACHI_LARGE_ORDER_ITEM_THRESHOLD,
+  qualifiesForFreeDelivery,
 } from "@/lib/delivery-fee"
 import { PAYMENT_SUMMARY_KEY_PREFIX } from "@/lib/checkout-summary"
 import { Package, Truck, Check, AlertCircle, Loader2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/browser-client"
 import Link from "next/link"
 import type { CartItem } from "@/types"
+import { FreeDeliveryBar } from "@/components/cart/free-delivery-bar"
 
 interface SavedAddress {
   id: string
@@ -90,6 +92,10 @@ export default function CheckoutPage() {
   const [deliveryFeeError, setDeliveryFeeError] = useState<string | null>(null)
   const [productDimensions, setProductDimensions] = useState<Record<string, ProductDimensions>>({})
   const [formData, setFormData] = useState<CheckoutFormData>({ fullName: "", email: "", contactNumber: "", fullAddress: "", city: "" })
+  const [couponInput, setCouponInput] = useState("")
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
   const [touched, setTouched] = useState<TouchedFields>({ fullName: false, email: false, contactNumber: false, fullAddress: false, city: false })
 
@@ -99,7 +105,49 @@ export default function CheckoutPage() {
     () => karachiDeliveryFee(cart.items.filter((item) => !isEquipmentItem({ dim: productDimensions[item.product.id], quantity: item.quantity })).length),
     [cart.items, productDimensions]
   )
-  const total = useMemo(() => deliveryType === "pickup" ? subtotal : subtotal + deliveryFee, [subtotal, deliveryFee, deliveryType])
+  const discount = appliedCoupon?.discount ?? 0
+  const itemUnits = cart.items.reduce((n, item) => n + item.quantity, 0)
+  // Free delivery: 10,000+ with fewer than 4 items (the server re-checks this from database prices).
+  const freeDelivery = deliveryType === "delivery" && qualifiesForFreeDelivery(subtotal, itemUnits)
+  const effectiveDeliveryFee = freeDelivery ? 0 : deliveryFee
+  const total = useMemo(() => Math.max(0, (deliveryType === "pickup" ? subtotal : subtotal + effectiveDeliveryFee) - discount), [subtotal, effectiveDeliveryFee, deliveryType, discount])
+
+  const applyCoupon = async () => {
+    if (!couponInput.trim() || isApplyingCoupon) return
+    setIsApplyingCoupon(true)
+    setCouponError(null)
+    try {
+      const response = await fetch("/api/validate-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponInput,
+          email: formData.email,
+          items: cart.items.map((item) => ({ productId: item.product.id, variantId: item.variant?.id || null, quantity: item.quantity })),
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "This coupon code isn't valid.")
+      setAppliedCoupon({ code: result.code, discount: result.discount })
+      setCouponInput("")
+    } catch (err) {
+      setCouponError(err instanceof Error ? err.message : "Couldn't apply the coupon. Please try again.")
+    } finally {
+      setIsApplyingCoupon(false)
+    }
+  }
+
+  const couponBox = (
+    <CouponBox
+      input={couponInput}
+      onInput={(value) => { setCouponInput(value); setCouponError(null) }}
+      applied={appliedCoupon}
+      error={couponError}
+      isApplying={isApplyingCoupon}
+      onApply={applyCoupon}
+      onRemove={() => { setAppliedCoupon(null); setCouponError(null) }}
+    />
+  )
 
   // Fire GA4 begin_checkout once, when the cart has loaded with items
   const beginCheckoutTracked = useRef(false)
@@ -292,8 +340,9 @@ export default function CheckoutPage() {
           ? { fullAddress: formData.fullAddress, city: formData.city }
           : null,
         paymentMethod: "bank_transfer" as const,
-        deliveryFee,
+        deliveryFee: effectiveDeliveryFee,
         cartSubtotal: subtotal,
+        couponCode: appliedCoupon?.code ?? null,
       }
 
       const response = await fetch("/api/checkout-submit", {
@@ -385,7 +434,7 @@ export default function CheckoutPage() {
                 <span className="font-mono text-lg font-medium text-forest-900">{formatPrice(total)}</span>
               </summary>
               <div className="border-t border-forest-200 [&>div]:border-0 [&>div]:bg-transparent">
-                <OrderSummary items={cart.items} subtotal={subtotal} deliveryFee={deliveryFee} deliveryType={deliveryType} total={total} isCalculatingDeliveryFee={isCalculatingDeliveryFee} deliveryFeeError={deliveryFeeError} currentStep={currentStep} />
+                <OrderSummary items={cart.items} subtotal={subtotal} discount={discount} couponBox={couponBox} deliveryFee={effectiveDeliveryFee} freeDelivery={freeDelivery} itemUnits={itemUnits} deliveryType={deliveryType} total={total} isCalculatingDeliveryFee={isCalculatingDeliveryFee} deliveryFeeError={deliveryFeeError} currentStep={currentStep} />
               </div>
             </details>
             <div className="lg:col-span-3">
@@ -584,7 +633,7 @@ export default function CheckoutPage() {
             {/* Order Summary */}
             <div className="hidden lg:col-span-2 lg:block">
               <div className="lg:sticky lg:top-8">
-                <OrderSummary items={cart.items} subtotal={subtotal} deliveryFee={deliveryFee} deliveryType={deliveryType} total={total} isCalculatingDeliveryFee={isCalculatingDeliveryFee} deliveryFeeError={deliveryFeeError} currentStep={currentStep} />
+                <OrderSummary items={cart.items} subtotal={subtotal} discount={discount} couponBox={couponBox} deliveryFee={effectiveDeliveryFee} freeDelivery={freeDelivery} itemUnits={itemUnits} deliveryType={deliveryType} total={total} isCalculatingDeliveryFee={isCalculatingDeliveryFee} deliveryFeeError={deliveryFeeError} currentStep={currentStep} />
               </div>
             </div>
           </div>
@@ -645,7 +694,40 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
 }
 
 // Order Summary Component
-function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCalculatingDeliveryFee, deliveryFeeError, currentStep }: { items: CartItem[]; subtotal: number; deliveryFee: number; deliveryType: "delivery" | "pickup"; total: number; isCalculatingDeliveryFee?: boolean; deliveryFeeError?: string | null; currentStep?: number }) {
+function CouponBox({ input, onInput, applied, error, isApplying, onApply, onRemove }: { input: string; onInput: (value: string) => void; applied: { code: string; discount: number } | null; error: string | null; isApplying: boolean; onApply: () => void; onRemove: () => void }) {
+  if (applied) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-lg border border-sprout-200 bg-sprout-50 px-3 py-2 text-sm">
+        <span className="text-sprout-700">Coupon <span className="font-mono font-medium">{applied.code}</span> applied</span>
+        <button type="button" onClick={onRemove} className="text-forest-600 underline hover:text-forest-800">Remove</button>
+      </div>
+    )
+  }
+  return (
+    <div>
+      <div className="flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => onInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onApply() } }}
+          placeholder="Coupon code"
+          aria-label="Coupon code"
+          aria-invalid={!!error}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          className={error ? "border-red-300" : ""}
+        />
+        <Button type="button" variant="outline" onClick={onApply} disabled={isApplying || !input.trim()}>
+          {isApplying ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
+        </Button>
+      </div>
+      {error && <p role="alert" className="mt-1 text-sm text-red-600">{error}</p>}
+    </div>
+  )
+}
+
+function OrderSummary({ items, subtotal, discount, couponBox, deliveryFee, freeDelivery, itemUnits, deliveryType, total, isCalculatingDeliveryFee, deliveryFeeError, currentStep }: { items: CartItem[]; subtotal: number; discount: number; couponBox: React.ReactNode; deliveryFee: number; freeDelivery: boolean; itemUnits: number; deliveryType: "delivery" | "pickup"; total: number; isCalculatingDeliveryFee?: boolean; deliveryFeeError?: string | null; currentStep?: number }) {
   return (
     <div className="p-6 bg-surface border border-forest-200 rounded-xl">
       <h2 className="font-serif text-xl mb-6">Order Summary</h2>
@@ -673,11 +755,19 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCal
         })}
       </div>
       <div className="border-t border-forest-200 pt-6">
+        {deliveryType === "delivery" && <FreeDeliveryBar subtotal={subtotal} itemCount={itemUnits} className="mb-4" />}
+        <div className="mb-4">{couponBox}</div>
         <div className="space-y-3 mb-6">
           <div className="flex justify-between text-sm">
             <span className="text-forest-500">Subtotal</span>
             <span className="font-mono">{formatPrice(subtotal)}</span>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-forest-500">Discount</span>
+              <span className="font-mono text-sprout-600">-{formatPrice(discount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm items-center">
             <span className="text-forest-500">Delivery</span>
             <div className="flex flex-col items-end">
@@ -686,7 +776,7 @@ function OrderSummary({ items, subtotal, deliveryFee, deliveryType, total, isCal
               ) : deliveryFeeError ? (
                 <span className="text-sm text-amber-600 font-medium">{deliveryFeeError}</span>
               ) : (
-                <span className="font-mono">{deliveryType === "pickup" ? "Free" : formatPrice(deliveryFee)}</span>
+                <span className="font-mono">{deliveryType === "pickup" || freeDelivery ? "Free" : formatPrice(deliveryFee)}</span>
               )}
             </div>
           </div>

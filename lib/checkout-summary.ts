@@ -14,4 +14,6 @@ export interface PaymentSummary {
   deliveryType: "delivery" | "pickup"
   deliveryFee: number
   subtotal: number
+  /** Coupon discount taken off the subtotal (0 or absent when none). */
+  discount?: number
 }

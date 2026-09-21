@@ -90,6 +90,11 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // Admin is private. robots.txt must NOT block it: a crawler that can't fetch the page never sees this header.
+        source: '/admin/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
     ]
   },
 }

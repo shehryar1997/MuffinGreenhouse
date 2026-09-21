@@ -74,6 +74,8 @@ interface AccountDashboardProps {
   addresses: Address[]
   orders: Order[]
   wishlistItems: WishlistItem[]
+  /** Referral section, rendered by the server page. */
+  referral?: React.ReactNode
 }
 
 function formatDate(dateString: string): string {
@@ -108,7 +110,7 @@ interface AddressFormState {
 
 const EMPTY_ADDRESS_FORM: AddressFormState = { label: "Home", street: "", city: "" }
 
-export function AccountDashboard({ customer, addresses, orders, wishlistItems }: AccountDashboardProps) {
+export function AccountDashboard({ customer, addresses, orders, wishlistItems, referral }: AccountDashboardProps) {
   const router = useRouter()
   const { clearCart } = useCart()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -626,6 +628,8 @@ export function AccountDashboard({ customer, addresses, orders, wishlistItems }:
               </div>
             </motion.div>
           </div>
+
+          {referral && <div className="mt-6">{referral}</div>}
 
           {/* Continue Shopping */}
           <div className="mt-8">

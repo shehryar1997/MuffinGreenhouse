@@ -9,6 +9,8 @@ import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import type { CartItem } from "@/types"
+import { FreeDeliveryBar } from "./free-delivery-bar"
+import { Recommendations } from "@/components/shop/recommendations"
 
 export function CartDrawer() {
   const { cart, toggleCart, removeItem, updateQuantity, itemCount } = useCart()
@@ -132,9 +134,11 @@ export function CartDrawer() {
                     </div>
                   </div>
                 ))}
+                <Recommendations excludeIds={cart.items.map((i) => i.product.id)} compact onNavigate={() => toggleCart(false)} />
               </div>
 
               <div className="border-t border-border p-6 bg-background">
+                <FreeDeliveryBar subtotal={cart.subtotal} itemCount={cart.items.reduce((n, i) => n + i.quantity, 0)} className="mb-4" />
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-sm text-muted-foreground">
                     <span className="font-mono text-xs uppercase">Subtotal</span>

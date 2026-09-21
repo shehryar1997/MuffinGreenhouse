@@ -7,8 +7,9 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 import { createServerClient } from "@/lib/supabase/server-client"
 import { sendBookingReceivedEmail } from "@/lib/email/send-booking-received"
 import { pakistanCities } from "@/data/pakistan-cities"
-import { calculateDeliveryFee, type DeliveryFeeDimensions } from "@/lib/delivery-fee"
+import { calculateDeliveryFee, qualifiesForFreeDelivery, type DeliveryFeeDimensions } from "@/lib/delivery-fee"
 import type { PaymentSummary } from "@/lib/checkout-summary"
+import { dbSubtotal, resolveCoupon } from "@/lib/coupons"
 
 /**
  * CHECKOUT SUBMIT ENDPOINT
@@ -19,7 +20,8 @@ import type { PaymentSummary } from "@/lib/checkout-summary"
  * Everything that affects the amount charged is decided HERE, never taken from
  * the browser: line prices come from the database (inside the RPC), the
  * delivery fee is recomputed from product weights/dimensions and the delivery
- * city, and no discount can be supplied. The customer identity comes from the
+ * city, and the only discount possible is a valid active coupon code that is
+ * re-resolved against the database here. The customer identity comes from the
  * verified Supabase session (or the guest e-mail), and a saved address must
  * belong to that customer.
  *
@@ -54,6 +56,7 @@ const checkoutSchema = z.object({
     .nullish(),
   paymentMethod: z.enum(PAYMENT_METHODS),
   customerNotes: z.string().trim().max(1000).nullish(),
+  couponCode: z.string().trim().max(40).nullish(),
 })
 
 function jsonError(error: string, status: number) {
@@ -240,6 +243,32 @@ export async function POST(request: NextRequest) {
         city: deliveryCity,
         items: body.items.map((item) => ({ dim: dimensionsById.get(item.productId), quantity: item.quantity })),
       })
+
+      // Free delivery: 10,000+ items subtotal with fewer than 4 items (decided from database prices).
+      const unitCount = body.items.reduce((n, item) => n + item.quantity, 0)
+      if (deliveryFee > 0 && qualifiesForFreeDelivery(await dbSubtotal(body.items), unitCount)) deliveryFee = 0
+    }
+
+    // Coupon: re-validated here; the discount comes from the database, never from the browser.
+    let discount = 0
+    let couponCode: string | null = null
+    let couponIsRow = false
+    if (body.couponCode) {
+      const coupon = await resolveCoupon(body.couponCode, body.items, customerEmail)
+      if (!coupon.ok) return jsonError(coupon.error, 400)
+      // Claim a use atomically so a limited coupon can't be redeemed twice at once.
+      // (A referral code is not a row in `coupons`, so there is nothing to claim.)
+      if (coupon.source === "coupon") {
+        const { data: claimed, error: claimError } = await supabaseAdmin.rpc("redeem_coupon", { p_code: coupon.code })
+        if (claimError) {
+          console.error("Failed to redeem coupon:", claimError)
+          return jsonError("Couldn't apply the coupon right now. Please try again.", 500)
+        }
+        if (!claimed) return jsonError("This coupon is no longer available.", 400)
+      }
+      discount = coupon.discount
+      couponCode = coupon.code
+      couponIsRow = coupon.source === "coupon"
     }
 
     // Convert items to JSONB format expected by the RPC
@@ -260,12 +289,13 @@ export async function POST(request: NextRequest) {
       p_address_id: addressId,
       p_payment_method: body.paymentMethod,
       p_delivery_fee: deliveryFee,
-      p_discount_amount: 0,
+      p_discount_amount: discount,
       p_customer_notes: body.customerNotes || null,
     })
 
     if (error) {
       console.error("RPC create_order error:", error)
+      if (couponCode && couponIsRow) await supabaseAdmin.rpc("release_coupon", { p_code: couponCode })
 
       // Handle specific error messages from the RPC
       let errorMessage = "Failed to create order"
@@ -298,7 +328,12 @@ export async function POST(request: NextRequest) {
     const orderNumber: string = data.order_number
     const publicToken: string = data.public_token
     const total = Number(data.total) || 0
-    const subtotal = total - deliveryFee
+    const subtotal = total - deliveryFee + discount
+
+    if (couponCode) {
+      const { error: couponError } = await supabaseAdmin.from("orders").update({ coupon_code: couponCode }).eq("id", orderId)
+      if (couponError) console.error("Failed to record coupon on order:", couponError)
+    }
 
     // Order lines exactly as stored (DB prices), used for the confirmation
     // email and for the payment page summary.
@@ -332,6 +367,7 @@ export async function POST(request: NextRequest) {
           items: summaryItems.map(({ productName, quantity, price }) => ({ productName, quantity, price })),
           subtotal,
           deliveryFee,
+          discount,
           total,
           deliveryType: body.deliveryType,
           paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -355,6 +391,7 @@ export async function POST(request: NextRequest) {
       deliveryType: body.deliveryType,
       deliveryFee,
       subtotal,
+      discount,
     }
 
     return NextResponse.json(

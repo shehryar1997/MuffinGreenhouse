@@ -8,7 +8,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/checkout/pay"],
+        // /admin is deliberately not listed: it's kept out of the index by an X-Robots-Tag header (next.config.mjs),
+        // which crawlers can only read if robots.txt lets them fetch the page.
+        disallow: ["/checkout/pay"],
       },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,

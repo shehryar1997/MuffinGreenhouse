@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { sendOrderConfirmedEmail } from "@/lib/email/send-order-confirmed"
+import { grantReferralRewards } from "@/lib/referrals"
 import { sendOrderShippedEmail } from "@/lib/email/send-order-shipped"
 import { sendOrderCancelledEmail } from "@/lib/email/send-order-cancelled"
 import { isPlaceholderEmail } from "@/lib/manual-order"
@@ -80,6 +81,13 @@ export async function markPaid(orderId: string) {
   if (error) throw new Error(error.message)
   if (!updated || updated.length === 0) {
     throw new Error("The order changed while you were working on it. Refresh the page and try again.")
+  }
+
+  // Referral rewards are paid once the order is really paid (never for unpaid or expired bookings).
+  try {
+    await grantReferralRewards(orderId)
+  } catch (rewardError) {
+    console.error("Failed to grant referral reward:", rewardError)
   }
 
   // The "order confirmed" e-mail only makes sense at the moment the order is confirmed.

@@ -14,12 +14,17 @@ import { toast } from "sonner"
 import { Product } from "@/types"
 import { generateProductSchema, serializeJsonLd } from "@/lib/structured-data"
 import { isPlantProduct } from "@/lib/product-categories"
+import { NotifyMeForm } from "@/components/shop/notify-me-form"
+import { Recommendations } from "@/components/shop/recommendations"
 
 interface ProductDetailClientProps {
   product: Product
+  /** Server-rendered reviews section, shown under the product details. */
+  reviewsSlot?: React.ReactNode
+  rating?: { average: number; count: number }
 }
 
-export function ProductDetailClient({ product }: ProductDetailClientProps) {
+export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDetailClientProps) {
   const [selectedVariant, setSelectedVariant] = useState(product?.variants[0] || null)
   const [selectedImage, setSelectedImage] = useState(0)
   const [requestedQuantity, setQuantity] = useState(1)
@@ -73,7 +78,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     }
   }
 
-  const productSchema = generateProductSchema(product)
+  const productSchema = generateProductSchema(product, rating)
   // Tools & Equipment (pots, fertilizer, media...) have no plant care info to show.
   const isPlant = isPlantProduct(product)
 
@@ -173,6 +178,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               </Button>
             </div>
 
+            {isOutOfStock && <NotifyMeForm productId={product.id} productName={product.name} />}
+
             {/* Care Requirements (plants only) */}
             {isPlant && (
             <div className="border-t border-forest-200 pt-6">
@@ -246,6 +253,8 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             )}
           </div>
         </div>
+        {reviewsSlot}
+        <Recommendations excludeIds={[product.id]} />
       </div>
       {/* Sticky mobile buy bar. Right padding keeps the floating WhatsApp/chat buttons off the CTA. */}
       {!isOutOfStock && !ctaInView && (

@@ -18,7 +18,7 @@ export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
 // use_case_tags) -- no more joins needed for those. Only images
 // and variants remain separate linked tables, same as in Airtable.
 
-const PRODUCT_SELECT = `
+export const PRODUCT_SELECT = `
   *,
   images:product_images(id, url, alt_text, sort_order, is_primary),
   variants:product_variants(id, sku, name, price, stock_status, stock_count, is_default, is_active)

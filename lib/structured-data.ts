@@ -67,7 +67,7 @@ export function generateWebSiteSchema() {
 /**
  * Generates Product schema for a single product
  */
-export function generateProductSchema(product: Product) {
+export function generateProductSchema(product: Product, rating?: { average: number; count: number }) {
   // Google rejects an empty image: omit the field entirely when the product has no photo yet.
   const mainImage = product.images.length > 0 ? product.images[0].url : undefined
   
@@ -102,7 +102,10 @@ export function generateProductSchema(product: Product) {
     },
     "offers": offers,
     "category": product.category.name,
-    "url": `${BASE_URL}/shop/product/${product.slug}`
+    "url": `${BASE_URL}/shop/product/${product.slug}`,
+    ...(rating && rating.count > 0
+      ? { "aggregateRating": { "@type": "AggregateRating", "ratingValue": rating.average.toFixed(1), "reviewCount": rating.count } }
+      : {})
   }
 }
 

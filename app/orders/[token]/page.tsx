@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Clock, Truck, Package, CheckCircle, AlertCircle, MessageCircle } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { ReviewForm } from "./review-form"
 import { formatPrice } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { siteConfig } from "@/config/nav.config"
@@ -23,6 +24,7 @@ interface OrderWithDetails {
   delivery_type: "delivery" | "pickup"
   subtotal: number
   delivery_fee: number
+  discount_amount: number | null
   total: number
   customer_notes: string | null
   created_at: string
@@ -40,6 +42,7 @@ interface OrderWithDetails {
   } | null
   order_items: Array<{
     id: string
+    product_id: string | null
     product_name: string
     variant_name: string | null
     quantity: number
@@ -152,16 +155,20 @@ export default async function OrderStatusPage({ params }: OrderStatusPageProps) 
     .from("orders")
     .select(
       `id, order_number, public_token, status, payment_status, payment_method, delivery_type,
-       subtotal, delivery_fee, total, customer_notes, created_at, confirmed_at, shipped_at,
+       subtotal, delivery_fee, discount_amount, total, customer_notes, created_at, confirmed_at, shipped_at,
        delivered_at, cancelled_at, tracking_number, courier,
        address:addresses(label, street, city, province),
-       order_items(id, product_name, variant_name, quantity, unit_price, total_price)`
+       order_items(id, product_id, product_name, variant_name, quantity, unit_price, total_price)`
     )
     .eq("public_token", token)
     .maybeSingle()
 
   if (error || !data) notFound()
   const order = data as unknown as OrderWithDetails
+
+  // Items already reviewed (one review per order line).
+  const { data: reviewRows } = await supabaseAdmin.from("reviews").select("order_item_id").in("order_item_id", order.order_items.map((i) => i.id))
+  const reviewedItemIds = new Set((reviewRows ?? []).map((r) => r.order_item_id as string))
 
   const isCancelled = order.status === "cancelled"
   const isPaid = order.payment_status === "paid"
@@ -269,15 +276,23 @@ export default async function OrderStatusPage({ params }: OrderStatusPageProps) 
         </h2>
         <ul className="divide-y">
           {order.order_items.map((item) => (
-            <li key={item.id} className="flex justify-between gap-4 py-3 text-sm">
-              <div>
-                <p className="font-medium">{item.product_name}</p>
-                {item.variant_name && <p className="text-muted-foreground">{item.variant_name}</p>}
-                <p className="text-muted-foreground">
-                  {item.quantity} × {formatPrice(item.unit_price)}
-                </p>
+            <li key={item.id} className="py-3 text-sm">
+              <div className="flex justify-between gap-4">
+                <div>
+                  <p className="font-medium">{item.product_name}</p>
+                  {item.variant_name && <p className="text-muted-foreground">{item.variant_name}</p>}
+                  <p className="text-muted-foreground">
+                    {item.quantity} × {formatPrice(item.unit_price)}
+                  </p>
+                </div>
+                <p className="font-medium">{formatPrice(item.total_price)}</p>
               </div>
-              <p className="font-medium">{formatPrice(item.total_price)}</p>
+              {isShipped && item.product_id &&
+                (reviewedItemIds.has(item.id) ? (
+                  <p className="mt-2 text-muted-foreground">Thanks for reviewing this item.</p>
+                ) : (
+                  <ReviewForm token={token} orderItemId={item.id} productName={item.product_name} />
+                ))}
             </li>
           ))}
         </ul>
@@ -286,6 +301,12 @@ export default async function OrderStatusPage({ params }: OrderStatusPageProps) 
             <dt className="text-muted-foreground">Subtotal</dt>
             <dd>{formatPrice(order.subtotal)}</dd>
           </div>
+          {Number(order.discount_amount) > 0 && (
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">Discount</dt>
+              <dd>-{formatPrice(Number(order.discount_amount))}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Delivery</dt>
             <dd>{order.delivery_fee > 0 ? formatPrice(order.delivery_fee) : "Free"}</dd>
