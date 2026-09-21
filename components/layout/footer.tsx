@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { siteConfig } from "@/config/nav.config"
 
@@ -10,12 +11,12 @@ export function Footer({ clearTabBar = false }: { clearTabBar?: boolean }) {
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-x-6 gap-y-10 lg:gap-12 mb-12">
           {/* Brand */}
           <div className="max-lg:col-span-2">
-            <div className="w-8 h-8 rounded-full border border-foreground flex items-center justify-center mb-4">
-              <span className="text-sm">&#10022;</span>
-            </div>
+            <Link href="/" aria-label="Muffin Plants - Home" className="mb-4 inline-flex flex-col items-start gap-1 hover:opacity-80 transition-opacity">
+              <Image src="/logo-nav.png" alt="" width={37} height={40} className="h-10 w-auto object-contain" />
+              <span className="font-serif text-xs text-foreground leading-none">Muffin Plants</span>
+            </Link>
             <p className="text-secondary-foreground/80 text-sm max-w-xs">Good plants for good energy.</p>
-            <p className="mt-4 text-sm"><Link href="/visit-us" className="text-foreground hover:opacity-60 transition-opacity max-lg:inline-flex max-lg:min-h-11 max-lg:items-center">Karachi · pickup on WhatsApp</Link></p>
-            <p className="text-secondary-foreground/80 text-sm"><a href="mailto:support@muffinplants.com" className="hover:opacity-60 transition-opacity max-lg:inline-flex max-lg:min-h-11 max-lg:items-center">support@muffinplants.com</a></p>
+            <p className="mt-4 text-secondary-foreground/80 text-sm"><a href="mailto:support@muffinplants.com" className="hover:opacity-60 transition-opacity max-lg:inline-flex max-lg:min-h-11 max-lg:items-center">support@muffinplants.com</a></p>
           </div>
 
           {/* Shop */}
@@ -23,7 +24,8 @@ export function Footer({ clearTabBar = false }: { clearTabBar?: boolean }) {
             <h3 className="font-mono text-xs tracking-widest uppercase text-secondary-foreground/80 mb-4">Shop</h3>
             <ul className="space-y-2 max-lg:space-y-0">
               <li><Link href="/shop/all" className="text-foreground text-sm hover:opacity-60 transition-opacity max-lg:flex max-lg:min-h-11 max-lg:items-center">All plants</Link></li>
-              <li><Link href="/plant-finder" className="text-foreground text-sm hover:opacity-60 transition-opacity max-lg:flex max-lg:min-h-11 max-lg:items-center">Plant finder</Link></li>
+              <li><Link href="/shop/tools-equipment" className="text-foreground text-sm hover:opacity-60 transition-opacity max-lg:flex max-lg:min-h-11 max-lg:items-center">Tools & Equipment</Link></li>
+              <li><Link href="/plant-finder"className="text-foreground text-sm hover:opacity-60 transition-opacity max-lg:flex max-lg:min-h-11 max-lg:items-center">Plant finder</Link></li>
               <li><Link href="/shop-by-need" className="text-foreground text-sm hover:opacity-60 transition-opacity max-lg:flex max-lg:min-h-11 max-lg:items-center">Shop by need</Link></li>
             </ul>
           </div>
