@@ -358,6 +358,27 @@ export async function deleteProduct(productId: string): Promise<ProductActionRes
   redirect("/admin/products")
 }
 
+// One-click publish/unpublish from the products list. Mirrors the form's rule: publishing an
+// already-published product keeps its original published_at (the "New" badge counts from it).
+export async function setProductPublished(productId: string, published: boolean): Promise<ProductActionResult> {
+  await requireAdmin()
+
+  const { data: existing, error: readError } = await supabaseAdmin
+    .from("products")
+    .select("published_at")
+    .eq("id", productId)
+    .maybeSingle()
+  if (readError) return { error: readError.message }
+  if (!existing) return { error: "This product no longer exists. It may have been deleted." }
+
+  const publishedAt = published ? ((existing.published_at as string | null) ?? new Date().toISOString()) : null
+  const { error } = await supabaseAdmin.from("products").update({ published_at: publishedAt }).eq("id", productId)
+  if (error) return { error: error.message }
+
+  revalidatePath("/admin/products")
+  revalidateStorefront()
+}
+
 // Attaches already-uploaded photos to a product straight from the products list (no edit form).
 // Photos are only ever appended: the first one becomes the primary image when the product has
 // none, and existing photos are never touched or deleted.

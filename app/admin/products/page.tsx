@@ -5,7 +5,8 @@ import { sanitizeSearchTerm } from "@/lib/search-term"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { DeleteProductButton } from "./delete-product-button"
 import { ProductPhotoButton } from "./product-photo-button"
-import { deleteProduct } from "./actions"
+import { PublishToggle } from "./publish-toggle"
+import { deleteProduct, setProductPublished } from "./actions"
 import { Alert, Badge, ButtonLink, EmptyState, PageHeader, StatStrip, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, linkClass, rowLinkClass } from "../_components/ui"
 import { fmtNumber, rs } from "../_components/format"
 
@@ -238,7 +239,9 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                         <span className="tabular-nums text-foreground/80">{fmtNumber(p.stock_count)}</span>
                       )}
                     </Td>
-                    <Td>{p.published_at ? <Badge tone="success">Published</Badge> : <Badge>Draft</Badge>}</Td>
+                    <Td>
+                      <PublishToggle productName={p.name} published={!!p.published_at} action={setProductPublished.bind(null, p.id)} />
+                    </Td>
                     <Td align="right">
                       <div className="flex items-start justify-end gap-2">
                         <ProductPhotoButton productId={p.id} />

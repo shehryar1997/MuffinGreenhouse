@@ -1,4 +1,4 @@
-# Action Plan: rank muffinplants.com higher in Pakistan
+# Action Plan v1 (superseded by v2/ROADMAP-TO-100.md): rank muffinplants.com higher in Pakistan
 
 Order matters: Phase 1 removes things that actively hurt; Phase 2 gets Google to see the site; Phases 3–4 build the rankings. Nothing below invents traffic numbers: check progress in GSC.
 
@@ -48,12 +48,12 @@ In `lib/structured-data.ts` → `generateProductSchema`: skip `image` when empty
 ### 8. Strengthen category pages
 For `/shop/all`, `/shop/aroids`, `/shop/sansevierias`, `/shop/mangaves`, `/shop/fertilizer`, `/shop/planting-media` and the six `/shop-by-need/*` pages:
 - 150–300 word intro above the grid (what it is, how to choose, Karachi care tips).
-- 3–5 FAQs at the bottom (add `FAQPage` schema).
+- A short "common questions" text block at the bottom (plain content: Google retired FAQ rich results on 7 May 2026, so do not add FAQPage schema for SERP benefit).
 - Titles: `Buy Aroids Online in Pakistan – Monstera, Philodendron | Muffin Greenhouse`.
 
 ### 9. Local + richer schema
 - Replace/extend Organization with `LocalBusiness`/`Store`: full `address` (streetAddress, postalCode), `geo`, `openingHoursSpecification`, `areaServed: Pakistan`, `priceRange`, `telephone: +923095360009`, `sameAs` (Instagram, Facebook, GBP, YouTube).
-- Add `WebSite` + SearchAction, `FAQPage` (FAQ), `Event` (workshops), `hasMerchantReturnPolicy` + `shippingDetails` on offers (uses 2-hour claim window, delivery zones).
+- Add `WebSite` + SearchAction, `Event` (workshops), `hasMerchantReturnPolicy` + `shippingDetails` on offers (uses 2-hour claim window, delivery zones).
 - Validate at https://search.google.com/test/rich-results.
 
 ### 10. Performance & speed
@@ -85,7 +85,7 @@ Write for Pakistani conditions, with real photos and the founder as a **named au
 8. Best soil mix / potting media for Pakistan, fertilizer schedule
 9. How we ship plants across Pakistan safely (and the 2-hour damage guarantee)
 10. Balcony garden ideas Karachi (ties to landscaping service)
-Each post: 1,000+ words, H2 questions, FAQ block, links to 3+ relevant products/categories, `BlogPosting` with image + named author.
+Each post: 1,000+ words, H2 questions, a common-questions section (plain content), links to 3+ relevant products/categories, `BlogPosting` with image + named author.
 
 ### 13. City & service landing pages (only with real substance)
 - Create `/plants-in-karachi` (hub: delivery times, areas covered such as DHA, Clifton, Gulshan, PECHS, North Nazimabad, pickup). Expand to Lahore/Islamabad **only if you actually deliver there**, with unique shipping details per city. Avoid thin copy-pasted city pages.
@@ -127,8 +127,8 @@ KPIs to track (set a baseline in week 1 from GSC/GA4):
 - [ ] Canonicals on 8 pages
 - [ ] Never emit empty product `image`
 - [ ] 30+ real products with photos and unique copy
-- [ ] Category page intros + FAQs
-- [ ] LocalBusiness/FAQ/Event/WebSite schema; E.164 phone
+- [ ] Category page intros + common-questions text
+- [ ] LocalBusiness/Event/WebSite schema; E.164 phone
 - [ ] Static/ISR rendering; hero image ≤150 KB; PSI key fixed
 - [ ] 16 articles in 8 weeks, named author
 - [ ] Citations + 10 quality local backlinks
