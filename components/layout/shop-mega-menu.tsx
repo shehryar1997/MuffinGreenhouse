@@ -33,9 +33,15 @@ export function ShopMegaMenu({ isOpen, onClose }: ShopMegaMenuProps) {
                 <div key={section.id} className="space-y-4">
                   {/* Section title */}
                   <h3 className="font-serif text-lg text-forest-900 border-b border-forest-200/50 pb-2">
-                    {section.title}
+                    {section.href ? (
+                      <Link href={section.href} onClick={onClose} className="hover:text-clay-600 transition-colors">
+                        {section.title}
+                      </Link>
+                    ) : (
+                      section.title
+                    )}
                   </h3>
-                  
+
                   {/* Section items */}
                   <ul className="space-y-2">
                     {section.items.map((item) => (
@@ -97,7 +103,13 @@ export function ShopMegaMenu({ isOpen, onClose }: ShopMegaMenuProps) {
                   <div key={section.id} className="space-y-4">
                     {/* Section title */}
                     <h3 className="font-serif text-lg text-forest-900 border-b border-forest-200/50 pb-2">
-                      {section.title}
+                      {section.href ? (
+                        <Link href={section.href} onClick={onClose} className="hover:text-clay-600 transition-colors">
+                          {section.title}
+                        </Link>
+                      ) : (
+                        section.title
+                      )}
                     </h3>
                     
                     {/* Section items */}

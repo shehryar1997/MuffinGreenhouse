@@ -9,7 +9,7 @@ import { isWithinNewArrivalWindow } from '@/lib/new-arrival'
  * the products row (no joins) -- mirrors the Airtable Products table 1:1.
  */
 export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
-  // Tools & Equipment (pots, fertilizer, media...) have no use-case / mood tags: the admin form
+  // Tools & Equipment (pots, fertilizer, media...) have no use-case tags: the admin form
   // never saves them, and this also hides any left over from before that rule existed.
   const isToolOrEquipment = isNonPlantCategorySlug(row.category_slug) || isNonPlantCategoryName(row.category_name)
   return {
@@ -31,11 +31,11 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     // The "New" badge lasts 14 days from publishing, even if the flag hasn't been cleared yet.
     isNewArrival: !!row.is_new_arrival && isWithinNewArrivalWindow(row.published_at, row.created_at),
     isPetSafe: row.is_pet_safe,
+    isImported: !!row.is_imported,
     difficulty: row.difficulty,
     lightRequirement: row.light_requirement,
     waterRequirement: row.water_requirement,
     size: row.size,
-    moodTags: isToolOrEquipment ? [] : row.mood_tags ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? row.created_at,
     // Shipping box dimensions

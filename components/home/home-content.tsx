@@ -4,14 +4,12 @@ import dynamic from "next/dynamic"
 import { Hero } from "@/components/home/sections/hero"
 import { TrustStrip } from "@/components/home/sections/trust-strip"
 import { CategoryTiles } from "@/components/home/sections/category-tiles"
-import { FeaturedPlants, pickFeatured } from "@/components/home/sections/featured-plants"
-import { moodsWithPlants } from "@/lib/mood-utils"
+import { FeaturedPlants, latestProducts } from "@/components/home/sections/featured-plants"
 import type { Event, JournalPost, Product } from "@/types"
 
 // Below-the-fold sections are code-split. They still render on the server (no ssr: false), so their content stays
 // visible to search engines; the skeleton only shows while the chunk loads.
 const MethodSection = dynamic(() => import("./sections/method-section").then((m) => ({ default: m.MethodSection })), { loading: () => <SectionSkeleton /> })
-const AtmospherePicker = dynamic(() => import("./sections/atmosphere-picker").then((m) => ({ default: m.AtmospherePicker })), { loading: () => <SectionSkeleton /> })
 const ShopByNeedSection = dynamic(() => import("./sections/shop-by-need-section").then((m) => ({ default: m.ShopByNeedSection })), { loading: () => <SectionSkeleton /> })
 const AskMuffinSection = dynamic(() => import("./sections/ask-muffin-section").then((m) => ({ default: m.AskMuffinSection })), { loading: () => <SectionSkeleton /> })
 const OurStorySection = dynamic(() => import("./sections/our-story-section").then((m) => ({ default: m.OurStorySection })), { loading: () => <SectionSkeleton /> })
@@ -63,19 +61,17 @@ export default function HomeContent({ products, events, posts }: { products: Pro
   let count = 1
   const next = () => String(++count).padStart(3, "0")
 
-  const featured = pickFeatured(products, 1)[0]
+  const latest = latestProducts(products, 10)
   const showFeatured = products.length > 0
-  const showMoods = moodsWithPlants(products).length > 0
 
   return (
     <div className="bg-background">
-      <Hero featured={featured} />
+      <Hero latest={latest} />
       <Marquee />
       <TrustStrip />
       <CategoryTiles n={next()} />
       {showFeatured && <FeaturedPlants products={products} n={next()} />}
       <MethodSection products={products} n={next()} />
-      {showMoods && <AtmospherePicker products={products} n={next()} />}
       <ShopByNeedSection n={next()} />
       <AskMuffinSection n={next()} />
       <OurStorySection n={next()} />

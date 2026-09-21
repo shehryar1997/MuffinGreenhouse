@@ -110,6 +110,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 {product.isNewArrival && <Badge variant="secondary">New</Badge>}
                 {product.stockStatus === "low_stock" && <Badge variant="lowStock">Low Stock</Badge>}
                 {isPlant && product.isPetSafe && <Badge variant="outline">Pet Safe</Badge>}
+                {isPlant && product.isImported && <Badge variant="outline">Imported</Badge>}
               </div>
             </div>
             <div className="flex gap-2">

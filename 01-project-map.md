@@ -8,7 +8,7 @@
 `TESTING.md` — Detailed testing documentation — N/A — playwright.config.ts, tests/*
 
 ## Shared dependencies
-- `@/types` — Imported by: data/mock-products.ts, lib/mood-utils.ts, lib/plant-utils.ts, lib/structured-data.ts, components/providers/cart-provider.tsx, components/providers/search-provider.tsx, components/ui/product-card.tsx, components/shop/product-filters.tsx
+- `@/types` — Imported by: data/mock-products.ts, lib/plant-utils.ts, lib/structured-data.ts, components/providers/cart-provider.tsx, components/providers/search-provider.tsx, components/ui/product-card.tsx, components/shop/product-filters.tsx
 - `@/lib/utils` — Imported by: components/ui/* (7 files), components/layout/header.tsx, components/layout/footer.tsx
 - `@/config/nav.config` — Imported by: lib/structured-data.ts, components/layout/header.tsx, components/layout/shop-mega-menu.tsx, components/layout/footer.tsx, app/page.tsx
 - `@/data/mock-products` — Imported by: app/page.tsx, app/shop/*, components/light-filter-teaser.tsx

@@ -32,6 +32,7 @@ export interface SupabaseProduct {
   size: 'small' | 'medium' | 'large'
   is_new_arrival: boolean
   is_pet_safe: boolean
+  is_imported: boolean
   is_featured: boolean
   category_id: string
   category_name: string
@@ -59,7 +60,6 @@ export interface SupabaseProduct {
 
   // Tags -- flat text[], was previously joined junction tables
   use_case_tags: string[]
-  mood_tags: string[]
 
   // Still separate linked tables, same as Airtable
   images?: SupabaseProductImage[]
@@ -90,7 +90,6 @@ export interface SearchFilters {
   query?: string
   category?: string
   useCases?: string[]
-  moods?: string[]
   lightLevels?: ('low' | 'medium' | 'bright' | 'full_sun')[]
   difficulties?: ('beginner' | 'intermediate' | 'expert')[]
   minPrice?: number

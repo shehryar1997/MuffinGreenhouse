@@ -250,6 +250,7 @@ const ART: Record<string, (props: ArtProps) => React.ReactElement> = {
   "planting-media": MediaArt,
   fertilizer: FertilizerArt,
   "other-equipment": EquipmentArt,
+  "tools-equipment": EquipmentArt,
 }
 
 /** The illustration for a shop category slug (falls back to the aroid leaf). */

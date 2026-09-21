@@ -15,7 +15,7 @@ export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
 // NOTE: care info, category, and tags now live directly as flat columns on
 // `products` (light, water, humidity, temperature, soil, fertilizer, toxicity,
 // light_summary, water_summary, pet_safe_note, category_name, category_slug,
-// use_case_tags, mood_tags) -- no more joins needed for those. Only images
+// use_case_tags) -- no more joins needed for those. Only images
 // and variants remain separate linked tables, same as in Airtable.
 
 const PRODUCT_SELECT = `
@@ -350,7 +350,6 @@ export interface SearchProductsParams {
   query?: string
   categorySlug?: string
   useCaseSlugs?: string[]
-  moodSlugs?: string[]
   lightLevels?: ('low' | 'medium' | 'bright' | 'full_sun')[]
   difficulties?: ('beginner' | 'intermediate' | 'expert')[]
   minPrice?: number
@@ -367,7 +366,6 @@ export async function searchProducts(params: SearchProductsParams): Promise<Pagi
     query = '',
     categorySlug,
     useCaseSlugs,
-    moodSlugs,
     lightLevels,
     difficulties,
     minPrice,
@@ -387,7 +385,6 @@ export async function searchProducts(params: SearchProductsParams): Promise<Pagi
     p_search_query: query || null,
     p_category_slug: categorySlug || null,
     p_use_case_slugs: useCaseSlugs?.length ? useCaseSlugs : null,
-    p_mood_slugs: moodSlugs?.length ? moodSlugs : null,
     p_light_levels: lightLevels?.length ? lightLevels : null,
     p_difficulties: difficulties?.length ? difficulties : null,
     p_min_price: minPrice || null,
@@ -463,7 +460,6 @@ export async function searchProductsSuggestions(query: string): Promise<{
     p_search_query: query,
     p_category_slug: null,
     p_use_case_slugs: null,
-    p_mood_slugs: null,
     p_light_levels: null,
     p_difficulties: null,
     p_min_price: null,

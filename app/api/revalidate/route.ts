@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
 
     // Always revalidate these paths
     revalidatePath("/shop/all");
+    revalidatePath("/shop/tools-equipment");
     revalidatePath("/");
 
     // Revalidate product detail page if slug is present

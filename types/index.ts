@@ -28,11 +28,11 @@ export interface Product {
   useCaseTags: string[]
   isNewArrival: boolean
   isPetSafe: boolean
+  isImported: boolean
   difficulty: "beginner" | "intermediate" | "expert"
   lightRequirement: "low" | "medium" | "bright" | "full_sun"
   waterRequirement: "low" | "medium" | "high"
   size: "small" | "medium" | "large"
-  moodTags: string[]
   createdAt: string
   updatedAt: string
   // Shipping box dimensions for volumetric weight calculation (in centimeters)
@@ -229,6 +229,8 @@ export interface NavItem {
 export interface MegaMenuSection {
   id: string
   title: string
+  /** When set, the section heading links here (e.g. Plants -> /shop/all, Tools & Equipment -> its overview page). */
+  href?: string
   items: NavItem[]
 }
 

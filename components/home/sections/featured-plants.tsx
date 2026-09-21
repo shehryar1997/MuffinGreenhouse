@@ -14,6 +14,11 @@ export function pickFeatured(products: Product[], limit = 4): Product[] {
     .slice(0, limit)
 }
 
+/** The most recently added products (plants and tools alike), newest first. */
+export function latestProducts(products: Product[], limit = 10): Product[] {
+  return [...products].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit)
+}
+
 // Shown only when the shop has something to show.
 export function FeaturedPlants({ products, n }: { products: Product[]; n: string }) {
   const featured = pickFeatured(products)

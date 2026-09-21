@@ -22,13 +22,6 @@ export interface UseCaseTag {
   icon: string | null
 }
 
-export interface MoodTag {
-  id: string
-  slug: string
-  name: string
-  description: string | null
-}
-
 // ============================================================================
 // GET ALL CATEGORIES
 // ============================================================================
@@ -75,32 +68,6 @@ export async function getUseCaseTags(): Promise<UseCaseTag[]> {
 export async function getUseCaseBySlug(slug: string): Promise<UseCaseTag | null> {
   const { data, error } = await supabase
     .from('use_case_tags')
-    .select('*')
-    .eq('slug', slug)
-    .single()
-
-  if (error) return null
-  return data
-}
-
-// ============================================================================
-// GET MOOD TAGS (Shop by Atmosphere)
-// ============================================================================
-// Maps to: Soft, Bright, Moody
-export async function getMoodTags(): Promise<MoodTag[]> {
-  const { data, error } = await supabase
-    .from('mood_tags')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order')
-
-  if (error) throw error
-  return data || []
-}
-
-export async function getMoodBySlug(slug: string): Promise<MoodTag | null> {
-  const { data, error } = await supabase
-    .from('mood_tags')
     .select('*')
     .eq('slug', slug)
     .single()

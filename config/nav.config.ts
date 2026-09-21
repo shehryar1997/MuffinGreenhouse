@@ -42,8 +42,8 @@ export const shopMegaMenuSections: MegaMenuSection[] = [
   {
     id: "plants",
     title: "Plants",
+    href: "/shop/all",
     items: [
-      { id: "shop-all", label: "All Plants", href: "/shop/all" },
       { id: "shop-aroids", label: "Aroids", href: "/shop/aroids", featured: true },
       { id: "shop-sansevierias", label: "Sansevierias", href: "/shop/sansevierias" },
       { id: "shop-agaves", label: "Agaves", href: "/shop/agaves" },
@@ -56,6 +56,7 @@ export const shopMegaMenuSections: MegaMenuSection[] = [
   {
     id: "tools-equipment",
     title: "Tools & Equipment",
+    href: "/shop/tools-equipment",
     items: [
       { id: "shop-planting-media", label: "Planting Media", href: "/shop/planting-media" },
       { id: "shop-fertilizer", label: "Fertilizer", href: "/shop/fertilizer" },
@@ -136,8 +137,8 @@ export const footerNav = {
 export const mobileNav: NavItem[] = [
   { id: "mobile-home", label: "Home", href: "/" },
   { id: "mobile-shop", label: "Shop All", href: "/shop/all" },
-  { id: "mobile-plants", label: "Plants", href: "/shop", children: shopMegaMenuSections.find(s => s.id === "plants")?.items },
-  { id: "mobile-tools", label: "Tools & Equipment", href: "/shop", children: shopMegaMenuSections.find(s => s.id === "tools-equipment")?.items },
+  { id: "mobile-plants", label: "Plants", href: "/shop/all", children: shopMegaMenuSections.find(s => s.id === "plants")?.items },
+  { id: "mobile-tools", label: "Tools & Equipment", href: "/shop/tools-equipment", children: shopMegaMenuSections.find(s => s.id === "tools-equipment")?.items },
   { id: "mobile-by-need", label: "By Need", href: "/shop-by-need", children: shopByNeedCategories },
   { id: "mobile-muffin", label: askMuffin.name, href: "/muffin", isAi: true },
   { id: "mobile-events", label: "Events", href: "/events" },

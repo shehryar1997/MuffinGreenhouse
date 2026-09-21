@@ -5,13 +5,11 @@
 ### Core Product Tables
 1. **categories** - Plant categories (aroids, sansevierias, etc.)
 2. **use_case_tags** - Shop by Need tags (pet-safe, low-light, etc.)
-3. **mood_tags** - Atmosphere tags (soft, bright, moody)
 4. **products** - Main product catalog with permanent SKUs
 5. **product_images** - Cloudflare R2 image URLs
 6. **product_variants** - Size/pot options with separate SKUs
 7. **care_info** - Plant care instructions
 8. **product_use_cases** - Junction table (products <-> use cases)
-9. **product_moods** - Junction table (products <-> moods)
 
 ### Commerce Tables
 10. **customers** - User accounts
@@ -34,7 +32,6 @@
 | Shop by Category | `category_id` foreign key |
 | Shop by Need | `product_use_cases` junction table |
 | Shop by Light | `light_requirement` enum |
-| Shop by Atmosphere | `product_moods` junction table |
 | Search | `search_vector` TSVECTOR + GIN index |
 | Image Hosting | Cloudflare R2 URLs in `product_images` |
 | Inventory Tracking | `stock_count` + `stock_status` |
@@ -59,7 +56,7 @@ R2 Bucket: `muffin-images`
 supabase/
 ├── client.ts              # Supabase client + types
 ├── api/
-│   ├── categories.ts     # Categories, use cases, moods
+│   ├── categories.ts     # Categories, use cases
 │   ├── products.ts       # Product search, filters
 │   ├── admin.ts          # Product CRUD
 │   └── index.ts          # Barrel export

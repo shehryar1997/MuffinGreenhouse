@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 // Server Component: fetches real product, event and journal data from Supabase, then hands it
 // to the client component that owns the interactive homepage UI (motion,
-// mood picker, parallax). Keeps the "Server fetches, Client renders" split
+// parallax). Keeps the "Server fetches, Client renders" split
 // used elsewhere in the app (product detail page, shop grids).
 export default async function HomePage() {
   const [products, events, posts] = await Promise.all([getAllProducts(), getUpcomingEvents(), getPublishedPosts()])

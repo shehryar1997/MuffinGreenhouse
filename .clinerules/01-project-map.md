@@ -75,12 +75,10 @@ Do not regenerate the full map unless explicitly asked to.
 `components/light-filter-teaser.tsx` — Light level filter section — LightFilterTeaser — @/types, @/components/ui/*, @/data/* [LARGE]
 `components/cart/cart-drawer.tsx` — Cart sidebar drawer — CartDrawer — @/components/providers/cart-provider, @/components/ui/* [LARGE]
 `components/home/home-content.tsx` — Homepage content with lazy-loaded sections — HomeContent, FadeIn, KineticHeading, ParallaxMonstera — next/dynamic, @/hooks/*, @/components/home/* [LARGE]
-`components/home/sections/atmosphere-picker.tsx` — Mood-based plant picker (lazy-loaded) — AtmospherePicker — @/components/home/shared/*, @/lib/mood-utils
 `components/home/sections/shop-by-need-section.tsx` — Shop by need grid (lazy-loaded) — ShopByNeedSection — @/components/home/shared/*, @/config/nav.config
 `components/home/sections/our-story-section.tsx` — Our story section (lazy-loaded) — OurStorySection — @/components/home/shared/*
 `components/home/sections/events-section.tsx` — Events preview section (lazy-loaded) — EventsSection — @/components/home/shared/*, @/lib/data/events
 `components/home/shared/animations.tsx` — Shared animation components for homepage — FadeIn, KineticHeading, KineticLine, LiftText, AnimatedHeading — framer-motion, @/hooks/use-reduced-motion
-`components/home/shared/mood-plants-grid.tsx` — Mood-filtered plant grid component — MoodPlantsGrid — @/types, @/lib/mood-utils
 `components/layout/footer.tsx` — Site footer — Footer — @/config/nav.config
 `components/layout/header.tsx` — Site header with navigation — Header, ShopMegaMenu — @/config/nav.config, @/components/providers/* [LARGE]
 `components/layout/shop-mega-menu.tsx` — Shop dropdown mega menu — ShopMegaMenu — @/config/nav.config [LARGE]
@@ -111,7 +109,6 @@ Do not regenerate the full map unless explicitly asked to.
 
 ### /lib
 `lib/utils.ts` — Utility functions — cn, formatPrice, debounce, throttle, formatDate, generateId, slugify, getInitials, scrollToElement — clsx, tailwind-merge
-`lib/mood-utils.ts` — Mood theme utilities — Mood, MoodTheme, moodThemes, filterProductsByMood, getMoodTheme — @/types
 `lib/plant-utils.ts` — Light filter logic — LightLevel, lightLevelLabels, filterProductsByLight, getLightPreviewProducts — @/types
 `lib/admin-session.ts` — Admin session utilities (HMAC‑signed expiring tokens) — verifyPassword, getSessionCookieValue, isValidSessionCookie, COOKIE_NAME — crypto (Web Crypto), env:SESSION_SECRET
 `lib/rate-limit.ts` — In-memory rate limiting — RateLimiter, defaultLimiter, getClientIP, checkRateLimit — N/A
@@ -135,7 +132,7 @@ Do not regenerate the full map unless explicitly asked to.
 `types/index.ts` — Core TypeScript types — Category, Product, ProductImage, CareInfo, ProductVariant, Review, CartItem, Cart, User, Address, Order, MyPlant, Event, JournalPost, NavItem, etc. — Includes shipping box dimensions (boxHeightCm, boxWidthCm, boxBreadthCm) — N/A
 
 ## Shared dependencies
-- `@/types` — Imported by: data/mock-products.ts, lib/mood-utils.ts, lib/plant-utils.ts, components/providers/cart-provider.tsx, components/providers/search-provider.tsx, components/ui/product-card.tsx, components/shop/product-filters.tsx
+- `@/types` — Imported by: data/mock-products.ts, lib/plant-utils.ts, components/providers/cart-provider.tsx, components/providers/search-provider.tsx, components/ui/product-card.tsx, components/shop/product-filters.tsx
 - `@/lib/utils` — Imported by: components/ui/* (7 files), components/layout/header.tsx, components/layout/footer.tsx
 - `@/config/nav.config` — Imported by: components/layout/header.tsx, components/layout/shop-mega-menu.tsx, components/layout/footer.tsx, app/page.tsx
 - `@/data/mock-products` — Imported by: app/page.tsx, app/shop/*, components/light-filter-teaser.tsx

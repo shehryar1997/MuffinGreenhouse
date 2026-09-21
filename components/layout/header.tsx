@@ -210,7 +210,17 @@ export function Header() {
                                   <div key={section.id} className="space-y-5">
                                     <div className="flex items-center gap-2 border-b border-border pb-3">
                                       <h3 className="font-serif text-lg text-foreground">
-                                        {section.title}
+                                        {section.href ? (
+                                          <Link
+                                            href={section.href}
+                                            className="hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                                            onClick={() => setShopMenuOpen(false)}
+                                          >
+                                            {section.title}
+                                          </Link>
+                                        ) : (
+                                          section.title
+                                        )}
                                       </h3>
                                     </div>
                                     <ul className="space-y-1">
@@ -453,7 +463,15 @@ export function Header() {
                 </button>
                 {shopMegaMenuSections.map((section) => (
                   <div key={section.id}>
-                    <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-forest-500">{section.title}</h2>
+                    <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-forest-500">
+                      {section.href ? (
+                        <Link href={section.href} onClick={() => setMobileMenuOpen(false)} className="hover:text-clay-600 transition-colors">
+                          {section.title}
+                        </Link>
+                      ) : (
+                        section.title
+                      )}
+                    </h2>
                     <ul className="grid grid-cols-2 gap-x-4">
                       {section.items.map((item) => (
                         <li key={item.id}>

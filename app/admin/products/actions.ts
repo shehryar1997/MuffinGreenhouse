@@ -28,6 +28,7 @@ const PREFILL_COLUMNS = [
   "size",
   "is_new_arrival",
   "is_pet_safe",
+  "is_imported",
   "meta_title",
   "meta_description",
   "light",
@@ -45,7 +46,6 @@ const PREFILL_COLUMNS = [
   "box_breadth_cm",
   "weight_kg",
   "use_case_tags",
-  "mood_tags",
 ].join(", ")
 
 export type PrefillProduct = {
@@ -65,6 +65,7 @@ export type PrefillProduct = {
   size: string | null
   is_new_arrival: boolean | null
   is_pet_safe: boolean | null
+  is_imported: boolean | null
   meta_title: string | null
   meta_description: string | null
   light: string | null
@@ -82,7 +83,6 @@ export type PrefillProduct = {
   box_breadth_cm: number | null
   weight_kg: number | null
   use_case_tags: string[]
-  mood_tags: string[]
 }
 
 const normalizeName = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase()
@@ -111,15 +111,13 @@ export async function findProductsByName(name: string): Promise<{ matches: Prefi
 
 export async function getFormLookups() {
   await requireAdmin()
-  const [{ data: categories }, { data: useCaseTags }, { data: moodTags }] = await Promise.all([
+  const [{ data: categories }, { data: useCaseTags }] = await Promise.all([
     supabaseAdmin.from("categories").select("name").order("name"),
     supabaseAdmin.from("use_case_tags").select("name").order("name"),
-    supabaseAdmin.from("mood_tags").select("name").order("name"),
   ])
   return {
     categories: (categories ?? []).map((c) => c.name as string),
     useCaseTags: (useCaseTags ?? []).map((t) => t.name as string),
-    moodTags: (moodTags ?? []).map((t) => t.name as string),
   }
 }
 
@@ -258,6 +256,7 @@ function parseProductFields(
       size: isPlant ? text("size") || null : null,
       is_new_arrival: formData.get("is_new_arrival") === "on",
       is_pet_safe: isPlant && formData.get("is_pet_safe") === "on",
+      is_imported: isPlant && formData.get("is_imported") === "on",
       is_featured: formData.get("is_featured") === "on",
       // Keep the original publish date when a published product is simply re-saved --
       // it's what the "New" badge's 14-day window counts from.
@@ -275,10 +274,9 @@ function parseProductFields(
       water_summary: careText("water_summary"),
       pet_safe_note: careText("pet_safe_note"),
       // trg_validate_product_tags rejects any value not already in
-      // use_case_tags/mood_tags -- the form only offers valid checkboxes,
+      // use_case_tags -- the form only offers valid checkboxes,
       // so this should always pass, but the DB guard stays as a backstop.
       use_case_tags: isPlant ? (formData.getAll("use_case_tags") as string[]) : [],
-      mood_tags: isPlant ? (formData.getAll("mood_tags") as string[]) : [],
       // Shipping box dimensions apply to plants only (equipment is charged by weight).
       box_height_cm: isPlant ? (boxHeight as number | null) : null,
       box_width_cm: isPlant ? (boxWidth as number | null) : null,

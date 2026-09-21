@@ -15,7 +15,6 @@ const highlightInputClass = cn(inputClass, "border-primary bg-clay-50")
 type Lookups = {
   categories: string[]
   useCaseTags: string[]
-  moodTags: string[]
 }
 
 type ExistingProduct = {
@@ -35,6 +34,7 @@ type ExistingProduct = {
   size: string
   is_new_arrival: boolean
   is_pet_safe: boolean
+  is_imported: boolean
   is_featured: boolean
   published_at: string | null
   meta_title: string | null
@@ -54,7 +54,6 @@ type ExistingProduct = {
   box_breadth_cm: number | null
   weight_kg: number | null
   use_case_tags: string[]
-  mood_tags: string[]
   images?: { url: string; alt_text: string }[]
   variants?: { id?: string; name: string; sku: string; price: number; stock_count: number }[]
 }
@@ -104,8 +103,8 @@ const PREFILL_VALUE_FIELDS = [
   "box_breadth_cm",
   "weight_kg",
 ] as const
-const PREFILL_CHECK_FIELDS = ["is_new_arrival", "is_pet_safe"] as const
-const PREFILL_TAG_FIELDS = ["use_case_tags", "mood_tags"] as const
+const PREFILL_CHECK_FIELDS = ["is_new_arrival", "is_pet_safe", "is_imported"] as const
+const PREFILL_TAG_FIELDS = ["use_case_tags"] as const
 
 type ImageRowState = { id: string; url: string; alt_text: string; uploading: boolean; error: string | null }
 let imageRowSeq = 0
@@ -451,7 +450,7 @@ export function ProductForm({
           description={
             isPlantCategory
               ? "Care level, size and how the product is listed."
-              : `Care requirements, size, box dimensions and use-case / mood tags don't apply to ${categoryName}, so they're hidden here and won't appear on the website.`
+              : `Care requirements, size, box dimensions and use-case tags don't apply to ${categoryName}, so they're hidden here and won't appear on the website.`
           }
         >
           {/* Hidden (not unmounted) for Tools & Equipment so values survive a category switch; the server clears them on save. */}
@@ -495,15 +494,20 @@ export function ProductForm({
             />
             <div className={isPlantCategory ? "contents" : "hidden"}>
               <CheckField name="is_pet_safe" label="Pet safe" defaultChecked={product?.is_pet_safe} />
+              <CheckField
+                name="is_imported"
+                label="Imported"
+                description="Shows an “Imported” tag on the plant's page."
+                defaultChecked={product?.is_imported}
+              />
             </div>
             <CheckField name="is_featured" label="Featured" defaultChecked={product?.is_featured} />
             <CheckField name="published" label="Published" description="Untick to keep it as a draft." defaultChecked={!!product?.published_at} />
           </div>
         </FormSection>
 
-        <FormSection title="Use case & mood tags" description="Used for filtering in the shop." className={isPlantCategory ? undefined : "hidden"}>
+        <FormSection title="Use case tags" description="Used for filtering in the shop." className={isPlantCategory ? undefined : "hidden"}>
           <TagGroup legend="Use case" name="use_case_tags" tags={lookups.useCaseTags} selected={product?.use_case_tags} />
-          <TagGroup legend="Mood" name="mood_tags" tags={lookups.moodTags} selected={product?.mood_tags} />
         </FormSection>
 
         <FormSection title="Care info" description="Shown on the product page." className={isPlantCategory ? undefined : "hidden"}>

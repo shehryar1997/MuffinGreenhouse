@@ -22,6 +22,12 @@ const staticRoutes: MetadataRoute.Sitemap = [
     priority: 0.8,
   },
   {
+    url: `${siteUrl}/shop/tools-equipment`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.7,
+  },
+  {
     url: `${siteUrl}/our-story`,
     lastModified: new Date(),
     changeFrequency: "monthly",

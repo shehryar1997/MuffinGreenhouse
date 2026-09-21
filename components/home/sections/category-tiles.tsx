@@ -15,7 +15,7 @@ const tiles = [
   { slug: "hoyas", name: "Hoyas", note: "Trailing wax vines", bg: "bg-[#F6DDE4]" },
   { slug: "orchids", name: "Orchids", note: "Blooms that last", bg: "bg-[#E6ECDA]" },
   { slug: "cacti-succulents", name: "Cacti & Succulents", note: "Sun lovers", bg: "bg-[#F4E6C8]" },
-  { slug: "pots", name: "Pots & supplies", note: "Pots, soil & fertilizer", bg: "bg-[#F6DDCB]" },
+  { slug: "tools-equipment", name: "Shop Gardening Tools & Equipment", note: "Tools, watering & plant care", bg: "bg-[#F6DDCB]" },
 ]
 
 export function CategoryTiles({ n }: { n: string }) {

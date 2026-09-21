@@ -78,6 +78,16 @@ const config: Config = {
         float: { "0%, 100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-8px)" } },
         wiggle: { "0%, 100%": { transform: "rotate(-4deg)" }, "50%": { transform: "rotate(4deg)" } },
         draw: { to: { strokeDashoffset: "0" } },
+        // Hero carousel: --hero-x is the travel distance, --hero-o the opacity at the far end, --hero-dir is 1 (forward) or -1.
+        "hero-in": {
+          from: { opacity: "var(--hero-o)", transform: "translateX(calc(var(--hero-x) * var(--hero-dir)))" },
+          to: { opacity: "1", transform: "translateX(0)" },
+        },
+        "hero-out": {
+          from: { opacity: "1", transform: "translateX(0)" },
+          to: { opacity: "var(--hero-o)", transform: "translateX(calc(var(--hero-x) * var(--hero-dir) * -1))" },
+        },
+        "hero-progress": { from: { transform: "scaleX(0)" }, to: { transform: "scaleX(1)" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -92,6 +102,9 @@ const config: Config = {
         float: "float 6s ease-in-out infinite",
         wiggle: "wiggle 0.5s ease-in-out infinite",
         draw: "draw 1.2s ease-out 0.9s forwards",
+        "hero-in": "hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "hero-out": "hero-out 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "hero-progress": "hero-progress 5s linear forwards",
         counter: "counter-tick 0.5s ease-out forwards",
       },
       transitionTimingFunction: {
