@@ -64,11 +64,11 @@ function Underline({ active }: { active: boolean }) {
   )
 }
 
-function Arch({ reduced, slides, state }: { reduced: boolean; slides: readonly HeroSlide[]; state: CarouselState }) {
+function Backdrop({ reduced, slides, state }: { reduced: boolean; slides: readonly HeroSlide[]; state: CarouselState }) {
   const { offset, containerRef } = useParallax({ maxOffset: 8 })
   return (
-    <div ref={containerRef as React.RefObject<HTMLDivElement>} className="relative">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-t-full border-[12px] border-b-0 border-background">
+    <div ref={containerRef as React.RefObject<HTMLDivElement>} className="relative h-full">
+      <div className="relative h-full overflow-hidden">
         <div
           className="absolute inset-[-16px]"
           style={reduced ? undefined : { transform: `translate(${offset.x}px, ${offset.y}px)`, transition: "transform 50ms ease-out" }}
@@ -97,16 +97,17 @@ function Arch({ reduced, slides, state }: { reduced: boolean; slides: readonly H
             )
           })}
         </div>
-        <div className="absolute bottom-0 left-0 right-0 z-10 h-3 bg-secondary" />
+        {/* A dark wash keeps the text readable: even on phones, and strongest on the text side (left) on desktop so the photo shows on the right. */}
+        <div className="absolute inset-0 z-[5] bg-gradient-to-b from-ink/75 via-ink/60 to-ink/85 lg:bg-gradient-to-r lg:from-ink/85 lg:via-ink/55 lg:to-ink/15" aria-hidden="true" />
       </div>
     </div>
   )
 }
 
 const primaryCta =
-  "group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 font-mono text-xs uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:brightness-110"
+  "group inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3.5 lg:px-7 font-mono text-xs uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/20 transition hover:-translate-y-0.5 hover:brightness-110"
 const secondaryCta =
-  "inline-flex items-center gap-2 rounded-full border border-foreground/30 px-7 py-3.5 font-mono text-xs uppercase tracking-widest text-foreground transition hover:-translate-y-0.5 hover:border-foreground hover:bg-foreground/5"
+  "inline-flex items-center gap-2 rounded-full border border-paper/50 px-5 py-3.5 font-mono text-xs uppercase tracking-widest text-paper transition hover:-translate-y-0.5 hover:border-paper hover:bg-paper/10 lg:px-7"
 
 /** The "Just in" card: steps through the newest products. Stops under the same conditions as the slideshow (and for reduced motion). */
 function JustIn({ products, paused }: { products: Product[]; paused: boolean }) {
@@ -123,18 +124,19 @@ function JustIn({ products, paused }: { products: Product[]; paused: boolean }) 
   const product = products[tick % count]
 
   return (
-    <div className="absolute -left-3 top-8 z-20 sm:-left-8 lg:-left-10">
+    // Phones: pinned to the bottom (the section's bottom padding reserves the room). Desktop: top right, top-24 (96px) sits ~16px under the 80px fixed header.
+    <div className="absolute bottom-6 left-6 right-6 z-20 lg:bottom-auto lg:left-auto lg:right-12 lg:top-24">
       {/* Keyed so each new product fades in; the first one is already covered by the hero's own entrance. */}
       <div key={product.id} className={tick > 0 ? "animate-fade-in" : undefined}>
         <Link
           href={`/shop/product/${product.slug}`}
-          className="group flex w-64 items-center gap-3 rounded-2xl border border-border bg-surface p-3 pr-4 shadow-xl transition hover:-translate-y-1"
+          className="group flex w-full max-w-sm items-center gap-3 rounded-2xl border border-border bg-surface p-3 pr-4 shadow-xl transition hover:-translate-y-1 lg:w-72"
         >
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#EEF3DC]">
             <CategoryArt slug={product.category.slug} className="h-11 w-11" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-mono text-[10px] uppercase tracking-widest text-primary">Just in</span>
+            <span className="block font-mono text-xs uppercase tracking-widest text-primary">Just in</span>
             <span className="block truncate font-serif text-base leading-tight text-foreground">{product.name}</span>
             <span className="block font-mono text-xs text-muted-foreground">{formatPrice(product.price)}</span>
           </span>
@@ -189,7 +191,7 @@ export function Hero({ latest }: { latest: Product[] }) {
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured at Muffin"
-      className="relative touch-pan-y overflow-hidden"
+      className="relative flex touch-pan-y flex-col justify-center overflow-hidden lg:min-h-[46rem]"
       onPointerEnter={(e) => e.pointerType === "mouse" && setHovering(true)}
       onPointerLeave={(e) => e.pointerType === "mouse" && setHovering(false)}
       onFocus={() => setFocusWithin(true)}
@@ -204,18 +206,16 @@ export function Hero({ latest }: { latest: Product[] }) {
       }}
     >
       {/* Soft colour behind the page, so the cream doesn't feel flat. */}
-      <div className="pointer-events-none absolute -right-32 top-10 h-[34rem] w-[34rem] rounded-full bg-sprout-200/50 blur-3xl" aria-hidden="true" />
-      <div className="pointer-events-none absolute -left-40 bottom-0 h-[26rem] w-[26rem] rounded-full bg-clay-200/30 blur-3xl" aria-hidden="true" />
 
-      <div className="container relative mx-auto px-6 pb-20 pt-28 lg:px-12 lg:pb-28 lg:pt-32">
-        <div className="animate-fade-in-up mb-8 flex items-center gap-4" style={rise(0)}>
-          <span className="font-mono text-xs text-primary">001</span>
-          <span className="h-px w-8 bg-border" />
-          <span className="font-mono text-xs tracking-widest text-muted-foreground">A DIFFERENT KIND OF PLANT SHOP</span>
+      <div className="container mx-auto w-full px-6 pb-36 pt-24 lg:px-12 lg:pb-32 lg:pt-32">
+        <div className="animate-fade-in-up relative z-10 mb-5 flex items-center gap-4 lg:mb-8" style={rise(0)}>
+          <span className="font-mono text-xs text-sprout-300">001</span>
+          <span className="h-px w-8 bg-paper/40" />
+          <span className="font-mono text-xs tracking-widest text-paper/80">A DIFFERENT KIND OF PLANT SHOP</span>
         </div>
 
         <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-12">
-          <div className="lg:col-span-7">
+          <div className="relative z-10 lg:col-span-7">
             {/* Every slide sits in the same grid cell, so the block is as tall as the tallest slide and nothing shifts. */}
             <div className="animate-fade-in-up grid" style={rise(0.08)} aria-live={autoplaying ? "off" : "polite"}>
               {HERO_SLIDES.map((slide, i) => {
@@ -232,16 +232,16 @@ export function Hero({ latest }: { latest: Product[] }) {
                     inert={status !== "active"}
                   >
                     <Heading className="font-serif text-[clamp(3rem,7.4vw,7rem)] leading-[0.95] tracking-tight">
-                      <span className="block whitespace-nowrap text-foreground">{slide.headline[0]}</span>
-                      <span className="relative block whitespace-nowrap pb-3 text-primary">
+                      <span className="block whitespace-nowrap text-paper">{slide.headline[0]}</span>
+                      <span className="relative block whitespace-nowrap pb-3 text-sprout-300">
                         {slide.headline[1]}
                         <Underline active={status === "active"} />
                       </span>
                     </Heading>
 
-                    <p className="mt-8 max-w-md text-lg text-muted-foreground">{slide.subcopy}</p>
+                    <p className="mt-5 max-w-md text-lg text-paper/90 lg:mt-8">{slide.subcopy}</p>
 
-                    <div className="mt-9 flex flex-wrap gap-3">
+                    <div className="mt-6 flex flex-wrap gap-3 lg:mt-9">
                       <Link href={slide.ctaHref} className={primaryCta}>
                         {slide.ctaLabel}
                         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
@@ -257,7 +257,7 @@ export function Hero({ latest }: { latest: Product[] }) {
               })}
             </div>
 
-            <div className="animate-fade-in-up mt-6 flex items-center gap-1" style={rise(0.45)}>
+            <div className="animate-fade-in-up mt-3 flex items-center gap-1 lg:mt-6" style={rise(0.45)}>
               <div className="flex items-center" role="group" aria-label="Choose a slide">
                 {HERO_SLIDES.map((slide, i) => {
                   const active = i === state.cur
@@ -270,12 +270,12 @@ export function Hero({ latest }: { latest: Product[] }) {
                       onClick={() => go(i)}
                       className="flex h-11 items-center px-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full"
                     >
-                      <span className="relative block h-1.5 w-8 overflow-hidden rounded-full bg-border sm:w-12">
-                        {active && reduced && <span className="absolute inset-0 rounded-full bg-primary" />}
+                      <span className="relative block h-1.5 w-8 overflow-hidden rounded-full bg-paper/30 sm:w-12">
+                        {active && reduced && <span className="absolute inset-0 rounded-full bg-sprout-300" />}
                         {active && !reduced && mounted && (
                           <span
                             key={state.cur}
-                            className="absolute inset-0 origin-left rounded-full bg-primary animate-hero-progress"
+                            className="absolute inset-0 origin-left rounded-full bg-sprout-300 animate-hero-progress"
                             style={{ animationDuration: `${SLIDE_MS}ms`, animationPlayState: holding ? "paused" : "running" }}
                             onAnimationEnd={next}
                           />
@@ -290,7 +290,7 @@ export function Hero({ latest }: { latest: Product[] }) {
                   type="button"
                   aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
                   onClick={() => setUserPaused((p) => !p)}
-                  className="ml-2 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="ml-2 flex h-11 w-11 items-center justify-center rounded-full text-paper/80 transition hover:bg-paper/10 hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   {userPaused ? <Play className="h-4 w-4" aria-hidden="true" /> : <Pause className="h-4 w-4" aria-hidden="true" />}
                 </button>
@@ -298,18 +298,18 @@ export function Hero({ latest }: { latest: Product[] }) {
             </div>
 
             {/* Same stacking as the text above: the row is as tall as the tallest slide's highlights, so nothing shifts. */}
-            <div className="animate-fade-in-up mt-10 grid" style={rise(0.55)}>
+            <div className="animate-fade-in-up mt-4 grid lg:mt-10" style={rise(0.55)}>
               {HERO_SLIDES.map((slide, i) => {
                 const status = statusOf(i, state)
                 return (
                   <ul
                     key={slide.id}
-                    className={cn("col-start-1 row-start-1 flex flex-wrap content-start gap-x-7 gap-y-3 text-sm text-muted-foreground", motionClass(status, state.animate))}
+                    className={cn("col-start-1 row-start-1 flex flex-wrap content-start gap-x-7 gap-y-2 text-sm text-paper/85 lg:gap-y-3", motionClass(status, state.animate))}
                     style={{ ...motionVars("3rem", 0, state.dir, reduced), animationDelay: "160ms" }}
                   >
                     {slide.highlights.map(({ icon: Icon, text }) => (
                       <li key={text} className="inline-flex items-center gap-2">
-                        <Icon className="h-4 w-4 text-primary" aria-hidden="true" /> {text}
+                        <Icon className="h-4 w-4 text-sprout-300" aria-hidden="true" /> {text}
                       </li>
                     ))}
                   </ul>
@@ -318,15 +318,8 @@ export function Hero({ latest }: { latest: Product[] }) {
             </div>
           </div>
 
-          <div className="animate-fade-in-up relative mx-auto w-full max-w-md lg:col-span-5 lg:max-w-none" style={rise(0.25)}>
-            <Arch reduced={reduced} slides={HERO_SLIDES} state={state} />
-
-            <span className="absolute -right-1 top-24 z-20 animate-float text-3xl text-secondary drop-shadow sm:-right-4" aria-hidden="true">
-              ✦
-            </span>
-            <span className="absolute -left-2 bottom-40 z-20 animate-float text-xl text-primary [animation-delay:1.5s]" aria-hidden="true">
-              ✦
-            </span>
+          <div className="animate-fade-in-up absolute inset-0" style={rise(0.25)}>
+            <Backdrop reduced={reduced} slides={HERO_SLIDES} state={state} />
 
             <JustIn products={latest} paused={reduced || holding} />
           </div>

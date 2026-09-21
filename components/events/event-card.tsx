@@ -48,7 +48,7 @@ export function EventCard({ event, past = false }: { event: Event; past?: boolea
         )}
 
         <div className="absolute left-4 top-4 rounded-xl bg-background/95 px-3 py-2 text-center shadow-sm backdrop-blur">
-          <div className="font-mono text-[10px] font-medium tracking-widest text-primary">{formatEventMonth(event.datetime)}</div>
+          <div className="font-mono text-xs lg:text-[10px] font-medium tracking-widest text-primary">{formatEventMonth(event.datetime)}</div>
           <div className="font-serif text-2xl leading-none text-foreground">{formatEventDay(event.datetime)}</div>
         </div>
 
@@ -58,7 +58,7 @@ export function EventCard({ event, past = false }: { event: Event; past?: boolea
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <div className="mb-2 flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-primary">
+        <div className="mb-2 flex items-center gap-2 font-mono text-xs lg:text-[11px] uppercase tracking-widest text-primary">
           <span>{EVENT_TYPE_LABEL[event.type]}</span>
           {status && (
             <span

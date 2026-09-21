@@ -20,9 +20,11 @@ interface ProductCardProps {
   product: Product
   index?: number
   className?: string
+  /** Image size hint. The default suits a 1-column phone layout; 2-column grids pass a smaller one. */
+  sizes?: string
 }
 
-export function ProductCard({ product, index = 0, className }: ProductCardProps) {
+export function ProductCard({ product, index = 0, className, sizes = "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isTogglingWishlist, setIsTogglingWishlist] = useState(false)
   const { addItem } = useCart()
@@ -94,11 +96,11 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
             alt={product.images[0]?.alt || product.name}
             fill
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            sizes={sizes}
           />
           {/* Overlay actions */}
           <motion.div 
-            className="absolute inset-0 flex items-center justify-center gap-2 sm:gap-3"
+            className="absolute inset-0 flex items-center justify-center gap-2 max-lg:hidden sm:gap-3"
             initial={{ opacity: 0 }}
             animate={{ opacity: isHovered ? 1 : 0 }}
             transition={{ duration: 0.2 }}
@@ -134,6 +136,27 @@ export function ProductCard({ product, index = 0, className }: ProductCardProps)
             </Button>
           </motion.div>
           
+          {/* Touch screens have no hover, so the overlay above is desktop-only and the two actions that matter stay in view. */}
+          <button
+            type="button"
+            onClick={handleToggleWishlist}
+            disabled={isTogglingWishlist}
+            aria-pressed={wishlisted}
+            aria-label={wishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+            className="absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-background/90 shadow-sm transition active:scale-95 lg:hidden"
+          >
+            <Heart className={cn("h-5 w-5", wishlisted && "fill-primary text-primary")} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isOutOfStock}
+            aria-label={isOutOfStock ? `${product.name} is out of stock` : `Add ${product.name} to cart`}
+            className="absolute bottom-2 right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-background/90 shadow-sm transition active:scale-95 disabled:opacity-40 lg:hidden"
+          >
+            <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+          </button>
+
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {product.isNewArrival && <Badge variant="secondary">New</Badge>}

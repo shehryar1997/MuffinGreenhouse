@@ -159,7 +159,7 @@ function LoginForm() {
               </label>
               <Link
                 href={`/account/forgot-password${emailOrPhone.includes("@") ? `?email=${encodeURIComponent(emailOrPhone.trim())}` : ""}`}
-                className="text-xs text-clay-500 hover:underline"
+                className="text-xs text-clay-500 hover:underline max-lg:inline-flex max-lg:min-h-11 max-lg:items-center max-lg:text-sm"
               >
                 Forgot password?
               </Link>
@@ -180,7 +180,7 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-600 max-lg:right-0 max-lg:flex max-lg:h-11 max-lg:w-11 max-lg:items-center max-lg:justify-center"
                 aria-pressed={showPassword}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
@@ -203,7 +203,7 @@ function LoginForm() {
 
         <div className="mt-8 text-center text-sm text-forest-600">
           Don&apos;t have an account?{" "}
-          <Link href="/account/register" className="text-clay-500 hover:underline">
+          <Link href="/account/register" className="text-clay-500 hover:underline max-lg:inline-flex max-lg:min-h-11 max-lg:items-center">
             Create one
           </Link>
         </div>

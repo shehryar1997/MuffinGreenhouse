@@ -147,7 +147,7 @@ export function SearchDrawer() {
           </div>
           
           <div className="p-3 border-t border-border/50 bg-muted/30">
-            <p className="text-[11px] text-center text-muted-foreground/60">
+            <p className="text-xs lg:text-[11px] text-center text-muted-foreground/60">
               {hasQuery ? `Press Enter to see all results for "${query}"` : 'Start typing to find plants instantly'}
             </p>
           </div>

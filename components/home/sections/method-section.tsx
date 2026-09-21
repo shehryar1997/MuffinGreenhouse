@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import dynamic from "next/dynamic"
-import { ArrowRight, HeartHandshake, Sprout, Sun } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { FadeIn, AnimatedHeading } from "@/components/home/shared/animations"
 import { SectionLabel } from "@/components/home/shared/section-label"
 import type { Product } from "@/types"
@@ -10,15 +10,9 @@ import type { Product } from "@/types"
 // Client-only (it holds the selected light level), and below the fold.
 const LightFilterTeaser = dynamic(() => import("@/components/light-filter-teaser").then((mod) => ({ default: mod.LightFilterTeaser })), { ssr: false })
 
-const steps = [
-  { icon: Sun, title: "Choose your light", desc: "Sun, shade, or somewhere in between. Tell us how your space lives." },
-  { icon: Sprout, title: "Meet your plant", desc: "Matched from our current rarities, not a generic list." },
-  { icon: HeartHandshake, title: "Keep it alive", desc: "Considered care, from someone who stays with you after." },
-]
-
 export function MethodSection({ products, n }: { products: Product[]; n: string }) {
   return (
-    <section className="bg-forest-50 py-24 lg:py-32">
+    <section className="bg-forest-50 py-12 lg:py-14">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <SectionLabel n={n} label="Our method" />
@@ -50,27 +44,8 @@ export function MethodSection({ products, n }: { products: Product[]; n: string 
           </FadeIn>
         </div>
 
-        {/* Three steps, joined by a dashed line on wide screens. */}
-        <ol className="relative mt-16 grid grid-cols-1 gap-6 md:grid-cols-3 lg:mt-20">
-          <div className="pointer-events-none absolute left-[16%] right-[16%] top-8 hidden border-t-2 border-dashed border-forest-300/70 md:block" aria-hidden="true" />
-          {steps.map((step, i) => (
-            <li key={step.title}>
-              <FadeIn delay={i * 0.12}>
-                <div className="relative text-center md:text-left">
-                  <span className="relative z-10 mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-forest-950 text-sprout-300 ring-8 ring-forest-50 md:mx-0">
-                    <step.icon className="h-7 w-7" aria-hidden="true" />
-                  </span>
-                  <p className="mt-5 font-mono text-xs text-clay-500">0{i + 1}</p>
-                  <h3 className="mt-1 font-serif text-2xl text-forest-950">{step.title}</h3>
-                  <p className="mx-auto mt-2 max-w-xs text-forest-600 md:mx-0">{step.desc}</p>
-                </div>
-              </FadeIn>
-            </li>
-          ))}
-        </ol>
-
         <FadeIn delay={0.1}>
-          <div className="mt-16 lg:mt-20">
+          <div className="mt-12 lg:mt-14">
             <LightFilterTeaser products={products} />
           </div>
         </FadeIn>

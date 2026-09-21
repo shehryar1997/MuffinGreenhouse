@@ -92,9 +92,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const quantity = Math.min(Math.max(1, requestedQuantity), Math.max(1, currentStockCount))
 
   return (
-    <div className="bg-cream-100 min-h-screen pt-28 pb-24 md:pb-8">
+    <div className="bg-cream-100 min-h-screen pt-28 pb-44 md:pb-8">
       <div className="container mx-auto px-4">
-        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-forest-500 mb-6">
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-forest-500 mb-6 max-lg:[&>a]:inline-flex max-lg:[&>a]:min-h-11 max-lg:[&>a]:items-center">
           <Link href="/">Home</Link><span aria-hidden="true">/</span><Link href="/shop/all">Shop</Link>
           {product.category.slug && (
             <><span aria-hidden="true">/</span><Link href={`/shop/${product.category.slug}`}>{product.category.name}</Link></>
@@ -113,9 +113,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 {isPlant && product.isImported && <Badge variant="outline">Imported</Badge>}
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 max-lg:overflow-x-auto max-lg:pb-1">
               {product.images.map((img, i) => (
-                <button key={img.id} type="button" onClick={() => setSelectedImage(i)} aria-label={`Show photo ${i + 1} of ${product.images.length}`} aria-current={selectedImage === i} className={`w-20 h-20 rounded-lg overflow-hidden border-2 ${selectedImage === i ? "border-clay-500" : "border-transparent"}`}>
+                <button key={img.id} type="button" onClick={() => setSelectedImage(i)} aria-label={`Show photo ${i + 1} of ${product.images.length}`} aria-current={selectedImage === i} className={`w-20 h-20 max-lg:shrink-0 rounded-lg overflow-hidden border-2 ${selectedImage === i ? "border-clay-500" : "border-transparent"}`}>
                   <Image src={img.url} alt={img.alt} width={80} height={80} className="object-cover w-full h-full" />
                 </button>
               ))}
@@ -154,9 +154,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div className="flex items-center gap-4 mb-8">
               <label className="font-medium text-forest-900">Quantity</label>
               <div className="flex items-center border border-forest-200 rounded-lg">
-                <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Decrease quantity" className="px-4 py-2 hover:bg-forest-50 disabled:opacity-40 disabled:cursor-not-allowed">-</button>
+                <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Decrease quantity" className="px-4 py-2 max-lg:min-h-11 max-lg:min-w-11 hover:bg-forest-50 disabled:opacity-40 disabled:cursor-not-allowed">-</button>
                 <span className="px-4 py-2 font-mono min-w-[3rem] text-center" aria-live="polite">{quantity}</span>
-                <button type="button" onClick={() => setQuantity(Math.min(currentStockCount, quantity + 1))} disabled={quantity >= currentStockCount} aria-label="Increase quantity" className="px-4 py-2 hover:bg-forest-50 disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+                <button type="button" onClick={() => setQuantity(Math.min(currentStockCount, quantity + 1))} disabled={quantity >= currentStockCount} aria-label="Increase quantity" className="px-4 py-2 max-lg:min-h-11 max-lg:min-w-11 hover:bg-forest-50 disabled:opacity-40 disabled:cursor-not-allowed">+</button>
               </div>
             </div>
 
@@ -177,7 +177,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             {isPlant && (
             <div className="border-t border-forest-200 pt-6">
               <h3 className="font-serif text-xl mb-4">Care Requirements</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {/* Light */}
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-100 h-full">
                   <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -250,8 +250,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       {/* Sticky mobile buy bar. Right padding keeps the floating WhatsApp/chat buttons off the CTA. */}
       {!isOutOfStock && !ctaInView && (
         <div
-          className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border bg-background/95 px-4 pt-3 pr-24 backdrop-blur md:hidden"
-          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+          className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-between gap-3 border-t border-border bg-background/95 px-4 py-3 pr-24 backdrop-blur md:hidden"
         >
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-forest-900">{product.name}</p>

@@ -25,12 +25,12 @@ export function FeaturedPlants({ products, n }: { products: Product[]; n: string
   if (featured.length === 0) return null
 
   return (
-    <section className="bg-background py-24 lg:py-32">
+    <section className="bg-background py-12 lg:py-14">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <SectionLabel n={n} label="Fresh in the greenhouse" />
         </FadeIn>
-        <div className="mb-12 flex flex-wrap items-end justify-between gap-6">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
           <h2 className="font-serif text-[clamp(2.25rem,6vw,4.5rem)] leading-[0.95] tracking-tight text-foreground">
             <AnimatedHeading lines={["Just in,", "ready to go home."]} />
           </h2>

@@ -7,6 +7,7 @@ import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
 import { BookOpen, CalendarDays, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, Package, ShoppingBag, Users, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { BrandLogo } from "./brand-logo"
 
 type NavEntry = { href: string; label: string; icon: React.ElementType }
 
@@ -71,9 +72,12 @@ function NavItem({ entry, active, onNavigate }: { entry: NavEntry; active: boole
 function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
-      <Link href="/admin" onClick={onNavigate} className="mx-1 mb-6 mt-1 block rounded px-2 focus-visible:ring-offset-ink">
-        <span className="block font-serif text-[22px] leading-none tracking-tight text-paper">Muffin</span>
-        <span className="mt-1.5 block text-xs text-paper/60">Greenhouse admin</span>
+      <Link href="/admin" onClick={onNavigate} className="mx-1 mb-6 mt-1 flex items-center gap-3 rounded px-2 focus-visible:ring-offset-ink">
+        <BrandLogo chip className="h-11 w-11" />
+        <span className="min-w-0">
+          <span className="block font-serif text-[22px] leading-none tracking-tight text-paper">Muffin</span>
+          <span className="mt-1.5 block text-xs text-paper/60">Greenhouse admin</span>
+        </span>
       </Link>
 
       <nav aria-label="Admin sections" className="flex-1 space-y-5 overflow-y-auto">
@@ -124,8 +128,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       {/* Phone top bar + slide-out menu */}
       <div className="sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 print:hidden lg:hidden">
-        <Link href="/admin" className="font-serif text-xl tracking-tight text-paper focus-visible:ring-offset-ink">
-          Muffin <span className="font-sans text-xs text-paper/60">admin</span>
+        <Link href="/admin" className="flex items-center gap-2.5 font-serif text-xl tracking-tight text-paper focus-visible:ring-offset-ink">
+          <BrandLogo chip className="h-9 w-9" />
+          <span>
+            Muffin <span className="font-sans text-xs text-paper/60">admin</span>
+          </span>
         </Link>
         <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
           <Dialog.Trigger

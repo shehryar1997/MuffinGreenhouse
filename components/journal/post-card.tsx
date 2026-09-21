@@ -32,7 +32,7 @@ export function PostCard({ post, featured = false }: { post: JournalPost; featur
       </div>
 
       <div className={cn("flex flex-1 flex-col p-6", featured && "justify-center lg:p-10")}>
-        <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-primary">
+        <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs lg:text-[11px] uppercase tracking-widest text-primary">
           {featured && <span>Latest</span>}
           {post.tags.slice(0, 2).map((tag) => (
             <span key={tag} className={cn(featured && "text-muted-foreground")}>

@@ -358,6 +358,48 @@ export async function deleteProduct(productId: string): Promise<ProductActionRes
   redirect("/admin/products")
 }
 
+// Attaches already-uploaded photos to a product straight from the products list (no edit form).
+// Photos are only ever appended: the first one becomes the primary image when the product has
+// none, and existing photos are never touched or deleted.
+export async function addProductPhotos(productId: string, urls: string[]): Promise<ProductActionResult> {
+  await requireAdmin()
+
+  const wanted = Array.from(new Set(urls.map((u) => u.trim()).filter(Boolean)))
+  if (wanted.length === 0) return { error: "No photo was uploaded." }
+  if (wanted.length > 10) return { error: "Add at most 10 photos at a time." }
+  if (wanted.some((u) => !isAllowedImageUrl(u))) {
+    return { error: "One of the photos isn't from an allowed image host. Upload it with the photo button again." }
+  }
+
+  const { data: existing, error: readError } = await supabaseAdmin
+    .from("product_images")
+    .select("url, sort_order")
+    .eq("product_id", productId)
+  if (readError) return { error: `Could not read the product's photos: ${readError.message}` }
+
+  const have = new Set((existing ?? []).map((r) => r.url as string))
+  const fresh = wanted.filter((u) => !have.has(u))
+  if (fresh.length === 0) return undefined
+
+  const nextOrder = Math.max(-1, ...(existing ?? []).map((r) => (r.sort_order as number | null) ?? 0)) + 1
+  const hasPhotos = (existing ?? []).length > 0
+  const { error } = await supabaseAdmin.from("product_images").insert(
+    fresh.map((url, i) => ({
+      product_id: productId,
+      url,
+      alt_text: "",
+      sort_order: nextOrder + i,
+      is_primary: !hasPhotos && i === 0,
+    }))
+  )
+  if (error) {
+    return { error: error.code === "23503" ? "This product no longer exists. It may have been deleted." : `Saving the photo failed: ${error.message}` }
+  }
+
+  revalidatePath("/admin/products")
+  revalidateStorefront()
+}
+
 type StockStatus = "in_stock" | "low_stock" | "out_of_stock"
 function stockStatusFor(stock: number, threshold: number): StockStatus {
   if (stock <= 0) return "out_of_stock"

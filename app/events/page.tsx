@@ -93,7 +93,7 @@ function FeaturedEvent({ event }: { event: Awaited<ReturnType<typeof getUpcoming
         </div>
 
         <div className="flex flex-col justify-center p-7 sm:p-10">
-          <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-primary">
+          <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs lg:text-[11px] uppercase tracking-widest text-primary">
             <span>{EVENT_TYPE_LABEL[event.type]}</span>
             {status && (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 normal-case tracking-normal">{status.text}</span>

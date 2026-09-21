@@ -8,7 +8,7 @@ export function SectionLabel({ n, label, tone = "default" }: { n: string; label:
         ? { n: "text-ink/60", slash: "text-ink/30", label: "text-ink/70" }
         : { n: "text-forest-500", slash: "text-forest-300", label: "text-forest-600" }
   return (
-    <div className="mb-10 lg:mb-14">
+    <div className="mb-6 lg:mb-8">
       <span className={`font-mono text-xs ${colors.n}`}>{n}</span>
       <span className={`mx-3 ${colors.slash}`}>/</span>
       <span className={`font-mono text-xs uppercase tracking-widest ${colors.label}`}>{label}</span>

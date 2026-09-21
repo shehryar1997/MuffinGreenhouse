@@ -24,12 +24,12 @@ export function ShopByNeedSection({ n }: { n: string }) {
   })
 
   return (
-    <section className="bg-cream-200 py-24 lg:py-32">
+    <section className="bg-cream-200 py-12 lg:py-14">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <SectionLabel n={n} label="Shop by need" />
         </FadeIn>
-        <h2 className="mb-12 font-serif text-[clamp(2.25rem,6vw,4.5rem)] leading-[0.95] tracking-tight text-forest-950">
+        <h2 className="mb-8 font-serif text-[clamp(2.25rem,6vw,4.5rem)] leading-[0.95] tracking-tight text-forest-950">
           <AnimatedHeading lines={["Find your kind of green."]} />
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

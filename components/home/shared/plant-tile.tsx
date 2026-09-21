@@ -32,20 +32,20 @@ export function PlantTile({ product, ratio = "aspect-[4/5]", priority = false }:
         )}
 
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
-          {product.isNewArrival && <span className="rounded-full bg-secondary px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-secondary-foreground">New</span>}
-          {soldOut && <span className="rounded-full bg-ink px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-paper">Sold out</span>}
+          {product.isNewArrival && <span className="rounded-full bg-secondary px-2.5 py-1 font-mono text-xs lg:text-[10px] uppercase tracking-wider text-secondary-foreground">New</span>}
+          {soldOut && <span className="rounded-full bg-ink px-2.5 py-1 font-mono text-xs lg:text-[10px] uppercase tracking-wider text-paper">Sold out</span>}
           {product.stockStatus === "low_stock" && (
-            <span className="rounded-full bg-clay-500 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-white">Only {product.stockCount} left</span>
+            <span className="rounded-full bg-clay-500 px-2.5 py-1 font-mono text-xs lg:text-[10px] uppercase tracking-wider text-white">Only {product.stockCount} left</span>
           )}
         </div>
 
-        <span className="absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-between rounded-full bg-background/95 px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-foreground opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+        <span className="absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-between rounded-full bg-background/95 px-4 py-2 font-mono text-xs lg:text-[11px] uppercase tracking-widest text-foreground opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
           View plant <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
       </div>
 
       <div className="mt-4">
-        <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">{product.category.name}</p>
+        <p className="font-mono text-xs lg:text-[11px] uppercase tracking-widest text-muted-foreground">{product.category.name}</p>
         <h3 className="mt-1 font-serif text-xl leading-tight text-foreground transition-colors group-hover:text-primary">{product.name}</h3>
         <p className="mt-1 font-mono text-sm text-foreground">{formatPrice(product.price)}</p>
         {isPlant && (

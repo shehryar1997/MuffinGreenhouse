@@ -6,6 +6,7 @@ import { FadeIn, AnimatedHeading } from "@/components/home/shared/animations"
 import { SectionLabel } from "@/components/home/shared/section-label"
 import { AgaveArt, AroidArt, CactusArt, CategoryArt, SansevieriaArt } from "@/components/home/shared/plant-art"
 
+// On phones the last two tiles ("wide") span both columns: the tools tile has a long title that needs the room.
 // Tiles sit on light, theme-independent colours (the illustrations use fixed brand colours), so ink text is safe.
 const tiles = [
   { slug: "aroids", name: "Aroids", note: "Monstera, Pink Princess & friends", bg: "bg-[#E4ECD3]" },
@@ -14,18 +15,18 @@ const tiles = [
   { slug: "mangaves", name: "Mangaves", note: "Spotted, speckled, collectable", bg: "bg-[#EBE3F0]" },
   { slug: "hoyas", name: "Hoyas", note: "Trailing wax vines", bg: "bg-[#F6DDE4]" },
   { slug: "orchids", name: "Orchids", note: "Blooms that last", bg: "bg-[#E6ECDA]" },
-  { slug: "cacti-succulents", name: "Cacti & Succulents", note: "Sun lovers", bg: "bg-[#F4E6C8]" },
-  { slug: "tools-equipment", name: "Shop Gardening Tools & Equipment", note: "Tools, watering & plant care", bg: "bg-[#F6DDCB]" },
+  { slug: "cacti-succulents", name: "Cacti & Succulents", note: "Sun lovers", bg: "bg-[#F4E6C8]", wide: true },
+  { slug: "tools-equipment", name: "Shop Gardening Tools & Equipment", note: "Tools, watering & plant care", bg: "bg-[#F6DDCB]", wide: true },
 ]
 
 export function CategoryTiles({ n }: { n: string }) {
   return (
-    <section className="bg-cream-100 py-24 lg:py-32">
+    <section className="bg-cream-100 py-12 lg:py-14">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <SectionLabel n={n} label="Shop the greenhouse" />
         </FadeIn>
-        <div className="mb-12 flex flex-wrap items-end justify-between gap-6">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
           <h2 className="font-serif text-[clamp(2.25rem,6vw,4.5rem)] leading-[0.95] tracking-tight text-forest-950">
             <AnimatedHeading lines={["Pick a family,", "find your plant."]} />
           </h2>
@@ -65,10 +66,10 @@ export function CategoryTiles({ n }: { n: string }) {
           </FadeIn>
 
           {tiles.map((tile, i) => (
-            <FadeIn key={tile.slug} delay={0.08 + i * 0.05}>
+            <FadeIn key={tile.slug} delay={0.08 + i * 0.05} className={"wide" in tile && tile.wide ? "max-lg:col-span-2" : undefined}>
               <Link
                 href={`/shop/${tile.slug}`}
-                className={`group relative flex h-full min-h-[13rem] flex-col justify-between overflow-hidden rounded-3xl p-5 text-ink transition-transform duration-300 hover:-translate-y-1 sm:min-h-[15rem] sm:p-6 ${tile.bg}`}
+                className={`group relative flex h-full min-h-[13rem] flex-col justify-between overflow-hidden rounded-3xl p-5 text-ink transition-transform duration-300 hover:-translate-y-1 sm:min-h-[15rem] sm:p-6 ${tile.bg} ${"wide" in tile && tile.wide ? "max-lg:min-h-[9.5rem]" : ""}`}
               >
                 <div className="relative z-10">
                   <h3 className="font-serif text-xl leading-tight sm:text-2xl">{tile.name}</h3>

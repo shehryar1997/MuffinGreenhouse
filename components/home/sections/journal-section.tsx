@@ -12,12 +12,12 @@ export function JournalSection({ posts, n }: { posts: JournalPost[]; n: string }
   if (posts.length === 0) return null
 
   return (
-    <section className="border-t border-forest-200/50 bg-background py-24 lg:py-32">
+    <section className="border-t border-forest-200/50 bg-background py-12 lg:py-14">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <SectionLabel n={n} label="From the journal" />
         </FadeIn>
-        <div className="mb-12 flex flex-wrap items-end justify-between gap-6">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-6">
           <h2 className="font-serif text-[clamp(2.25rem,6vw,4.5rem)] leading-[0.95] tracking-tight text-forest-950">
             <AnimatedHeading lines={["Care advice,", "without the fluff."]} />
           </h2>

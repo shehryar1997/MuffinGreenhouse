@@ -14,7 +14,7 @@ const items = [
 export function TrustStrip() {
   return (
     <section className="border-b border-border/60 bg-background">
-      <div className="container mx-auto px-6 py-12 lg:px-12 lg:py-14">
+      <div className="container mx-auto px-6 py-8 lg:px-12 lg:py-10">
         <ul className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item, i) => (
             <li key={item.title}>

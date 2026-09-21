@@ -10,7 +10,7 @@ const whatsappUrl = `https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, ""
 
 export function FinalCta() {
   return (
-    <section className="relative overflow-hidden bg-clay-500 py-20 text-white lg:py-28">
+    <section className="relative overflow-hidden bg-clay-500 py-12 text-white lg:py-16">
       <span className="pointer-events-none absolute left-[8%] top-10 animate-float text-4xl text-sprout-300/80" aria-hidden="true">
         ✦
       </span>

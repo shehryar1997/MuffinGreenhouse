@@ -57,7 +57,7 @@ export function ShopAllClient({ products, currentPage, totalPages, totalCount, f
                       </div>
                       <div>
                         <select 
-                          className="font-mono text-sm text-forest-700 bg-surface border border-forest-200 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-clay-300"
+                          className="font-mono text-sm text-forest-700 bg-surface border border-forest-200 rounded px-3 py-1.5 max-lg:min-h-11 focus:outline-none focus:ring-2 focus:ring-clay-300"
                           value={filters.sort || 'new'}
                           onChange={(e) => updateFilter('sort', e.target.value)}
                         >
@@ -78,7 +78,7 @@ export function ShopAllClient({ products, currentPage, totalPages, totalCount, f
                     ) : (
                       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {products.map((product, i) => (
-                          <ProductCard key={product.id} product={product} index={i} />
+                          <ProductCard key={product.id} product={product} index={i} sizes="(max-width: 1200px) 50vw, 33vw" />
                         ))}
                       </div>
                     )}

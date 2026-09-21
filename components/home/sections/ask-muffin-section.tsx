@@ -10,7 +10,7 @@ import { MUFFIN_QUICK_REPLIES } from "@/lib/muffin-engine"
 
 export function AskMuffinSection({ n }: { n: string }) {
   return (
-    <section className="relative overflow-hidden bg-ink py-24 text-paper lg:py-32">
+    <section className="relative overflow-hidden bg-ink py-12 text-paper lg:py-14">
       <div className="pointer-events-none absolute -left-24 top-0 h-96 w-96 rounded-full bg-sprout-300/10 blur-3xl" aria-hidden="true" />
       <div className="pointer-events-none absolute -right-24 bottom-0 h-96 w-96 rounded-full bg-clay-500/20 blur-3xl" aria-hidden="true" />
 
@@ -56,7 +56,7 @@ export function AskMuffinSection({ n }: { n: string }) {
               </div>
 
               <div className="space-y-4 rounded-[2rem] border border-paper/15 bg-paper/5 p-6 pt-10 backdrop-blur-sm sm:p-8 sm:pt-12">
-                <p className="font-mono text-[11px] uppercase tracking-widest text-paper/50">Ask Muffin · plant guide</p>
+                <p className="font-mono text-xs lg:text-[11px] uppercase tracking-widest text-paper/50">Ask Muffin · plant guide</p>
                 <div className="max-w-[85%] rounded-2xl rounded-tl-md bg-paper px-4 py-3 text-sm text-ink">Hi! I am Muffin, your plant guide. What are you looking for today?</div>
                 <div className="ml-auto max-w-[70%] rounded-2xl rounded-tr-md bg-clay-500 px-4 py-3 text-sm text-white">Low light survivors</div>
                 <div className="flex w-fit items-center gap-1.5 rounded-2xl rounded-tl-md bg-paper px-4 py-3" aria-hidden="true">

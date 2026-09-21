@@ -122,7 +122,7 @@ export function CtaBand({ title, body, message }: { title: string; body: string;
 // Mobile only. The page adds bottom padding so this never covers content.
 export function StickyCtaBar({ message }: { message: string }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 pt-3 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
+    <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-40 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-2 gap-3">
         <WhatsAppButton message={message} label="WhatsApp" className="w-full" />
         <CallButton label="Call" className="w-full" />

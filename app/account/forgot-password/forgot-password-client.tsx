@@ -146,7 +146,7 @@ function ForgotPasswordForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-500 hover:text-forest-600 max-lg:right-0 max-lg:flex max-lg:h-11 max-lg:w-11 max-lg:items-center max-lg:justify-center"
                   aria-pressed={showPassword}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >

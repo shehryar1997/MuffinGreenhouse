@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { showsMobileTabBar } from "@/components/layout/mobile-tab-bar"
 import { CartDrawer } from "@/components/cart/cart-drawer"
 import { SearchDrawer } from "@/components/search/search-drawer"
 import { FloatingActions } from "@/components/ui/floating-actions"
@@ -25,7 +26,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}
       </main>
-      <Footer />
+      <Footer clearTabBar={showsMobileTabBar(pathname)} />
       <CartDrawer />
       <SearchDrawer />
       <FloatingActions showChat={!isCheckout} showWhatsApp={!isPay} />

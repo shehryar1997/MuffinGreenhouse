@@ -72,7 +72,7 @@ export default async function ToolsEquipmentPage() {
                 ) : (
                   <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {products.map((product, i) => (
-                      <ProductCard key={product.id} product={product} index={i} />
+                      <ProductCard key={product.id} product={product} index={i} sizes="(max-width: 1200px) 50vw, 33vw" />
                     ))}
                   </div>
                 )}

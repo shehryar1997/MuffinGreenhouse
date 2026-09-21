@@ -91,7 +91,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               )}
             </div>
 
-            <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-primary">
+            <div className="mb-3 flex flex-wrap items-center gap-2 font-mono text-xs lg:text-[11px] uppercase tracking-widest text-primary">
               <span>{EVENT_TYPE_LABEL[event.type]}</span>
               <span aria-hidden>·</span>
               <span>{formatEventPrice(event.price)}</span>
@@ -105,21 +105,21 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
               <div className="flex items-start gap-3">
                 <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                 <div>
-                  <dt className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Date</dt>
+                  <dt className="font-mono text-xs lg:text-[11px] uppercase tracking-wider text-muted-foreground">Date</dt>
                   <dd className="text-foreground">{formatEventDate(event.datetime)}</dd>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                 <div>
-                  <dt className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Time</dt>
+                  <dt className="font-mono text-xs lg:text-[11px] uppercase tracking-wider text-muted-foreground">Time</dt>
                   <dd className="text-foreground">{formatEventTime(event.datetime, event.endDatetime)}</dd>
                 </div>
               </div>
               <div className="flex items-start gap-3 sm:col-span-2">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                 <div>
-                  <dt className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Where</dt>
+                  <dt className="font-mono text-xs lg:text-[11px] uppercase tracking-wider text-muted-foreground">Where</dt>
                   <dd className="text-foreground">{event.location}</dd>
                 </div>
               </div>

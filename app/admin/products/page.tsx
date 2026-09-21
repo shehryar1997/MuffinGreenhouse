@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { Plus, Search } from "lucide-react"
+import { ImageIcon, Plus, Search } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { sanitizeSearchTerm } from "@/lib/search-term"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { DeleteProductButton } from "./delete-product-button"
+import { ProductPhotoButton } from "./product-photo-button"
 import { deleteProduct } from "./actions"
 import { Alert, Badge, ButtonLink, EmptyState, PageHeader, StatStrip, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, linkClass, rowLinkClass } from "../_components/ui"
 import { fmtNumber, rs } from "../_components/format"
@@ -36,13 +37,25 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   const filter = FILTERS.find((f) => f === rawFilter)
   const categoryFilter = rawCategory?.slice(0, 80) || undefined
 
-  const [{ data, error }, { data: categoryRows }] = await Promise.all([
+  const [{ data, error }, { data: categoryRows }, { data: imageRows }] = await Promise.all([
     supabaseAdmin
       .from("products")
       .select("id, sku, name, category_name, price, stock_count, stock_status, published_at, weight_kg")
       .order("name"),
     supabaseAdmin.from("categories").select("name").order("sort_order"),
+    supabaseAdmin.from("product_images").select("product_id, url, is_primary, sort_order").order("sort_order"),
   ])
+
+  // First photo per product (the primary one when flagged) + how many it has.
+  const photos = new Map<string, { url: string; count: number }>()
+  for (const row of (imageRows ?? []) as { product_id: string; url: string; is_primary: boolean | null }[]) {
+    const seen = photos.get(row.product_id)
+    if (!seen) photos.set(row.product_id, { url: row.url, count: 1 })
+    else {
+      seen.count += 1
+      if (row.is_primary) seen.url = row.url
+    }
+  }
 
   if (error) {
     return (
@@ -166,7 +179,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
             }
           />
         ) : (
-          <TableShell minWidth="min-w-[760px]">
+          <TableShell minWidth="min-w-[860px]">
             <Thead>
               <tr>
                 <Th>Product</Th>
@@ -181,14 +194,27 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
               {products.map((p) => {
                 const needsWeightFlag = isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
                 const isLowStock = p.stock_count !== null && p.stock_count > 0 && p.stock_count <= 5
+                const photo = photos.get(p.id)
 
                 return (
                   <Tr key={p.id}>
                     <Td>
-                      <Link href={`/admin/products/${p.id}/edit`} className={rowLinkClass}>
-                        {p.name}
-                      </Link>
-                      <p className="mt-0.5 font-mono text-xs text-muted-foreground">{p.sku}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/50">
+                          {photo ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- small admin thumbnail of a stored URL
+                            <img src={photo.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                          ) : (
+                            <ImageIcon className="h-4 w-4 text-muted-foreground/50" aria-label="No photo yet" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <Link href={`/admin/products/${p.id}/edit`} className={rowLinkClass}>
+                            {p.name}
+                          </Link>
+                          <p className="mt-0.5 font-mono text-xs text-muted-foreground">{p.sku}</p>
+                        </div>
+                      </div>
                     </Td>
                     <Td>
                       <span className="text-foreground/80">{p.category_name ?? "—"}</span>
@@ -214,7 +240,8 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                     </Td>
                     <Td>{p.published_at ? <Badge tone="success">Published</Badge> : <Badge>Draft</Badge>}</Td>
                     <Td align="right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-start justify-end gap-2">
+                        <ProductPhotoButton productId={p.id} hasPhotos={!!photo} />
                         <ButtonLink href={`/admin/products/${p.id}/edit`} size="sm">
                           Edit
                         </ButtonLink>

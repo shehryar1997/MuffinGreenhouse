@@ -28,18 +28,77 @@ function LogoChip({ className, imgClassName }: { className?: string; imgClassNam
   )
 }
 
-/** Floating "Ask Muffin" button. Text shows from sm up; phones get just the logo so it doesn't cover the buy bar. */
+const TIP_KEY = "muffin-tip-seen"
+const TIP_DELAY_MS = 4000
+const TIP_VISIBLE_MS = 16000
+
+/** Floating "Ask Muffin" button. Text shows from sm up; phones get just the logo so it doesn't cover the buy bar.
+ *  A small speech bubble beside it says what Muffin can do; it shows once per visit, then stays out of the way. */
 export function AskMuffinLauncher({ onClick }: { onClick: () => void }) {
+  const [tipOpen, setTipOpen] = useState(false)
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(TIP_KEY)) return
+    } catch {}
+    const show = setTimeout(() => setTipOpen(true), TIP_DELAY_MS)
+    return () => clearTimeout(show)
+  }, [])
+
+  const hideTip = () => {
+    setTipOpen(false)
+    try {
+      sessionStorage.setItem(TIP_KEY, "1")
+    } catch {}
+  }
+
+  useEffect(() => {
+    if (!tipOpen) return
+    const hide = setTimeout(hideTip, TIP_VISIBLE_MS)
+    return () => clearTimeout(hide)
+  }, [tipOpen])
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex items-center gap-2.5 rounded-full border border-border bg-background p-1.5 shadow-xl transition duration-300 hover:-translate-y-0.5 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:pr-5"
-      aria-label="Open Ask Muffin chat"
-    >
-      <LogoChip className="h-11 w-11" imgClassName="transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110" />
-      <span className="hidden font-serif text-base leading-none text-foreground sm:inline">{askMuffin.name}</span>
-    </button>
+    <div className="relative">
+      {tipOpen && (
+        <div className="absolute inset-y-0 right-full mr-3 flex items-center">
+          <div className="relative w-max max-w-[11.5rem] animate-fade-in rounded-2xl border border-border bg-background py-2.5 pl-3.5 pr-8 shadow-xl sm:max-w-[15rem]">
+            <button
+              type="button"
+              onClick={() => {
+                hideTip()
+                onClick()
+              }}
+              className="block rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <span className="block font-serif text-sm leading-tight text-foreground">Not sure which plant?</span>
+              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">Ask Muffin for plant picks, care tips or an order update.</span>
+            </button>
+            <button
+              type="button"
+              onClick={hideTip}
+              className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Dismiss tip"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+            <span className="absolute -right-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rotate-45 border-r border-t border-border bg-background" aria-hidden="true" />
+          </div>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          if (tipOpen) hideTip()
+          onClick()
+        }}
+        className="group flex items-center gap-2.5 rounded-full border border-border bg-background p-1.5 shadow-xl transition duration-300 hover:-translate-y-0.5 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:pr-5"
+        aria-label="Open Ask Muffin chat"
+      >
+        <LogoChip className="h-10 w-10 sm:h-11 sm:w-11" imgClassName="transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110" />
+        <span className="hidden font-serif text-base leading-none text-foreground sm:inline">{askMuffin.name}</span>
+      </button>
+    </div>
   )
 }
 

@@ -265,7 +265,7 @@ export function PhotoFallback({ slug, label, className }: { slug: string; label?
     <div className={`relative flex h-full w-full items-center justify-center bg-gradient-to-b from-[#EEF3DC] to-[#DDE8C4] ${label ? "pb-6" : ""} ${className ?? ""}`}>
       <CategoryArt slug={slug} className="h-3/4 w-3/4" />
       {label && (
-        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[10px] uppercase tracking-widest text-[#3F5A34]">{label}</span>
+        <span className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-xs lg:text-[10px] uppercase tracking-widest text-[#3F5A34]">{label}</span>
       )}
     </div>
   )

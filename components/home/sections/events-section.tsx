@@ -9,7 +9,7 @@ import type { Event } from "@/types"
 
 export function EventsSection({ events, n }: { events: Event[]; n: string }) {
   return (
-    <section className="bg-sprout-100 py-24 lg:py-32">
+    <section className="bg-sprout-100 py-12 lg:py-14">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <SectionLabel n={n} label="In the greenhouse" />
@@ -42,7 +42,7 @@ export function EventsSection({ events, n }: { events: Event[]; n: string }) {
                     className="group flex items-stretch gap-5 rounded-3xl border border-forest-200/60 bg-surface p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:gap-6 sm:p-5"
                   >
                     <div className="flex w-20 shrink-0 flex-col items-center justify-center rounded-2xl bg-forest-950 py-3 text-cream-50 sm:w-24">
-                      <span className="font-mono text-[11px] uppercase tracking-widest text-sprout-300">{formatEventMonth(event.datetime)}</span>
+                      <span className="font-mono text-xs lg:text-[11px] uppercase tracking-widest text-sprout-300">{formatEventMonth(event.datetime)}</span>
                       <span className="font-serif text-4xl leading-none sm:text-5xl">{formatEventDay(event.datetime)}</span>
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col justify-center">

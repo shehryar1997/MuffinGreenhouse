@@ -375,6 +375,19 @@ export default function CheckoutPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            {/* Phones: the summary is a collapsed bar above the form, so the total stays in view; desktop keeps the side column. */}
+            <details className="group rounded-xl border border-forest-200 bg-surface lg:hidden">
+              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2 text-sm font-medium text-forest-900">
+                  Order summary
+                  <span className="text-xs font-normal text-forest-500 group-open:hidden">({itemCount} {itemCount === 1 ? "item" : "items"}, tap to view)</span>
+                </span>
+                <span className="font-mono text-lg font-medium text-forest-900">{formatPrice(total)}</span>
+              </summary>
+              <div className="border-t border-forest-200 [&>div]:border-0 [&>div]:bg-transparent">
+                <OrderSummary items={cart.items} subtotal={subtotal} deliveryFee={deliveryFee} deliveryType={deliveryType} total={total} isCalculatingDeliveryFee={isCalculatingDeliveryFee} deliveryFeeError={deliveryFeeError} currentStep={currentStep} />
+              </div>
+            </details>
             <div className="lg:col-span-3">
               {currentStep === 1 ? (
                 <div className="space-y-6">
@@ -569,7 +582,7 @@ export default function CheckoutPage() {
             </div>
 
             {/* Order Summary */}
-            <div className="lg:col-span-2">
+            <div className="hidden lg:col-span-2 lg:block">
               <div className="lg:sticky lg:top-8">
                 <OrderSummary items={cart.items} subtotal={subtotal} deliveryFee={deliveryFee} deliveryType={deliveryType} total={total} isCalculatingDeliveryFee={isCalculatingDeliveryFee} deliveryFeeError={deliveryFeeError} currentStep={currentStep} />
               </div>

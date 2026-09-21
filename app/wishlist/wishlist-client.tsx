@@ -75,7 +75,7 @@ export function WishlistClient({ initialProducts }: WishlistClientProps) {
               ease: [0.22, 1, 0.36, 1],
             }}
           >
-            <ProductCard product={product} index={index} />
+            <ProductCard product={product} index={index} sizes="(max-width: 1200px) 50vw, 33vw" />
           </motion.div>
         ))}
       </AnimatePresence>

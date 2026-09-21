@@ -4,22 +4,42 @@ import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { Heart, Search, ShoppingBag, Menu, User, Star, X } from "lucide-react"
+import { ChevronDown, Heart, Search, ShoppingBag, Menu, User, Star, X } from "lucide-react"
 import { askMuffin, mainNav, shopMegaMenuSections } from "@/config/nav.config"
 import { useCart } from "@/components/providers/cart-provider"
 import { useSearch } from "@/components/providers/search-provider"
 import { useWishlist } from "@/components/providers/wishlist-provider"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar"
+
+// Pages reachable from the phone menu that are not in the main nav (which only has the top-level sections).
+const moreLinks = [
+  { href: "/plant-finder", label: "Plant finder" },
+  { href: "/shop-by-need", label: "Shop by need" },
+  { href: "/our-story", label: "Our story" },
+  { href: "/visit-us", label: "Visit us" },
+  { href: "/reviews", label: "Reviews" },
+  { href: "/delivery-and-pickup", label: "Delivery & pickup" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/contact", label: "Contact" },
+]
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [shopMenuOpen, setShopMenuOpen] = useState(false)
+  const [menuShopOpen, setMenuShopOpen] = useState(false)
   const shopMenuTimeout = useRef<NodeJS.Timeout | null>(null)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const { toggleCart, itemCount } = useCart()
   const { openSearch } = useSearch()
   const { count: wishlistCount } = useWishlist()
+
+  // The phone menu can open with the Shop section already expanded (the "Shop" tab in the bottom bar).
+  const openMobileMenu = (expandShop = false) => {
+    setMenuShopOpen(expandShop)
+    setMobileMenuOpen(true)
+  }
 
   const handleShopMenuEnter = () => {
     if (shopMenuTimeout.current) {
@@ -46,36 +66,33 @@ export function Header() {
     return () => document.removeEventListener("keydown", handleEscape)
   }, [mobileMenuOpen])
 
-  // Focus trap and initial focus
+  // Focus trap and initial focus. The focusable set is read on every Tab because expanding "Shop" changes it.
   useEffect(() => {
     if (!mobileMenuOpen) return
-    
-    const focusableElements = mobileMenuRef.current?.querySelectorAll(
-      'a[href], button, [tabindex]:not([tabindex="-1"])'
-    )
-    if (!focusableElements?.length) return
 
-    const firstElement = focusableElements[0] as HTMLElement
-    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+    const focusable = () =>
+      Array.from(mobileMenuRef.current?.querySelectorAll<HTMLElement>('a[href], button, [tabindex]:not([tabindex="-1"])') ?? [])
 
     const handleTabKey = (e: KeyboardEvent) => {
       if (e.key !== "Tab") return
+      const elements = focusable()
+      if (!elements.length) return
+      const first = elements[0]
+      const last = elements[elements.length - 1]
 
       if (e.shiftKey) {
-        if (document.activeElement === firstElement) {
-          lastElement?.focus()
+        if (document.activeElement === first) {
+          last.focus()
           e.preventDefault()
         }
-      } else {
-        if (document.activeElement === lastElement) {
-          firstElement?.focus()
-          e.preventDefault()
-        }
+      } else if (document.activeElement === last) {
+        first.focus()
+        e.preventDefault()
       }
     }
 
     document.addEventListener("keydown", handleTabKey)
-    firstElement?.focus()
+    mobileMenuRef.current?.querySelector<HTMLElement>("[data-menu-close]")?.focus()
     const menuButton = menuButtonRef.current
 
     return () => {
@@ -113,7 +130,7 @@ export function Header() {
             {/* Hamburger Menu Button - Mobile Only */}
             <button 
               ref={menuButtonRef}
-              onClick={() => setMobileMenuOpen(true)}
+              onClick={() => openMobileMenu()}
               className="lg:hidden p-3 -ml-2 hover:bg-muted rounded-full transition-colors touch-target"
               style={{ touchAction: "manipulation" }}
               aria-label="Open navigation menu"
@@ -294,7 +311,7 @@ export function Header() {
             ))}
           </nav>
 
-          {/* RIGHT: Actions (Cart + Account on mobile, full nav on desktop) */}
+          {/* RIGHT: Actions (Account on mobile; search, wishlist and cart live in the bottom tab bar) */}
           <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-1 lg:flex-none justify-end">
             
             {/* Desktop: Account */}
@@ -335,16 +352,6 @@ export function Header() {
               <ThemeToggle />
             </div>
 
-            {/* Search - Mobile/Tablet (was desktop-only, so phones had no search at all) */}
-            <button
-              onClick={openSearch}
-              className="p-2.5 lg:hidden hover:bg-muted rounded-full transition-colors"
-              style={{ touchAction: "manipulation" }}
-              aria-label="Search products"
-            >
-              <Search className="w-6 h-6 text-foreground" />
-            </button>
-
             {/* Account Icon - Mobile/Tablet */}
             <Link
               href="/account" 
@@ -355,10 +362,10 @@ export function Header() {
               <User className="w-6 h-6 text-foreground" />
             </Link>
 
-            {/* Cart - All screens */}
+            {/* Cart - desktop (phones have it in the bottom tab bar) */}
             <button 
               onClick={() => toggleCart(true)} 
-              className="p-3 -mr-2 lg:-mr-0 lg:px-2 lg:py-2 hover:bg-muted rounded-full transition-colors flex items-center gap-2"
+              className="max-lg:hidden p-3 -mr-2 lg:-mr-0 lg:px-2 lg:py-2 hover:bg-muted rounded-full transition-colors flex items-center gap-2"
               style={{ touchAction: "manipulation" }}
               aria-label={`Shopping cart with ${itemCount} items`}
             >
@@ -378,11 +385,10 @@ export function Header() {
 
     </motion.header>
 
-    {/* Mobile/Overlay Menu - Rendered outside header for proper z-index stacking */}
+    {/* Phone menu - rendered outside the header for proper z-index stacking */}
     <AnimatePresence>
       {mobileMenuOpen && (
         <>
-          {/* Backdrop overlay with blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -391,7 +397,6 @@ export function Header() {
             className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100]"
             onClick={() => setMobileMenuOpen(false)}
           />
-          {/* Slide-in menu panel */}
           <motion.div
             ref={mobileMenuRef}
             id="mobile-navigation"
@@ -402,108 +407,151 @@ export function Header() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-y-0 right-0 w-full sm:w-[400px] bg-cream-100 z-[100] shadow-2xl"
+            className="fixed inset-y-0 right-0 z-[100] flex w-full flex-col bg-cream-100 shadow-2xl sm:w-[400px]"
           >
-            {/* The panel is full-width on phones and covers the header, so it needs its own close control. */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="absolute top-4 right-4 z-10 p-3 rounded-full text-forest-900 hover:bg-forest-100 transition-colors touch-target"
-              aria-label="Close navigation menu"
-            >
-              <X className="w-6 h-6" aria-hidden="true" />
-            </button>
-            <div className="h-full overflow-y-auto px-6 py-12 pt-24">
-              <nav className="space-y-8">
-                {mainNav.map((item, i) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    <Link
-                      href={item.href}
-                      className="flex items-baseline gap-4 group"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <span className="font-mono text-sm text-forest-500">{String(i + 1).padStart(2, '0')}</span>
-                      {item.isAi ? (
-                        <span className="flex items-center gap-3">
-                          <span className="font-serif text-4xl text-forest-950 group-hover:text-clay-500 transition-colors">
-                            {item.label}
-                          </span>
-                          <Image
-                            src={askMuffin.logo}
-                            alt=""
-                            width={askMuffin.logoWidth}
-                            height={askMuffin.logoHeight}
-                            className="h-9 w-auto object-contain dark:rounded-lg dark:bg-paper dark:px-1"
-                          />
-                        </span>
-                      ) : (
-                        <span className="font-serif text-4xl text-forest-950 group-hover:text-clay-500 transition-colors">
-                          {item.label}
-                        </span>
-                      )}
-                    </Link>
-                  </motion.div>
-                ))}
-              </nav>
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-forest-200 pl-6 pr-3">
+              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2" aria-label="Muffin Plants - Home">
+                <Image src="/logo-nav.png" alt="" width={37} height={40} className="h-8 w-auto object-contain" />
+                <span className="font-serif text-lg text-forest-950">Muffin Plants</span>
+              </Link>
+              <button
+                type="button"
+                data-menu-close
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-3 rounded-full text-forest-900 hover:bg-forest-100 transition-colors touch-target"
+                aria-label="Close navigation menu"
+              >
+                <X className="w-6 h-6" aria-hidden="true" />
+              </button>
+            </div>
 
-              {/* Categories and search live here on phones (the mega menu is desktop-only). */}
-              <div className="mt-12 pt-8 border-t border-forest-200 space-y-8">
-                <button
-                  type="button"
-                  onClick={() => { setMobileMenuOpen(false); openSearch() }}
-                  className="flex w-full items-center gap-3 rounded-full border border-forest-300 bg-surface px-5 py-3 text-left font-mono text-sm text-forest-600"
-                >
-                  <Search className="w-4 h-4" aria-hidden="true" />
-                  Search plants
-                </button>
-                {shopMegaMenuSections.map((section) => (
-                  <div key={section.id}>
-                    <h2 className="mb-2 font-mono text-xs uppercase tracking-widest text-forest-500">
-                      {section.href ? (
-                        <Link href={section.href} onClick={() => setMobileMenuOpen(false)} className="hover:text-clay-600 transition-colors">
-                          {section.title}
-                        </Link>
-                      ) : (
-                        section.title
-                      )}
-                    </h2>
-                    <ul className="grid grid-cols-2 gap-x-4">
-                      {section.items.map((item) => (
-                        <li key={item.id}>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-10 pt-5">
+              <button
+                type="button"
+                onClick={() => { setMobileMenuOpen(false); openSearch() }}
+                className="flex min-h-12 w-full items-center gap-3 rounded-full border border-forest-300 bg-surface px-5 text-left font-mono text-sm text-forest-600"
+              >
+                <Search className="w-4 h-4" aria-hidden="true" />
+                Search plants
+              </button>
+
+              <nav aria-label="Main" className="mt-4">
+                <ul className="divide-y divide-forest-200">
+                  {mainNav.map((item) =>
+                    item.hasMegaMenu ? (
+                      <li key={item.id}>
+                        <div className="flex items-stretch">
                           <Link
                             href={item.href}
                             onClick={() => setMobileMenuOpen(false)}
-                            className="block py-2 text-forest-800 hover:text-clay-600 transition-colors"
+                            className="flex min-h-14 flex-1 items-center font-serif text-2xl text-forest-950 hover:text-clay-500 transition-colors"
                           >
                             {item.label}
                           </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-                <div className="flex gap-6 font-mono text-xs uppercase tracking-widest">
-                  <Link href="/account" onClick={() => setMobileMenuOpen(false)} className="py-2 text-forest-800 hover:text-clay-600">Account</Link>
-                  <Link href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="py-2 text-forest-800 hover:text-clay-600">Wishlist</Link>
-                  <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="py-2 text-forest-800 hover:text-clay-600">Contact</Link>
-                </div>
+                          <button
+                            type="button"
+                            onClick={() => setMenuShopOpen((open) => !open)}
+                            aria-expanded={menuShopOpen}
+                            aria-controls="mobile-shop-sections"
+                            aria-label={menuShopOpen ? "Hide shop categories" : "Show shop categories"}
+                            className="flex w-14 items-center justify-center text-forest-700"
+                          >
+                            <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${menuShopOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+                          </button>
+                        </div>
+                        {menuShopOpen && (
+                          <div id="mobile-shop-sections" className="space-y-6 pb-6 pt-1">
+                            {shopMegaMenuSections.map((section) => (
+                              <div key={section.id}>
+                                <h2 className="mb-1 font-mono text-xs uppercase tracking-widest text-forest-500">
+                                  {section.href ? (
+                                    <Link href={section.href} onClick={() => setMobileMenuOpen(false)} className="inline-flex min-h-11 items-center hover:text-clay-600 transition-colors">
+                                      {section.title}
+                                    </Link>
+                                  ) : (
+                                    section.title
+                                  )}
+                                </h2>
+                                <ul className="grid grid-cols-2 gap-x-4">
+                                  {section.items.map((sub) => (
+                                    <li key={sub.id}>
+                                      <Link
+                                        href={sub.href}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="flex min-h-11 items-center text-forest-800 hover:text-clay-600 transition-colors"
+                                      >
+                                        {sub.label}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ))}
+                            <Link
+                              href="/shop/all"
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="inline-flex min-h-11 items-center gap-2 font-mono text-xs uppercase tracking-widest text-clay-600"
+                            >
+                              View all products <span aria-hidden="true">→</span>
+                            </Link>
+                          </div>
+                        )}
+                      </li>
+                    ) : (
+                      <li key={item.id}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex min-h-14 items-center gap-3 font-serif text-2xl text-forest-950 hover:text-clay-500 transition-colors"
+                        >
+                          {item.label}
+                          {item.isAi && (
+                            <Image
+                              src={askMuffin.logo}
+                              alt=""
+                              width={askMuffin.logoWidth}
+                              height={askMuffin.logoHeight}
+                              className="h-8 w-auto object-contain dark:rounded-lg dark:bg-paper dark:px-1"
+                            />
+                          )}
+                        </Link>
+                      </li>
+                    )
+                  )}
+                </ul>
+              </nav>
+
+              <div className="mt-6 border-t border-forest-200 pt-4">
+                <h2 className="mb-1 font-mono text-xs uppercase tracking-widest text-forest-500">More</h2>
+                <ul className="grid grid-cols-2 gap-x-4">
+                  {moreLinks.map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href} onClick={() => setMobileMenuOpen(false)} className="flex min-h-11 items-center text-forest-800 hover:text-clay-600 transition-colors">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              <div className="mt-10 pt-8 border-t border-forest-200">
-                <p className="font-mono text-xs text-forest-500 max-w-xs">
-                  A different kind of plant shop. Curated in Karachi, built for real homes.
-                </p>
+              <div className="mt-4 flex items-center justify-between border-t border-forest-200 pt-4">
+                <div className="flex gap-5 font-mono text-xs uppercase tracking-widest">
+                  <Link href="/account" onClick={() => setMobileMenuOpen(false)} className="flex min-h-11 items-center text-forest-800 hover:text-clay-600">Account</Link>
+                  <Link href="/wishlist" onClick={() => setMobileMenuOpen(false)} className="flex min-h-11 items-center text-forest-800 hover:text-clay-600">Wishlist</Link>
+                </div>
+                <ThemeToggle />
               </div>
+
+              <p className="mt-6 font-mono text-xs text-forest-500 max-w-xs">
+                A different kind of plant shop. Curated in Karachi, built for real homes.
+              </p>
             </div>
           </motion.div>
         </>
       )}
     </AnimatePresence>
+
+    <MobileTabBar onShop={() => openMobileMenu(true)} />
   </>
   )
 }

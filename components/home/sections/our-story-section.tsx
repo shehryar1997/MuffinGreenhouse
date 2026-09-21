@@ -14,7 +14,7 @@ const traits = [
 
 export function OurStorySection({ n }: { n: string }) {
   return (
-    <section className="border-t border-forest-200/50 bg-cream-100 py-24 lg:py-32">
+    <section className="border-t border-forest-200/50 bg-cream-100 py-12 lg:py-14">
       <div className="container mx-auto px-6 lg:px-12">
         <FadeIn>
           <SectionLabel n={n} label="Our story" />
