@@ -7,6 +7,7 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  Camera,
   Check,
   ImagePlus,
   Italic,
@@ -110,7 +111,8 @@ function cleanHref(raw: string): string | null {
 export function RichEditor({ name, initialMarkdown }: { name: string; initialMarkdown: string }) {
   const editorRef = useRef<HTMLDivElement>(null)
   const savedRange = useRef<Range | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
   const [initialHtml] = useState(() => markdownToHtml(initialMarkdown) || EMPTY_HTML)
   const [markdown, setMarkdown] = useState(initialMarkdown)
   const [active, setActive] = useState<Active>(NONE)
@@ -118,7 +120,7 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
   const [linkUrl, setLinkUrl] = useState("")
   const [imageUrl, setImageUrl] = useState("")
   const [caption, setCaption] = useState("")
-  const [uploading, setUploading] = useState(false)
+  const [uploading, setUploading] = useState<"camera" | "gallery" | null>(null)
   const [panelError, setPanelError] = useState<string | null>(null)
 
   const sync = useCallback(() => {
@@ -272,18 +274,18 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
     sync()
   }
 
-  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPickFile(source: "camera" | "gallery", e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ""
     if (!file) return
-    setUploading(true)
+    setUploading(source)
     setPanelError(null)
     try {
       setImageUrl(await uploadAdminImage(file, "journal"))
     } catch (err) {
       setPanelError(err instanceof Error ? err.message : "Upload failed.")
     } finally {
-      setUploading(false)
+      setUploading(null)
     }
   }
 
@@ -489,12 +491,21 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
+              onClick={() => cameraRef.current?.click()}
+              disabled={!!uploading}
               className="inline-flex items-center gap-1.5 rounded border border-input bg-surface px-3 py-1 hover:bg-muted disabled:opacity-50"
             >
-              {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-              Upload image
+              {uploading === "camera" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+              Camera
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryRef.current?.click()}
+              disabled={!!uploading}
+              className="inline-flex items-center gap-1.5 rounded border border-input bg-surface px-3 py-1 hover:bg-muted disabled:opacity-50"
+            >
+              {uploading === "gallery" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              Gallery
             </button>
             <span className="text-muted-foreground">or</span>
             <input
@@ -519,7 +530,7 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
               placeholder="Caption (optional, also read aloud to screen-reader users)"
               className="min-w-[14rem] flex-1 rounded border border-input bg-surface px-2 py-1"
             />
-            <button type="button" onClick={insertImage} disabled={uploading || !imageUrl} className="inline-flex items-center gap-1 rounded bg-forest-700 px-3 py-1 text-white hover:bg-forest-800 disabled:opacity-50">
+            <button type="button" onClick={insertImage} disabled={!!uploading || !imageUrl} className="inline-flex items-center gap-1 rounded bg-forest-700 px-3 py-1 text-white hover:bg-forest-800 disabled:opacity-50">
               <Check className="h-3.5 w-3.5" /> Insert
             </button>
             <button type="button" onClick={() => setPanel(null)} className="inline-flex items-center gap-1 rounded border border-input bg-surface px-3 py-1 hover:bg-muted">
@@ -535,7 +546,8 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
               {panelError}
             </p>
           )}
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
+          <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onPickFile("camera", e)} />
+          <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPickFile("gallery", e)} />
         </div>
       )}
 

@@ -6,6 +6,7 @@ import { DeleteCustomerButton } from "./delete-customer-button"
 import { deleteCustomer } from "./actions"
 import { Alert, Badge, ButtonLink, EmptyState, PageHeader, StatStrip, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, linkClass, rowLinkClass } from "../_components/ui"
 import { fmtDate, fmtNumber, plural, rs } from "../_components/format"
+import { realEmail } from "@/lib/manual-order"
 
 // Force fresh data on every load — admin pages should never show a
 // customer's stale phone/address/etc. after they've just updated it.
@@ -140,7 +141,7 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
                         </Badge>
                       )}
                     </div>
-                    <p className="mt-0.5 text-[13px] text-muted-foreground">{c.email}</p>
+                    <p className="mt-0.5 text-[13px] text-muted-foreground">{realEmail(c.email) ?? "No email · added from WhatsApp"}</p>
                   </Td>
                   <Td className="whitespace-nowrap text-foreground/80">{c.phone || "—"}</Td>
                   <Td>

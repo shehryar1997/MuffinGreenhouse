@@ -1,12 +1,16 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { ImageIcon, Loader2, Trash2 } from "lucide-react"
+import { Camera, ImageIcon, Loader2, Trash2 } from "lucide-react"
 import { uploadAdminImage, type AdminUploadFolder } from "@/lib/admin-upload"
 import { buttonClass } from "./ui"
 
+type Source = "camera" | "gallery"
+
 // A single-image picker for admin forms. The chosen file is uploaded straight away and its public URL is
-// submitted with the form as a hidden input named `name` (empty string = no image).
+// submitted with the form as a hidden input named `name` (empty string = no image). Camera / Gallery work like
+// the product form's photo buttons: `capture` opens the camera directly on phones (a normal file dialog on
+// desktop); the gallery input has none, so phones open the photo library.
 export function ImageField({
   name,
   folder,
@@ -21,24 +25,32 @@ export function ImageField({
   hint?: string
 }) {
   const [url, setUrl] = useState(defaultUrl ?? "")
-  const [uploading, setUploading] = useState(false)
+  const [uploading, setUploading] = useState<Source | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galleryRef = useRef<HTMLInputElement>(null)
 
-  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPick(source: Source, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = "" // let the same file be picked again later
     if (!file) return
-    setUploading(true)
+    setUploading(source)
     setError(null)
     try {
       setUrl(await uploadAdminImage(file, folder))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.")
     } finally {
-      setUploading(false)
+      setUploading(null)
     }
   }
+
+  const pickButton = (source: Source, text: string, Icon: typeof Camera, inputRef: React.RefObject<HTMLInputElement | null>) => (
+    <button type="button" onClick={() => inputRef.current?.click()} disabled={!!uploading} className={buttonClass({ size: "sm" })}>
+      {uploading === source ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Icon className="h-3.5 w-3.5" aria-hidden />}
+      {uploading === source ? "Uploading…" : text}
+    </button>
+  )
 
   return (
     <div>
@@ -60,11 +72,10 @@ export function ImageField({
         </div>
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className={buttonClass({ size: "sm" })}>
-              {url ? "Replace image" : "Upload image"}
-            </button>
+            {pickButton("camera", "Camera", Camera, cameraRef)}
+            {pickButton("gallery", "Gallery", ImageIcon, galleryRef)}
             {url && (
-              <button type="button" onClick={() => setUrl("")} disabled={uploading} className={buttonClass({ variant: "danger", size: "sm" })}>
+              <button type="button" onClick={() => setUrl("")} disabled={!!uploading} className={buttonClass({ variant: "danger", size: "sm" })}>
                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
                 Remove
               </button>
@@ -78,7 +89,9 @@ export function ImageField({
           )}
         </div>
       </div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
+      {/* No name attribute: these are never part of a form submit. */}
+      <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onPick("camera", e)} />
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPick("gallery", e)} />
     </div>
   )
 }

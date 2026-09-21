@@ -6,6 +6,7 @@ import { Alert, Field } from "../_components/ui"
 import { BrandLogo } from "../_components/brand-logo"
 import { PasswordInput } from "../_components/password-input"
 import { SubmitButton } from "../_components/submit-button"
+import { DanceFloor } from "./dance-floor"
 
 // 10 attempts per 15 minutes per IP
 const loginLimiter = new RateLimiter({ interval: 15 * 60_000, max: 10 })
@@ -75,6 +76,8 @@ export default async function AdminLoginPage({
         </div>
 
         <p className="mt-6 text-xs text-muted-foreground">Staff only.</p>
+
+        <DanceFloor />
       </main>
     </div>
   )

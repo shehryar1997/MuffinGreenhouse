@@ -7,6 +7,7 @@ import { deleteCustomer } from "../actions"
 import { Badge, Field, OrderStatusBadge, PageHeader, Panel, PaymentStatusBadge, inputClass, linkClass, rowLinkClass } from "../../_components/ui"
 import { SubmitButton } from "../../_components/submit-button"
 import { fmtDate, fmtDateTime, rs } from "../../_components/format"
+import { realEmail } from "@/lib/manual-order"
 
 // Force fresh data on every load — a dynamic route param alone doesn't
 // reliably opt this page out of caching, and this page needs to reflect
@@ -90,7 +91,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
     <div>
       <PageHeader
         title={customer.name || "Unnamed customer"}
-        description={customer.email}
+        description={realEmail(customer.email) ?? customer.phone ?? "No email on file"}
         back={{ href: "/admin/customers", label: "Customers" }}
         badges={customer.email_verified ? <Badge tone="success">Verified</Badge> : <Badge>Unverified</Badge>}
         actions={
@@ -113,7 +114,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
                   <input id="name" name="name" type="text" defaultValue={customer.name || ""} className={inputClass} />
                 </Field>
                 <Field label="Email" hint="The sign-in email can't be changed here.">
-                  <input id="email" name="email" type="email" defaultValue={customer.email} disabled className={inputClass} />
+                  <input id="email" name="email" type="email" defaultValue={realEmail(customer.email) ?? ""} placeholder="No email on file" disabled className={inputClass} />
                 </Field>
                 <Field label="Phone">
                   <input id="phone" name="phone" type="tel" defaultValue={customer.phone || ""} className={inputClass} />
@@ -181,7 +182,7 @@ export default async function CustomerDetailPage({ params }: CustomerDetailPageP
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Sign-in email</dt>
-                <dd className="break-all text-right">{customer.email}</dd>
+                <dd className="break-all text-right">{realEmail(customer.email) ?? "—"}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Password</dt>

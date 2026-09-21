@@ -179,7 +179,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
             }
           />
         ) : (
-          <TableShell minWidth="min-w-[860px]">
+          <TableShell minWidth="min-w-[960px]">
             <Thead>
               <tr>
                 <Th>Product</Th>
@@ -241,7 +241,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                     <Td>{p.published_at ? <Badge tone="success">Published</Badge> : <Badge>Draft</Badge>}</Td>
                     <Td align="right">
                       <div className="flex items-start justify-end gap-2">
-                        <ProductPhotoButton productId={p.id} hasPhotos={!!photo} />
+                        <ProductPhotoButton productId={p.id} />
                         <ButtonLink href={`/admin/products/${p.id}/edit`} size="sm">
                           Edit
                         </ButtonLink>

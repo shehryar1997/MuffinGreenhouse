@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/supabase/admin-client'
 import { sendOrderCancelledEmail } from '@/lib/email/send-order-cancelled'
 import { safeEqual } from '@/lib/safe-compare'
+import { isPlaceholderEmail } from '@/lib/manual-order'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     for (const order of toNotify ?? []) {
       const customer = order.customer as unknown as { email: string; name: string | null } | null
-      if (!customer?.email) {
+      if (!customer?.email || isPlaceholderEmail(customer.email)) {
         // Nobody to tell; mark it done so it isn't retried forever.
         await supabaseAdmin.from('orders').update({ cancellation_email_sent_at: new Date().toISOString() }).eq('id', order.id)
         continue

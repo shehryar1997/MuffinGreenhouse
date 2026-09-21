@@ -70,6 +70,157 @@
   display: none;
 }
 
+/* Sign-in page dance floor (app/admin/login/dance-floor.tsx). Decorative only. */
+.dance-floor {
+  position: relative;
+  margin-top: 2rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+.dance-tiles {
+  height: 14px;
+  margin-top: -4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e8934a, #f3c64f, #7fb069, #4fa3c7, #a06cd5, #e8934a);
+  background-size: 200% 100%;
+  opacity: 0.85;
+  animation: dance-floor-glow 2.4s linear infinite;
+}
+
+.dance-cat,
+.dance-hamster {
+  overflow: visible;
+  animation-delay: var(--d, 0s);
+}
+
+/* Cats: hop and sway, arms up in alternating waves, tail swishing. */
+.dance-cat-hop {
+  transform-origin: 46px 92px;
+  animation: dance-cat-hop 0.8s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.dance-cat-head {
+  transform-origin: 46px 52px;
+  animation: dance-cat-head 0.8s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.dance-cat-tail {
+  transform-origin: 58px 80px;
+  animation: dance-cat-tail 0.8s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.dance-cat-arm-l {
+  transform-origin: 32px 62px;
+  animation: dance-cat-arm-l 0.8s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.dance-cat-arm-r {
+  transform-origin: 60px 62px;
+  animation: dance-cat-arm-r 0.8s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.dance-cat-foot {
+  animation: dance-cat-foot 0.4s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.dance-cat-foot-r {
+  animation-direction: alternate-reverse;
+}
+
+/* Hamsters: bent over, rear shaking fast, motion lines pulsing off the back. */
+.dance-ham-bob {
+  transform-origin: 56px 82px;
+  animation: dance-ham-bob 0.6s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.dance-ham-head {
+  transform-origin: 34px 48px;
+  animation: dance-ham-head 0.6s ease-in-out infinite alternate-reverse;
+  animation-delay: var(--d, 0s);
+}
+.dance-ham-rear {
+  transform-origin: 62px 56px;
+  animation: dance-twerk 0.26s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+.dance-ham-fx {
+  animation: dance-ham-fx 0.26s ease-in-out infinite alternate;
+  animation-delay: var(--d, 0s);
+}
+
+.dance-note {
+  position: absolute;
+  bottom: 40%;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: hsl(var(--primary));
+  opacity: 0;
+  animation: dance-note 3s ease-out infinite;
+}
+.dance-note-1 { left: 22%; }
+.dance-note-2 { left: 48%; animation-delay: 1s; color: rgb(var(--forest-500)); }
+.dance-note-3 { left: 74%; animation-delay: 2s; }
+
+@keyframes dance-cat-hop {
+  0%, 100% { transform: translateY(0) rotate(-3deg) scale(1.03, 0.96); }
+  50% { transform: translateY(-9px) rotate(3deg) scale(0.98, 1.03); }
+}
+@keyframes dance-cat-head {
+  from { transform: rotate(-7deg); }
+  to { transform: rotate(7deg); }
+}
+@keyframes dance-cat-tail {
+  from { transform: rotate(-14deg); }
+  to { transform: rotate(16deg); }
+}
+@keyframes dance-cat-arm-l {
+  from { transform: rotate(-28deg); }
+  to { transform: rotate(22deg); }
+}
+@keyframes dance-cat-arm-r {
+  from { transform: rotate(28deg); }
+  to { transform: rotate(-22deg); }
+}
+@keyframes dance-cat-foot {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
+@keyframes dance-ham-bob {
+  from { transform: translateY(0) rotate(-1.5deg); }
+  to { transform: translateY(-2px) rotate(1.5deg); }
+}
+@keyframes dance-ham-head {
+  from { transform: rotate(-4deg); }
+  to { transform: rotate(5deg); }
+}
+@keyframes dance-twerk {
+  from { transform: translateY(-6px) rotate(-9deg) scale(1, 1.05); }
+  to { transform: translateY(6px) rotate(9deg) scale(1.05, 0.93); }
+}
+@keyframes dance-ham-fx {
+  from { opacity: 0.15; transform: translateX(0); }
+  to { opacity: 0.9; transform: translateX(3px); }
+}
+@keyframes dance-note {
+  0% { opacity: 0; transform: translateY(0) rotate(-10deg); }
+  15% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(-70px) rotate(14deg); }
+}
+@keyframes dance-floor-glow {
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dance-floor,
+  .dance-floor * {
+    animation: none !important;
+  }
+  .dance-note {
+    display: none;
+  }
+}
+
 @media print {
   .admin-scope {
     background: #fff !important;

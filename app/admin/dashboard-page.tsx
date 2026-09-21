@@ -1,5 +1,6 @@
 "use server"
 
+import { Suspense } from "react"
 import Link from "next/link"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
@@ -8,6 +9,7 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 import { isValidSessionCookie, COOKIE_NAME } from "@/lib/admin-session"
 import { Panel, PageHeader, StatStrip } from "./_components/ui"
 import { fmtNumber, plural, rs } from "./_components/format"
+import { AnalyticsPanel, AnalyticsPanelSkeleton } from "./analytics-panel"
 
 interface StockRow { stock_count: number; low_stock_threshold: number | null }
 interface OrderTotalRow { total: number }
@@ -122,6 +124,12 @@ export async function AdminDashboardPage() {
             </li>
           </ul>
         </Panel>
+      </div>
+
+      <div className="mt-6">
+        <Suspense fallback={<AnalyticsPanelSkeleton />}>
+          <AnalyticsPanel />
+        </Suspense>
       </div>
     </div>
   )

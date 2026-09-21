@@ -10,6 +10,7 @@ import { fmtDateTime, rs } from "../../_components/format"
 import { whatsAppLink } from "@/lib/whatsapp-link"
 import { paymentAccountsAsText } from "@/config/payment-accounts"
 import { cn } from "@/lib/utils"
+import { isManualOrder, realEmail } from "@/lib/manual-order"
 
 // Force fresh data on every load — same reasoning as the orders list page.
 export const dynamic = "force-dynamic"
@@ -25,7 +26,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     .from("orders")
     .select(
       `id, order_number, status, payment_status, payment_method, delivery_type, subtotal,
-       delivery_fee, total, customer_notes, internal_notes, created_at,
+       delivery_fee, discount_amount, total, customer_notes, internal_notes, created_at,
        tracking_number, courier,
        customer:customers(id, name, email, phone),
        address:addresses(label, street, city, province, phone),
@@ -73,7 +74,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     <div>
       <PageHeader
         title={`Order ${order.order_number}`}
-        description={`Placed ${fmtDateTime(order.created_at)} · ${order.delivery_type === "pickup" ? "Pickup" : "Delivery"}`}
+        description={`Placed ${fmtDateTime(order.created_at)} · ${order.delivery_type === "pickup" ? "Pickup" : "Delivery"}${isManualOrder(order.internal_notes) ? " · Recorded from WhatsApp" : ""}`}
         back={{ href: "/admin/orders", label: "Orders" }}
         badges={
           <>
@@ -195,6 +196,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 <dt>Delivery</dt>
                 <dd>{rs(order.delivery_fee)}</dd>
               </div>
+              {Number(order.discount_amount) > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <dt>Discount</dt>
+                  <dd>− {rs(order.discount_amount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
                 <dt>Total</dt>
                 <dd>{rs(order.total)}</dd>
@@ -215,11 +222,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             {customer ? (
               <div className="space-y-1 text-sm">
                 <p className="font-medium">{customer.name || "—"}</p>
-                <p>
-                  <a href={`mailto:${customer.email}`} className="break-all text-muted-foreground hover:text-foreground hover:underline">
-                    {customer.email}
-                  </a>
-                </p>
+                {realEmail(customer.email) && (
+                  <p>
+                    <a href={`mailto:${customer.email}`} className="break-all text-muted-foreground hover:text-foreground hover:underline">
+                      {customer.email}
+                    </a>
+                  </p>
+                )}
                 <p className="text-muted-foreground">{customer.phone || "—"}</p>
                 <p className="pt-1">
                   <Link href={`/admin/customers/${customer.id}`} className={cn(linkClass, "text-[13px]")}>

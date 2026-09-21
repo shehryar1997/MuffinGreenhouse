@@ -1,9 +1,10 @@
 import Link from "next/link"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { requireAdmin } from "@/lib/admin-auth"
-import { Alert, EmptyState, FilterTabs, OrderStatusBadge, PageHeader, PaymentStatusBadge, TableShell, Td, Th, Thead, Tr, buttonClass, rowLinkClass } from "../_components/ui"
+import { Alert, ButtonLink, EmptyState, FilterTabs, OrderStatusBadge, PageHeader, PaymentStatusBadge, TableShell, Td, Th, Thead, Tr, buttonClass, rowLinkClass } from "../_components/ui"
 import { fmtDate, fmtNumber, plural, rs } from "../_components/format"
+import { realEmail } from "@/lib/manual-order"
 
 export const dynamic = "force-dynamic"
 const PAGE_SIZE = 25
@@ -56,7 +57,16 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
 
   return (
     <div>
-      <PageHeader title="Orders" description={`${plural(totalCount, "order")}${status && status !== "all" ? ` ${status}` : ""}`} />
+      <PageHeader
+        title="Orders"
+        description={`${plural(totalCount, "order")}${status && status !== "all" ? ` ${status}` : ""}`}
+        actions={
+          <ButtonLink href="/admin/orders/new" variant="primary">
+            <Plus className="h-4 w-4" aria-hidden />
+            Add order
+          </ButtonLink>
+        }
+      />
 
       {error && (
         <Alert tone="danger" title="Couldn't load orders" className="mb-6">
@@ -92,7 +102,7 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
           </Thead>
           <tbody>
             {ordersList.map((o: OrderRow) => {
-              const customer = o.customer as { name: string | null; email: string } | null
+              const customer = (Array.isArray(o.customer) ? o.customer[0] : o.customer) ?? null
               return (
                 <Tr key={o.id}>
                   <Td>
@@ -102,7 +112,7 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
                     <p className="mt-0.5 text-xs capitalize text-muted-foreground">{o.delivery_type}</p>
                   </Td>
                   <Td>
-                    {customer?.name || customer?.email || <span className="text-muted-foreground">Guest</span>}
+                    {customer?.name || realEmail(customer?.email) || customer?.phone || <span className="text-muted-foreground">Guest</span>}
                   </Td>
                   <Td align="right" className="font-medium tabular-nums">{rs(o.total)}</Td>
                   <Td><PaymentStatusBadge status={o.payment_status} /></Td>

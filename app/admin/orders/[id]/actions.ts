@@ -6,6 +6,7 @@ import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { sendOrderConfirmedEmail } from "@/lib/email/send-order-confirmed"
 import { sendOrderShippedEmail } from "@/lib/email/send-order-shipped"
 import { sendOrderCancelledEmail } from "@/lib/email/send-order-cancelled"
+import { isPlaceholderEmail } from "@/lib/manual-order"
 
 const DEFAULT_COURIER = "Leopards Courier"
 
@@ -32,9 +33,13 @@ async function getOrderForEmail(orderId: string): Promise<OrderForEmail | null> 
     return null
   }
 
+  // Orders recorded by hand for a WhatsApp customer have a stand-in address that can't receive mail.
+  const customer = data.customer as unknown as { email: string; name: string | null } | null
+  if (isPlaceholderEmail(customer?.email)) return null
+
   return {
     ...data,
-    customer: data.customer as unknown as { email: string; name: string | null } | null,
+    customer,
     order_items: (data.order_items as unknown as OrderForEmail["order_items"]) || [],
   }
 }
@@ -201,7 +206,7 @@ export async function cancelOrder(orderId: string) {
         .eq("id", orderId)
         .maybeSingle()
       const customer = order?.customer as unknown as { email: string; name: string | null } | null
-      if (order && customer?.email) {
+      if (order && customer?.email && !isPlaceholderEmail(customer.email)) {
         await sendOrderCancelledEmail({
           toEmail: customer.email,
           customerName: customer.name,
