@@ -27,6 +27,9 @@ interface ProductDetailClientProps {
 export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDetailClientProps) {
   const [selectedVariant, setSelectedVariant] = useState(product?.variants[0] || null)
   const [selectedImage, setSelectedImage] = useState(0)
+  // Photo of the variant the shopper last picked. While set it replaces the gallery photo in the main
+  // slot; picking a gallery thumbnail (or a variant without its own photo) goes back to the gallery.
+  const [variantImageUrl, setVariantImageUrl] = useState<string | null>(null)
   const [requestedQuantity, setQuantity] = useState(1)
   const { addItem } = useCart()
   const { isWishlisted, toggleWishlist } = useWishlist()
@@ -110,7 +113,13 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
         <div className="grid lg:grid-cols-2 gap-12">
           <div className="space-y-4">
             <div className="aspect-square relative rounded-2xl overflow-hidden bg-forest-50">
-              <Image src={product.images[selectedImage]?.url || "/placeholder-plant.png"} alt={product.name} fill className="object-cover" priority />
+              <Image
+                src={variantImageUrl || product.images[selectedImage]?.url || "/placeholder-plant.png"}
+                alt={variantImageUrl && selectedVariant ? `${product.name}, ${selectedVariant.name}` : product.name}
+                fill
+                className="object-cover"
+                priority
+              />
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 {product.isNewArrival && <Badge variant="secondary">New</Badge>}
                 {product.stockStatus === "low_stock" && <Badge variant="lowStock">Low Stock</Badge>}
@@ -120,7 +129,7 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
             </div>
             <div className="flex gap-2 max-lg:overflow-x-auto max-lg:pb-1">
               {product.images.map((img, i) => (
-                <button key={img.id} type="button" onClick={() => setSelectedImage(i)} aria-label={`Show photo ${i + 1} of ${product.images.length}`} aria-current={selectedImage === i} className={`w-20 h-20 max-lg:shrink-0 rounded-lg overflow-hidden border-2 ${selectedImage === i ? "border-clay-500" : "border-transparent"}`}>
+                <button key={img.id} type="button" onClick={() => { setSelectedImage(i); setVariantImageUrl(null) }} aria-label={`Show photo ${i + 1} of ${product.images.length}`} aria-current={!variantImageUrl && selectedImage === i} className={`w-20 h-20 max-lg:shrink-0 rounded-lg overflow-hidden border-2 ${!variantImageUrl && selectedImage === i ? "border-clay-500" : "border-transparent"}`}>
                   <Image src={img.url} alt={img.alt} width={80} height={80} className="object-cover w-full h-full" />
                 </button>
               ))}
@@ -146,7 +155,7 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
                 <label className="font-medium text-forest-900 block mb-2">Size</label>
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
-                    <button key={v.id} type="button" onClick={() => setSelectedVariant(v)} aria-pressed={selectedVariant?.id === v.id} disabled={v.stockStatus === "out_of_stock"}
+                    <button key={v.id} type="button" onClick={() => { setSelectedVariant(v); setVariantImageUrl(v.imageUrl ?? null) }} aria-pressed={selectedVariant?.id === v.id} disabled={v.stockStatus === "out_of_stock"}
                       className={`px-4 py-2 border-2 rounded-lg ${selectedVariant?.id === v.id ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300 disabled:opacity-50"}`}>
                       <span className="text-sm font-medium">{v.name}</span>
                       <span className="ml-2 text-xs text-forest-500">{formatPrice(v.price)}</span>

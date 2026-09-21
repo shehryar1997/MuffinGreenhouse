@@ -55,21 +55,35 @@ type ExistingProduct = {
   weight_kg: number | null
   use_case_tags: string[]
   images?: { url: string; alt_text: string }[]
-  variants?: { id?: string; name: string; sku: string; price: number; stock_count: number }[]
+  variants?: { id?: string; name: string; sku: string; price: number; stock_count: number; image_url?: string | null }[]
 }
 
 // A variant row in the form. `key` is a stable client-side React key (rows can be removed
 // from the middle); `id` is the database id of an existing variant ("" for a new one), so
-// saving updates that variant in place instead of recreating it.
-type VariantRow = { key: number; id: string; name: string; sku: string; price: number; stock_count: number }
+// saving updates that variant in place instead of recreating it. `image_url` is the variant's
+// own photo ("" for none); the text inputs stay uncontrolled, only the photo lives in state.
+type VariantRow = {
+  key: number
+  id: string
+  name: string
+  sku: string
+  price: number
+  stock_count: number
+  image_url: string
+  uploading: boolean
+  error: string | null
+}
 let variantRowSeq = 0
-const newVariantRow = (v?: { id?: string; name: string; sku: string; price: number; stock_count: number }): VariantRow => ({
+const newVariantRow = (v?: { id?: string; name: string; sku: string; price: number; stock_count: number; image_url?: string | null }): VariantRow => ({
   key: ++variantRowSeq,
   id: v?.id ?? "",
   name: v?.name ?? "",
   sku: v?.sku ?? "",
   price: v?.price ?? 0,
   stock_count: v?.stock_count ?? 0,
+  image_url: v?.image_url ?? "",
+  uploading: false,
+  error: null,
 })
 
 // Fields copied from an existing product when prefilling by name. sku and slug
@@ -230,7 +244,20 @@ export function ProductForm({
     }
   }
 
-  const uploadingCount = images.filter((r) => r.uploading).length
+  const uploadingCount = images.filter((r) => r.uploading).length + variants.filter((v) => v.uploading).length
+
+  function updateVariant(key: number, patch: Partial<VariantRow>) {
+    setVariants((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)))
+  }
+
+  async function uploadVariantImage(key: number, file: File) {
+    updateVariant(key, { uploading: true, error: null })
+    try {
+      updateVariant(key, { image_url: await uploadAdminImage(file, "products"), uploading: false })
+    } catch (err) {
+      updateVariant(key, { uploading: false, error: err instanceof Error ? err.message : "Upload failed." })
+    }
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -585,12 +612,16 @@ export function ProductForm({
           {pickNotice && <p className="text-xs text-muted-foreground">{pickNotice}</p>}
         </FormSection>
 
-        <FormSection title="Variants" description="Optional. Add these if the product comes in different sizes or pot types.">
+        <FormSection
+          title="Variants"
+          description="Optional. Add these if the product comes in different sizes or pot types. A variant can have its own photo, which replaces the main photo on the product page when a shopper picks that variant."
+        >
           {variants.length === 0 ? (
             <p className="text-sm text-muted-foreground">No variants.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className={`hidden gap-2 px-0.5 text-xs font-medium text-muted-foreground sm:grid ${VARIANT_COLUMNS}`} aria-hidden>
+                <span>Photo</span>
                 <span>Name</span>
                 <span>SKU</span>
                 <span>Price</span>
@@ -600,6 +631,15 @@ export function ProductForm({
               {variants.map((v) => (
                 <div key={v.key} className={`grid items-center gap-2 ${VARIANT_COLUMNS}`}>
                   <input type="hidden" name="variant_id" value={v.id} />
+                  {/* Always submitted (even empty) so the photo list stays in step with the other variant fields. */}
+                  <input type="hidden" name="variant_image_url" value={v.image_url} />
+                  <VariantPhoto
+                    url={v.image_url}
+                    uploading={v.uploading}
+                    error={v.error}
+                    onPick={(file) => void uploadVariantImage(v.key, file)}
+                    onClear={() => updateVariant(v.key, { image_url: "", error: null })}
+                  />
                   <input name="variant_name" aria-label="Variant name" defaultValue={v.name} placeholder='e.g. Medium - 8" pot' className={inputClass} />
                   <input name="variant_sku" aria-label="Variant SKU" defaultValue={v.sku} placeholder="SKU" className={cn(inputClass, "font-mono")} />
                   <input type="number" name="variant_price" aria-label="Variant price" defaultValue={v.price} placeholder="Price" className={inputClass} />
@@ -641,8 +681,74 @@ export function ProductForm({
   )
 }
 
-// Name | SKU | price | stock | remove: shared by the header row and every variant row so the columns line up.
-const VARIANT_COLUMNS = "sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_7rem_6rem_4.5rem]"
+// Photo | name | SKU | price | stock | remove: shared by the header row and every variant row so the columns line up.
+const VARIANT_COLUMNS = "sm:grid-cols-[4rem_minmax(0,1.6fr)_minmax(0,1fr)_7rem_6rem_4.5rem]"
+
+// The variant's own photo: a square that opens the file picker (camera or gallery on a phone).
+// Clicking a filled square replaces the photo; the small button clears it.
+function VariantPhoto({
+  url,
+  uploading,
+  error,
+  onPick,
+  onClear,
+}: {
+  url: string
+  uploading: boolean
+  error: string | null
+  onPick: (file: File) => void
+  onClear: () => void
+}) {
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
+  const showPreview = /^https?:\/\//i.test(url) && brokenUrl !== url
+
+  return (
+    <div className="flex items-center gap-2 sm:flex-col sm:items-start sm:gap-1">
+      <label
+        className={cn(
+          "relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-input bg-muted text-muted-foreground transition-colors hover:border-primary focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+          uploading ? "cursor-wait" : "cursor-pointer",
+          url && "border-solid"
+        )}
+      >
+        {showPreview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="Variant photo" onError={() => setBrokenUrl(url)} className="h-full w-full object-cover" />
+        ) : (
+          <Camera className="h-5 w-5" aria-hidden />
+        )}
+        {uploading && (
+          <span className="absolute inset-0 flex items-center justify-center bg-surface/70">
+            <Loader2 className="h-4 w-4 animate-spin text-foreground/70" aria-label="Uploading" />
+          </span>
+        )}
+        {/* No name attribute: the file itself must not be submitted with the form. */}
+        <input
+          type="file"
+          accept="image/*"
+          disabled={uploading}
+          aria-label={url ? "Replace variant photo" : "Add variant photo"}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = "" // allow re-selecting the same file
+            if (file) onPick(file)
+          }}
+          className="sr-only"
+        />
+      </label>
+      {url && !uploading && (
+        <button type="button" onClick={onClear} className="text-xs text-red-700 underline underline-offset-2 hover:text-red-800">
+          Clear
+        </button>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
 
 // Tag checkboxes drawn as toggle chips. The real checkbox stays in the DOM (visually hidden) so the form and the
 // name-prefill code keep working exactly as before.

@@ -5,10 +5,15 @@
 -- p_mood_slugs to search_products() and writes products.mood_tags, and would fail
 -- against this schema.
 
+-- 0. The tag trigger is declared "UPDATE OF use_case_tags, mood_tags", so the mood_tags column
+--    can't be dropped while it exists. Recreate it on use_case_tags only.
+drop trigger if exists trg_validate_product_tags on public.products;
+
 -- 1. Tag validation: keep the use-case check only.
 create or replace function public.validate_product_tags()
 returns trigger
 language plpgsql
+set search_path = public, pg_temp
 as $function$
 declare
   bad_use_case text;
@@ -53,6 +58,7 @@ returns table(
   stock_count integer, primary_image text, category_name text, total_count bigint
 )
 language plpgsql
+set search_path = public, pg_temp
 as $function$
 DECLARE
     v_use_case_names text[];
@@ -102,3 +108,8 @@ $function$;
 -- 3. The data and structure themselves.
 alter table public.products drop column if exists mood_tags;
 drop table if exists public.mood_tags;
+
+-- 4. Re-attach the validation trigger, now watching use_case_tags only.
+create trigger trg_validate_product_tags
+  before insert or update of use_case_tags on public.products
+  for each row execute function public.validate_product_tags();

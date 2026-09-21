@@ -735,7 +735,7 @@ function OrderSummary({ items, subtotal, discount, couponBox, deliveryFee, freeD
         {items.map((item) => {
           const price = item.variant?.price ?? item.product.price
           const lineTotal = price * item.quantity
-          const imageUrl = item.product.images[0]?.url || "/placeholder-plant.png"
+          const imageUrl = item.variant?.imageUrl || item.product.images[0]?.url || "/placeholder-plant.png"
           const imageAlt = item.product.images[0]?.alt || item.product.name
           return (
             <div key={`${item.product.id}-${item.variant?.id ?? "base"}`} className="flex gap-4">

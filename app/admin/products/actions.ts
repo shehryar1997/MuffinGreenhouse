@@ -637,6 +637,7 @@ async function syncVariants(productId: string, formData: FormData): Promise<stri
   const skus = formData.getAll("variant_sku") as string[]
   const prices = formData.getAll("variant_price") as string[]
   const stocks = formData.getAll("variant_stock") as string[]
+  const imageUrls = formData.getAll("variant_image_url") as string[]
   const productSku = String(formData.get("sku") ?? "").trim()
   const threshold = Number(formData.get("low_stock_threshold") || 10)
 
@@ -650,6 +651,7 @@ async function syncVariants(productId: string, formData: FormData): Promise<stri
         price: Number(prices[i] || 0),
         stock_count: stock,
         stock_status: stockStatusFor(stock, threshold),
+        image_url: imageUrls[i]?.trim() || null,
         sort_order: i,
         is_default: i === 0,
         is_active: true,
@@ -664,13 +666,18 @@ async function syncVariants(productId: string, formData: FormData): Promise<stri
   if (new Set(rows.map((r) => r.sku)).size !== rows.length) {
     return "Two variants have the same SKU. Every variant needs its own unique SKU."
   }
+  // Same rule as the product photos: next/image only loads allow-listed hosts.
+  if (rows.some((r) => r.image_url && !isAllowedImageUrl(r.image_url))) {
+    return "A variant photo isn't from an allowed image host. Remove it and upload the photo with the upload button instead."
+  }
 
   const { data: existing, error: readError } = await supabaseAdmin
     .from("product_variants")
-    .select("id")
+    .select("id, image_url")
     .eq("product_id", productId)
   if (readError) return `Could not read the existing variants: ${readError.message}`
   const existingIds = new Set((existing ?? []).map((v) => v.id as string))
+  const oldImageUrls = (existing ?? []).map((v) => v.image_url as string | null).filter((u): u is string => !!u)
 
   const keptIds = new Set<string>()
   for (const { id, ...values } of rows) {
@@ -700,5 +707,9 @@ async function syncVariants(productId: string, formData: FormData): Promise<stri
       return `Removing a variant failed: ${error.message}`
     }
   }
+
+  // Variant photos that were replaced, cleared or belonged to a removed variant: delete their files
+  // from R2 unless something else (another variant, a product photo...) still uses the same file.
+  await deleteUnreferencedProductImages(oldImageUrls)
   return null
 }

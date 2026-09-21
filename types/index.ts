@@ -65,6 +65,8 @@ export interface ProductVariant {
   stockStatus: "in_stock" | "low_stock" | "out_of_stock"
   stockCount: number
   sku: string
+  /** Optional photo; replaces the main product photo while this variant is selected. */
+  imageUrl?: string
 }
 
 export interface Review {

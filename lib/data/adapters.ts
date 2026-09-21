@@ -75,6 +75,7 @@ function mapSupabaseVariant(variant: SupabaseProductVariant): ProductVariant {
     stockStatus: variant.stock_status as 'in_stock' | 'low_stock' | 'out_of_stock',
     stockCount: variant.stock_count,
     sku: variant.sku,
+    imageUrl: variant.image_url || undefined,
   }
 }
 
