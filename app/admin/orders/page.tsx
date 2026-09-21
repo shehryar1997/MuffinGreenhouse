@@ -6,8 +6,9 @@ import { Alert, ButtonLink, EmptyState, FilterTabs, OrderStatusBadge, PageHeader
 import { fmtDate, fmtNumber, plural, rs } from "../_components/format"
 import { realEmail } from "@/lib/manual-order"
 import { DeleteButton } from "../_components/delete-button"
-import { deleteOrder } from "./[id]/actions"
+import { deleteOrder, deleteOrders } from "./[id]/actions"
 import { deleteOrderDescription } from "./delete-order-description"
+import { BulkSelect, RowCheck, SelectAllCheck } from "../_components/bulk-select"
 
 export const dynamic = "force-dynamic"
 const PAGE_SIZE = 25
@@ -88,59 +89,70 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
         />
       </div>
 
-      {ordersList.length === 0 ? (
-        <EmptyState title="No orders found" description={status && status !== "all" ? `Nothing is marked ${status} right now.` : "Orders show up here as customers place them."} />
-      ) : (
-        <TableShell minWidth="min-w-[820px]">
-          <Thead>
-            <tr>
-              <Th>Order</Th>
-              <Th>Customer</Th>
-              <Th align="right">Total</Th>
-              <Th>Payment</Th>
-              <Th>Status</Th>
-              <Th>Placed</Th>
-              <Th />
-            </tr>
-          </Thead>
-          <tbody>
-            {ordersList.map((o: OrderRow) => {
-              const customer = (Array.isArray(o.customer) ? o.customer[0] : o.customer) ?? null
-              return (
-                <Tr key={o.id}>
-                  <Td>
-                    <Link href={`/admin/orders/${o.id}`} className={`${rowLinkClass} font-mono text-[13px]`}>
-                      {o.order_number}
-                    </Link>
-                    <p className="mt-0.5 text-xs capitalize text-muted-foreground">{o.delivery_type}</p>
-                  </Td>
-                  <Td>
-                    {customer?.name || realEmail(customer?.email) || customer?.phone || <span className="text-muted-foreground">Guest</span>}
-                  </Td>
-                  <Td align="right" className="font-medium tabular-nums">{rs(o.total)}</Td>
-                  <Td><PaymentStatusBadge status={o.payment_status} /></Td>
-                  <Td><OrderStatusBadge status={o.status} /></Td>
-                  <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(o.created_at)}</Td>
-                  <Td align="right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link href={`/admin/orders/${o.id}`} className={buttonClass({ size: "sm" })}>
-                        View
+      <BulkSelect
+        ids={ordersList.map((o: OrderRow) => o.id)}
+        noun="order"
+        description="Orders that haven't shipped are cancelled first, so their plants go back in stock. Shipped and delivered orders are deleted without returning stock. They disappear from your order list, customer history and revenue totals, and customers are not e-mailed. This cannot be undone."
+        action={deleteOrders}
+      >
+        {ordersList.length === 0 ? (
+          <EmptyState title="No orders found" description={status && status !== "all" ? `Nothing is marked ${status} right now.` : "Orders show up here as customers place them."} />
+        ) : (
+          <TableShell minWidth="min-w-[860px]">
+            <Thead>
+              <tr>
+                <Th className="w-10"><SelectAllCheck label="Select all orders on this page" /></Th>
+                <Th>Order</Th>
+                <Th>Customer</Th>
+                <Th align="right">Total</Th>
+                <Th>Payment</Th>
+                <Th>Status</Th>
+                <Th>Placed</Th>
+                <Th />
+              </tr>
+            </Thead>
+            <tbody>
+              {ordersList.map((o: OrderRow) => {
+                const customer = (Array.isArray(o.customer) ? o.customer[0] : o.customer) ?? null
+                return (
+                  <Tr key={o.id} className="has-[[data-row-check]:checked]:bg-forest-50/60">
+                    <Td className="w-10">
+                      <RowCheck id={o.id} label={`order ${o.order_number}`} />
+                    </Td>
+                    <Td>
+                      <Link href={`/admin/orders/${o.id}`} className={`${rowLinkClass} font-mono text-[13px]`}>
+                        {o.order_number}
                       </Link>
-                      <DeleteButton
-                        title="Delete this order?"
-                        description={deleteOrderDescription(o.order_number, o.status)}
-                        confirmLabel="Delete order"
-                        fallbackError="Couldn't delete the order. Check your connection and try again."
-                        action={deleteOrder.bind(null, o.id, false)}
-                      />
-                    </div>
-                  </Td>
-                </Tr>
-              )
-            })}
-          </tbody>
-        </TableShell>
-      )}
+                      <p className="mt-0.5 text-xs capitalize text-muted-foreground">{o.delivery_type}</p>
+                    </Td>
+                    <Td>
+                      {customer?.name || realEmail(customer?.email) || customer?.phone || <span className="text-muted-foreground">Guest</span>}
+                    </Td>
+                    <Td align="right" className="font-medium tabular-nums">{rs(o.total)}</Td>
+                    <Td><PaymentStatusBadge status={o.payment_status} /></Td>
+                    <Td><OrderStatusBadge status={o.status} /></Td>
+                    <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(o.created_at)}</Td>
+                    <Td align="right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/admin/orders/${o.id}`} className={buttonClass({ size: "sm" })}>
+                          View
+                        </Link>
+                        <DeleteButton
+                          title="Delete this order?"
+                          description={deleteOrderDescription(o.order_number, o.status)}
+                          confirmLabel="Delete order"
+                          fallbackError="Couldn't delete the order. Check your connection and try again."
+                          action={deleteOrder.bind(null, o.id, false)}
+                        />
+                      </div>
+                    </Td>
+                  </Tr>
+                )
+              })}
+            </tbody>
+          </TableShell>
+        )}
+      </BulkSelect>
 
       {totalPages > 1 && (
         <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-4">

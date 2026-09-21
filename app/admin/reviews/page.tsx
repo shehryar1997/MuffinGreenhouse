@@ -6,7 +6,8 @@ import { requireAdmin } from "@/lib/admin-auth"
 import { Badge, EmptyState, PageHeader, StatStrip, buttonClass, rowLinkClass } from "../_components/ui"
 import { DeleteButton } from "../_components/delete-button"
 import { fmtNumber } from "../_components/format"
-import { deleteReview, setReviewHidden } from "./actions"
+import { BulkSelect, RowCheck, SelectAllCheck } from "../_components/bulk-select"
+import { deleteReview, deleteReviews, setReviewHidden } from "./actions"
 
 export const dynamic = "force-dynamic"
 
@@ -47,55 +48,71 @@ export default async function AdminReviewsPage() {
         ]}
       />
 
-      <div className="mt-8">
-        {rows.length === 0 ? (
-          <EmptyState title="No reviews yet" description="Customers can review an item from their order page once it has shipped." />
-        ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
-            {rows.map((r) => (
-              <li key={r.id} className="flex flex-wrap gap-4 px-5 py-4">
-                {r.image_url && (
-                  <a href={r.image_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                    <Image src={r.image_url} alt="Review photo" width={72} height={72} className="h-[72px] w-[72px] rounded-md object-cover" />
-                  </a>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="inline-flex text-amber-500" role="img" aria-label={`${r.rating} out of 5 stars`}>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <Star key={n} className={`h-4 w-4 ${n <= r.rating ? "fill-current" : "text-border"}`} aria-hidden />
-                      ))}
-                    </span>
-                    {r.product && (
-                      <Link href={`/admin/products/${r.product.id}/edit`} className={rowLinkClass}>
-                        {r.product.name}
-                      </Link>
-                    )}
-                    {r.is_hidden && <Badge tone="neutral">Hidden</Badge>}
+      <BulkSelect
+        ids={rows.map((r) => r.id)}
+        noun="review"
+        description="They will be removed for good. To take a review off the site but keep it, hide it instead."
+        action={deleteReviews}
+      >
+        <div className="mt-8">
+          {rows.length > 0 && (
+            <label className="mb-3 flex w-fit cursor-pointer items-center gap-2 text-[13px] text-muted-foreground">
+              <SelectAllCheck label="Select all reviews" />
+              Select all
+            </label>
+          )}
+          {rows.length === 0 ? (
+            <EmptyState title="No reviews yet" description="Customers can review an item from their order page once it has shipped." />
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+              {rows.map((r) => (
+                <li key={r.id} className="flex flex-wrap gap-4 px-5 py-4 has-[[data-row-check]:checked]:bg-forest-50/60">
+                  <div className="pt-0.5">
+                    <RowCheck id={r.id} label={`review by ${r.display_name ?? "Anonymous"}`} />
                   </div>
-                  <p className="mt-1.5 whitespace-pre-line text-foreground">{r.body}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {r.display_name ?? "Anonymous"} · {new Date(r.created_at).toLocaleDateString("en-PK", { dateStyle: "medium", timeZone: "Asia/Karachi" })}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-start gap-2">
-                  <form action={setReviewHidden.bind(null, r.id, !r.is_hidden)}>
-                    <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-                      {r.is_hidden ? "Show" : "Hide"}
-                    </button>
-                  </form>
-                  <DeleteButton
-                    title="Delete this review?"
-                    description="It will be removed for good. To take it off the site but keep it, hide it instead."
-                    action={deleteReview.bind(null, r.id)}
-                    fallbackError="Couldn't delete the review. Check your connection and try again."
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                  {r.image_url && (
+                    <a href={r.image_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                      <Image src={r.image_url} alt="Review photo" width={72} height={72} className="h-[72px] w-[72px] rounded-md object-cover" />
+                    </a>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="inline-flex text-amber-500" role="img" aria-label={`${r.rating} out of 5 stars`}>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star key={n} className={`h-4 w-4 ${n <= r.rating ? "fill-current" : "text-border"}`} aria-hidden />
+                        ))}
+                      </span>
+                      {r.product && (
+                        <Link href={`/admin/products/${r.product.id}/edit`} className={rowLinkClass}>
+                          {r.product.name}
+                        </Link>
+                      )}
+                      {r.is_hidden && <Badge tone="neutral">Hidden</Badge>}
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-line text-foreground">{r.body}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {r.display_name ?? "Anonymous"} · {new Date(r.created_at).toLocaleDateString("en-PK", { dateStyle: "medium", timeZone: "Asia/Karachi" })}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-start gap-2">
+                    <form action={setReviewHidden.bind(null, r.id, !r.is_hidden)}>
+                      <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
+                        {r.is_hidden ? "Show" : "Hide"}
+                      </button>
+                    </form>
+                    <DeleteButton
+                      title="Delete this review?"
+                      description="It will be removed for good. To take it off the site but keep it, hide it instead."
+                      action={deleteReview.bind(null, r.id)}
+                      fallbackError="Couldn't delete the review. Check your connection and try again."
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </BulkSelect>
     </div>
   )
 }

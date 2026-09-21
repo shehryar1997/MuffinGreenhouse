@@ -25,7 +25,7 @@ interface ProductFiltersProps {
 
 export interface FilterStateHelpers {
   filters: FilterState
-  /** Top of the price slider: the priciest product on the page, rounded up (was a fixed 250,000). */
+  /** Top of the price slider (fixed at MAX_PRICE). */
   maxPrice: number
   hasActiveFilters: boolean
   updateFilter: (key: keyof FilterState, value: string | number | [number, number] | undefined) => void
@@ -37,7 +37,7 @@ const defaultFilters: FilterState = {
   priceRange: [0, MAX_PRICE]
 }
 
-export function ProductFilters({ products, children, initialFilters, priceBounds }: ProductFiltersProps) {
+export function ProductFilters({ products, children, initialFilters }: ProductFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [filters, setFilters] = useState<FilterState>(() => ({
@@ -47,12 +47,8 @@ export function ProductFilters({ products, children, initialFilters, priceBounds
       : [0, MAX_PRICE]
   }))
 
-  // The stored upper bound starts at MAX_PRICE ("no limit"), so it stays valid as the catalog changes.
-  const maxPrice = useMemo(() => {
-    if (priceBounds) return Math.max(priceBounds.max, 1000)
-    const priciest = products.reduce((max, p) => Math.max(max, p.price), 0)
-    return Math.min(MAX_PRICE, Math.max(1000, Math.ceil(priciest / 500) * 500))
-  }, [products, priceBounds])
+  // The slider always spans 0 – MAX_PRICE; the upper bound at MAX_PRICE means "no limit".
+  const maxPrice = MAX_PRICE
 
   // Update URL when filters change (debounced for price slider)
   const updateUrl = useCallback((newFilters: FilterState) => {
@@ -287,6 +283,22 @@ export function FilterSidebar({
   const priceRange = filters.priceRange ?? [0, maxPrice]
   const lower = Math.max(0, priceRange[0])
   const upper = Math.min(priceRange[1], maxPrice)
+
+  // Text-box drafts let people type freely; the value is clamped and applied on blur/Enter.
+  const [minDraft, setMinDraft] = useState<string | null>(null)
+  const [maxDraft, setMaxDraft] = useState<string | null>(null)
+  const commitMin = () => {
+    if (minDraft === null) return
+    const n = minDraft === "" ? 0 : Number(minDraft)
+    updateFilter("priceRange", [Math.min(Math.max(0, n), upper), upper])
+    setMinDraft(null)
+  }
+  const commitMax = () => {
+    if (maxDraft === null) return
+    const n = maxDraft === "" ? maxPrice : Number(maxDraft)
+    updateFilter("priceRange", [lower, Math.max(Math.min(n, maxPrice), lower)])
+    setMaxDraft(null)
+  }
   const activeCount =
     [filters.light, filters.water, filters.pets, filters.stock].filter(Boolean).length +
     (lower > 0 || upper < maxPrice ? 1 : 0)
@@ -309,15 +321,40 @@ export function FilterSidebar({
         <div>
           <h3 className="font-mono text-xs tracking-widest text-forest-600 uppercase mb-3">Price Range (PKR)</h3>
           <div className="space-y-4">
-            <div className="flex justify-between text-sm font-mono text-forest-600">
-              <span>PKR {lower.toLocaleString()}</span>
-              <span>PKR {upper.toLocaleString()}</span>
+            <div className="flex items-center gap-2">
+              <Input
+                type="text"
+                inputMode="numeric"
+                aria-label="Minimum price (PKR)"
+                value={minDraft ?? String(lower)}
+                onChange={(e) => setMinDraft(e.target.value.replace(/\D/g, ""))}
+                onBlur={commitMin}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                className="font-mono text-sm"
+              />
+              <span className="text-forest-400" aria-hidden="true">–</span>
+              <Input
+                type="text"
+                inputMode="numeric"
+                aria-label="Maximum price (PKR)"
+                value={maxDraft ?? String(upper)}
+                onChange={(e) => setMaxDraft(e.target.value.replace(/\D/g, ""))}
+                onBlur={commitMax}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                className="font-mono text-sm"
+              />
             </div>
             <Slider
               value={[lower, upper]}
+              min={0}
               max={maxPrice}
-              step={maxPrice <= 20000 ? 100 : 1000}
-              onValueChange={(value: [number, number]) => updateFilter("priceRange", value)}
+              step={1000}
+              minStepsBetweenThumbs={0}
+              onValueChange={(value: number[]) => {
+                setMinDraft(null)
+                setMaxDraft(null)
+                updateFilter("priceRange", [value[0], value[1]])
+              }}
               className="w-full"
             />
           </div>

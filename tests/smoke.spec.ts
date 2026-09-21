@@ -7,11 +7,20 @@ const CART_STORAGE_KEY = 'muffin_cart_v1';
 // Product links as rendered by <ProductCard> etc: /shop/product/<slug>.
 const PRODUCT_LINK = 'a[href^="/shop/product/"]';
 
-/** Unique product hrefs on /shop/all (a card can render several links to the same product). */
+// Shown by /shop/all when the catalog has no products at all (see shop-all-client.tsx).
+const EMPTY_CATALOG_TEXT = 'New plants are on their way.';
+const EMPTY_CATALOG_REASON = 'Catalog is empty, so there is no product to buy. Add a product to run this test.';
+
+/**
+ * Unique product hrefs on /shop/all (a card can render several links to the
+ * same product). Empty when the shop has no products yet.
+ */
 async function listProductHrefs(page: Page, max = 6): Promise<string[]> {
   await page.goto('/shop/all', { waitUntil: 'domcontentloaded' });
-  // Web-first assertion: auto-waits for the server-rendered catalog to show up.
-  await expect(page.locator(PRODUCT_LINK).first()).toBeVisible({ timeout: 15000 });
+  // Web-first assertion: auto-waits for either the catalog or the empty-shop message.
+  await expect(
+    page.locator(PRODUCT_LINK).first().or(page.getByText(EMPTY_CATALOG_TEXT)),
+  ).toBeVisible({ timeout: 15000 });
   const hrefs = await page.locator(PRODUCT_LINK).evaluateAll((els) =>
     els.map((el) => el.getAttribute('href') ?? ''),
   );
@@ -21,10 +30,11 @@ async function listProductHrefs(page: Page, max = 6): Promise<string[]> {
 /**
  * Open the first product that can actually be bought. The first card in the
  * catalog may be out of stock (button reads "Out of Stock" and is disabled),
- * so don't assume it.
+ * so don't assume it. Returns null when the catalog is empty.
  */
 async function openInStockProduct(page: Page) {
   const hrefs = await listProductHrefs(page);
+  if (hrefs.length === 0) return null;
   for (const href of hrefs) {
     await page.goto(href, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('h1').first()).toBeVisible();
@@ -62,11 +72,15 @@ test.describe('Smoke Tests', () => {
     await page.goto('/shop/all', { waitUntil: 'domcontentloaded' });
 
     await expect(page).toHaveURL(/shop\/all/);
-    await expect(page.locator(PRODUCT_LINK).first()).toBeVisible({ timeout: 15000 });
+    // Products when the catalog has any, the "on their way" message when it is empty.
+    await expect(
+      page.locator(PRODUCT_LINK).first().or(page.getByText(EMPTY_CATALOG_TEXT)),
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test('product detail page loads', async ({ page }) => {
     const [href] = await listProductHrefs(page, 1);
+    test.skip(!href, EMPTY_CATALOG_REASON);
     expect(href).toContain('/product/');
 
     await page.goto(href, { waitUntil: 'domcontentloaded' });
@@ -79,8 +93,9 @@ test.describe('Smoke Tests', () => {
 
   test('add to cart works', async ({ page }) => {
     const addButton = await openInStockProduct(page);
+    test.skip(!addButton, EMPTY_CATALOG_REASON);
 
-    await addButton.click();
+    await addButton!.click();
 
     // The cart drawer slides open as the confirmation, and the item really landed in the persisted cart.
     await expect(page.getByRole('dialog', { name: /cart/i })).toBeVisible();
@@ -92,7 +107,8 @@ test.describe('Smoke Tests', () => {
     // something in the cart first. The cart is restored from localStorage on
     // the full page load below.
     const addButton = await openInStockProduct(page);
-    await addButton.click();
+    test.skip(!addButton, EMPTY_CATALOG_REASON);
+    await addButton!.click();
     await expect.poll(() => cartItemCount(page)).toBeGreaterThan(0);
 
     await page.goto('/checkout', { waitUntil: 'domcontentloaded' });

@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 import { requireAdmin } from "@/lib/admin-auth"
 import { normalizeCouponCode } from "@/lib/coupons"
 import { fromKarachiInputValue } from "@/lib/event-format"
+import { BAD_BULK_REQUEST, cleanBulkIds, type BulkDeleteResult } from "@/lib/admin-bulk"
 
 /** `undefined` = success. */
 export type CouponActionResult = { error: string } | undefined
@@ -44,6 +45,17 @@ export async function deleteCoupon(couponId: string): Promise<CouponActionResult
   const { error } = await supabaseAdmin.from("coupons").delete().eq("id", couponId)
   if (error) return { error: error.message }
   revalidatePath("/admin/coupons")
+}
+
+export async function deleteCoupons(ids: string[]): Promise<BulkDeleteResult> {
+  await requireAdmin()
+  const clean = cleanBulkIds(ids)
+  if (!clean) return BAD_BULK_REQUEST
+
+  const { data, error } = await supabaseAdmin.from("coupons").delete().in("id", clean).select("id")
+  if (error) return { deleted: 0, failures: [], error: error.message }
+  revalidatePath("/admin/coupons")
+  return { deleted: data?.length ?? 0, failures: [] }
 }
 
 export async function setCouponActive(couponId: string, isActive: boolean): Promise<CouponActionResult> {

@@ -6,9 +6,10 @@ import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { DeleteProductButton } from "./delete-product-button"
 import { ProductPhotoButton } from "./product-photo-button"
 import { PublishToggle } from "./publish-toggle"
-import { deleteProduct, setProductPublished } from "./actions"
+import { deleteProduct, deleteProducts, setProductPublished } from "./actions"
 import { Alert, Badge, ButtonLink, EmptyState, PageHeader, StatStrip, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, linkClass, rowLinkClass } from "../_components/ui"
 import { fmtNumber, rs } from "../_components/format"
+import { BulkSelect, RowCheck, SelectAllCheck } from "../_components/bulk-select"
 
 export const dynamic = "force-dynamic"
 
@@ -157,97 +158,108 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
         </p>
       )}
 
-      <div className="mt-4">
-        {products.length === 0 ? (
-          <EmptyState
-            title={filtersActive ? "No products match these filters" : "No products yet"}
-            action={
-              !filtersActive && (
-                <ButtonLink href="/admin/products/new" variant="primary">
-                  Add your first product
-                </ButtonLink>
-              )
-            }
-          />
-        ) : (
-          <TableShell minWidth="min-w-[960px]">
-            <Thead>
-              <tr>
-                <Th>Product</Th>
-                <Th>Category</Th>
-                <Th align="right">Price</Th>
-                <Th>Stock</Th>
-                <Th>Status</Th>
-                <Th />
-              </tr>
-            </Thead>
-            <tbody>
-              {products.map((p) => {
-                const needsWeightFlag = isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
-                const isLowStock = p.stock_count !== null && p.stock_count > 0 && p.stock_count <= 5
-                const photo = photos.get(p.id)
-
-                return (
-                  <Tr key={p.id}>
-                    <Td>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/50">
-                          {photo ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- small admin thumbnail of a stored URL
-                            <img src={photo.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-                          ) : (
-                            <ImageIcon className="h-4 w-4 text-muted-foreground/50" aria-label="No photo yet" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <Link href={`/admin/products/${p.id}/edit`} className={rowLinkClass}>
-                            {p.name}
-                          </Link>
-                          <p className="mt-0.5 font-mono text-xs text-muted-foreground">{p.sku}</p>
-                        </div>
-                      </div>
-                    </Td>
-                    <Td>
-                      <span className="text-foreground/80">{p.category_name ?? "—"}</span>
-                      {needsWeightFlag && (
-                        <Link href={`/admin/products/${p.id}/edit`} className="ml-2 align-middle">
-                          <Badge tone="warning">Add weight</Badge>
-                        </Link>
-                      )}
-                    </Td>
-                    <Td align="right" className="font-medium tabular-nums">
-                      {rs(p.price)}
-                    </Td>
-                    <Td>
-                      {p.stock_count === null ? (
-                        <span className="text-muted-foreground">—</span>
-                      ) : p.stock_count === 0 ? (
-                        <Badge tone="danger">Out of stock</Badge>
-                      ) : isLowStock ? (
-                        <Badge tone="warning">{p.stock_count} left</Badge>
-                      ) : (
-                        <span className="tabular-nums text-foreground/80">{fmtNumber(p.stock_count)}</span>
-                      )}
-                    </Td>
-                    <Td>
-                      <PublishToggle productName={p.name} published={!!p.published_at} action={setProductPublished.bind(null, p.id)} />
-                    </Td>
-                    <Td align="right">
-                      <div className="flex items-start justify-end gap-2">
-                        <ProductPhotoButton productId={p.id} />
-                        <ButtonLink href={`/admin/products/${p.id}/edit`} size="sm">
-                          Edit
-                        </ButtonLink>
-                        <DeleteProductButton productName={p.name} action={deleteProduct.bind(null, p.id)} label="Delete" />
-                      </div>
-                    </Td>
-                  </Tr>
+      <BulkSelect
+        ids={products.map((p) => p.id)}
+        noun="product"
+        description="Products that appear in past orders can't be deleted without breaking your order history. They are kept, and you'll see which ones. Everything else is removed for good, along with its photos."
+        action={deleteProducts}
+      >
+        <div className="mt-4">
+          {products.length === 0 ? (
+            <EmptyState
+              title={filtersActive ? "No products match these filters" : "No products yet"}
+              action={
+                !filtersActive && (
+                  <ButtonLink href="/admin/products/new" variant="primary">
+                    Add your first product
+                  </ButtonLink>
                 )
-              })}
-            </tbody>
-          </TableShell>
-        )}
-      </div>
+              }
+            />
+          ) : (
+            <TableShell minWidth="min-w-[1000px]">
+              <Thead>
+                <tr>
+                  <Th className="w-10"><SelectAllCheck label="Select all products" /></Th>
+                  <Th>Product</Th>
+                  <Th>Category</Th>
+                  <Th align="right">Price</Th>
+                  <Th>Stock</Th>
+                  <Th>Status</Th>
+                  <Th />
+                </tr>
+              </Thead>
+              <tbody>
+                {products.map((p) => {
+                  const needsWeightFlag = isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
+                  const isLowStock = p.stock_count !== null && p.stock_count > 0 && p.stock_count <= 5
+                  const photo = photos.get(p.id)
+
+                  return (
+                    <Tr key={p.id} className="has-[[data-row-check]:checked]:bg-forest-50/60">
+                      <Td className="w-10">
+                        <RowCheck id={p.id} label={p.name} />
+                      </Td>
+                      <Td>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/50">
+                            {photo ? (
+                              // eslint-disable-next-line @next/next/no-img-element -- small admin thumbnail of a stored URL
+                              <img src={photo.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                            ) : (
+                              <ImageIcon className="h-4 w-4 text-muted-foreground/50" aria-label="No photo yet" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <Link href={`/admin/products/${p.id}/edit`} className={rowLinkClass}>
+                              {p.name}
+                            </Link>
+                            <p className="mt-0.5 font-mono text-xs text-muted-foreground">{p.sku}</p>
+                          </div>
+                        </div>
+                      </Td>
+                      <Td>
+                        <span className="text-foreground/80">{p.category_name ?? "—"}</span>
+                        {needsWeightFlag && (
+                          <Link href={`/admin/products/${p.id}/edit`} className="ml-2 align-middle">
+                            <Badge tone="warning">Add weight</Badge>
+                          </Link>
+                        )}
+                      </Td>
+                      <Td align="right" className="font-medium tabular-nums">
+                        {rs(p.price)}
+                      </Td>
+                      <Td>
+                        {p.stock_count === null ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : p.stock_count === 0 ? (
+                          <Badge tone="danger">Out of stock</Badge>
+                        ) : isLowStock ? (
+                          <Badge tone="warning">{p.stock_count} left</Badge>
+                        ) : (
+                          <span className="tabular-nums text-foreground/80">{fmtNumber(p.stock_count)}</span>
+                        )}
+                      </Td>
+                      <Td>
+                        <PublishToggle productName={p.name} published={!!p.published_at} action={setProductPublished.bind(null, p.id)} />
+                      </Td>
+                      <Td align="right">
+                        <div className="flex items-start justify-end gap-2">
+                          <ProductPhotoButton productId={p.id} />
+                          <ButtonLink href={`/admin/products/${p.id}/edit`} size="sm">
+                            Edit
+                          </ButtonLink>
+                          <DeleteProductButton productName={p.name} action={deleteProduct.bind(null, p.id)} label="Delete" />
+                        </div>
+                      </Td>
+                    </Tr>
+                  )
+                })}
+              </tbody>
+            </TableShell>
+          )}
+        </div>
+      </BulkSelect>
     </div>
   )
 }

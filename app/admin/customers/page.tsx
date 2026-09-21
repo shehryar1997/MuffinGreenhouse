@@ -3,10 +3,11 @@ import { Search, Star } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { sanitizeSearchTerm } from "@/lib/search-term"
 import { DeleteCustomerButton } from "./delete-customer-button"
-import { deleteCustomer } from "./actions"
+import { deleteCustomer, deleteCustomers } from "./actions"
 import { Alert, Badge, ButtonLink, EmptyState, PageHeader, StatStrip, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, linkClass, rowLinkClass } from "../_components/ui"
 import { fmtDate, fmtNumber, plural, rs } from "../_components/format"
 import { realEmail } from "@/lib/manual-order"
+import { BulkSelect, RowCheck, SelectAllCheck } from "../_components/bulk-select"
 
 // Force fresh data on every load — admin pages should never show a
 // customer's stale phone/address/etc. after they've just updated it.
@@ -110,69 +111,82 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
         )}
       </form>
 
-      <div className="mt-4">
-        {customerData.length === 0 ? (
-          <EmptyState title="No customers found" description={query ? "Try a different name, email or phone number." : "Customers appear here after their first order."} />
-        ) : (
-          <TableShell minWidth="min-w-[860px]">
-            <Thead>
-              <tr>
-                <Th>Customer</Th>
-                <Th>Phone</Th>
-                <Th>Account</Th>
-                <Th>Joined</Th>
-                <Th align="right">Orders</Th>
-                <Th align="right">Spent</Th>
-                <Th />
-              </tr>
-            </Thead>
-            <tbody>
-              {customerData.map((c) => (
-                <Tr key={c.id} className={c.isHighSpender ? "bg-amber-50/60 hover:bg-amber-50" : undefined}>
-                  <Td>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <Link href={`/admin/customers/${c.id}`} className={rowLinkClass}>
-                        {c.name || "Unnamed"}
-                      </Link>
-                      {c.isHighSpender && (
-                        <Badge tone="warning" dot={false}>
-                          <Star className="h-3 w-3 fill-current" aria-hidden />
-                          Top spender
-                        </Badge>
+      <BulkSelect
+        ids={customerData.map((c) => c.id)}
+        flaggedIds={customerData.filter((c) => c.orderCount > 0).map((c) => c.id)}
+        flaggedNotice="{n} of the selected customers have orders. Those orders are deleted too: they disappear from your order list and revenue totals, and any stock they reserved is NOT returned."
+        noun="customer"
+        description="This removes each profile with its account login, saved addresses and wishlist. It cannot be undone."
+        action={deleteCustomers}
+      >
+        <div className="mt-4">
+          {customerData.length === 0 ? (
+            <EmptyState title="No customers found" description={query ? "Try a different name, email or phone number." : "Customers appear here after their first order."} />
+          ) : (
+            <TableShell minWidth="min-w-[900px]">
+              <Thead>
+                <tr>
+                  <Th className="w-10"><SelectAllCheck label="Select all customers" /></Th>
+                  <Th>Customer</Th>
+                  <Th>Phone</Th>
+                  <Th>Account</Th>
+                  <Th>Joined</Th>
+                  <Th align="right">Orders</Th>
+                  <Th align="right">Spent</Th>
+                  <Th />
+                </tr>
+              </Thead>
+              <tbody>
+                {customerData.map((c) => (
+                  <Tr key={c.id} className={`has-[[data-row-check]:checked]:bg-forest-50/60 ${c.isHighSpender ? "bg-amber-50/60 hover:bg-amber-50" : ""}`}>
+                    <Td className="w-10">
+                      <RowCheck id={c.id} label={c.email} />
+                    </Td>
+                    <Td>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <Link href={`/admin/customers/${c.id}`} className={rowLinkClass}>
+                          {c.name || "Unnamed"}
+                        </Link>
+                        {c.isHighSpender && (
+                          <Badge tone="warning" dot={false}>
+                            <Star className="h-3 w-3 fill-current" aria-hidden />
+                            Top spender
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-[13px] text-muted-foreground">{realEmail(c.email) ?? "No email · added from WhatsApp"}</p>
+                    </Td>
+                    <Td className="whitespace-nowrap text-foreground/80">{c.phone || "—"}</Td>
+                    <Td>
+                      {c.auth_id ? (
+                        <Badge tone="success">{c.email_verified ? "Signed up · verified" : "Signed up"}</Badge>
+                      ) : (
+                        <Badge>Guest</Badge>
                       )}
-                    </div>
-                    <p className="mt-0.5 text-[13px] text-muted-foreground">{realEmail(c.email) ?? "No email · added from WhatsApp"}</p>
-                  </Td>
-                  <Td className="whitespace-nowrap text-foreground/80">{c.phone || "—"}</Td>
-                  <Td>
-                    {c.auth_id ? (
-                      <Badge tone="success">{c.email_verified ? "Signed up · verified" : "Signed up"}</Badge>
-                    ) : (
-                      <Badge>Guest</Badge>
-                    )}
-                  </Td>
-                  <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(c.created_at)}</Td>
-                  <Td align="right" className="tabular-nums">{c.orderCount}</Td>
-                  <Td align="right" className={`tabular-nums ${c.isHighSpender ? "font-semibold" : ""}`}>{rs(c.spent)}</Td>
-                  <Td align="right">
-                    <div className="flex items-center justify-end gap-2">
-                      <ButtonLink href={`/admin/customers/${c.id}`} size="sm">
-                        View
-                      </ButtonLink>
-                      <DeleteCustomerButton
-                        email={c.email}
-                        orderCount={c.orderCount}
-                        action={deleteCustomer.bind(null, c.id)}
-                        label="Delete"
-                      />
-                    </div>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </TableShell>
-        )}
-      </div>
+                    </Td>
+                    <Td className="whitespace-nowrap text-muted-foreground">{fmtDate(c.created_at)}</Td>
+                    <Td align="right" className="tabular-nums">{c.orderCount}</Td>
+                    <Td align="right" className={`tabular-nums ${c.isHighSpender ? "font-semibold" : ""}`}>{rs(c.spent)}</Td>
+                    <Td align="right">
+                      <div className="flex items-center justify-end gap-2">
+                        <ButtonLink href={`/admin/customers/${c.id}`} size="sm">
+                          View
+                        </ButtonLink>
+                        <DeleteCustomerButton
+                          email={c.email}
+                          orderCount={c.orderCount}
+                          action={deleteCustomer.bind(null, c.id)}
+                          label="Delete"
+                        />
+                      </div>
+                    </Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </TableShell>
+          )}
+        </div>
+      </BulkSelect>
     </div>
   )
 }

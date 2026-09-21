@@ -5,6 +5,7 @@ import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { deleteUnreferencedProductImages } from "@/lib/product-images"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { isAllowedImageUrl } from "@/lib/image-hosts"
+import { BAD_BULK_REQUEST, cleanBulkIds, type BulkDeleteResult } from "@/lib/admin-bulk"
 import { recordToFormData, type ImportRecord } from "@/lib/product-import"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
@@ -432,24 +433,57 @@ export async function updateProduct(productId: string, formData: FormData): Prom
   redirect("/admin/products")
 }
 
-export async function deleteProduct(productId: string): Promise<ProductActionResult> {
-  await requireAdmin()
+// Deletes one product and its photo files. No revalidating or redirecting, so the single and bulk deletes can share it.
+async function removeProduct(productId: string): Promise<{ error: string; inOrders: boolean } | null> {
   const { data: images } = await supabaseAdmin.from("product_images").select("url").eq("product_id", productId)
   const { error } = await supabaseAdmin.from("products").delete().eq("id", productId)
-  if (error) {
-    if (error.code === "23503") {
-      return {
-        error:
-          "This product appears in past orders (or stock records), so it can't be deleted without breaking your order history. Edit it and untick “Published” to hide it from the shop instead.",
-      }
-    }
-    return { error: error.message }
-  }
+  if (error) return { error: error.message, inOrders: error.code === "23503" }
   // product_images rows cascade-delete with the product; now drop their files from R2.
   await deleteUnreferencedProductImages((images ?? []).map((i) => i.url as string))
+  return null
+}
+
+export async function deleteProduct(productId: string): Promise<ProductActionResult> {
+  await requireAdmin()
+  const failed = await removeProduct(productId)
+  if (failed) {
+    return {
+      error: failed.inOrders
+        ? "This product appears in past orders (or stock records), so it can't be deleted without breaking your order history. Edit it and untick “Published” to hide it from the shop instead."
+        : failed.error,
+    }
+  }
   revalidatePath("/admin/products")
   revalidateStorefront()
   redirect("/admin/products")
+}
+
+// "Delete selected" on the products list. Products that appear in past orders are kept and reported by name.
+export async function deleteProducts(ids: string[]): Promise<BulkDeleteResult> {
+  await requireAdmin()
+  const clean = cleanBulkIds(ids)
+  if (!clean) return BAD_BULK_REQUEST
+
+  const { data: named } = await supabaseAdmin.from("products").select("id, name").in("id", clean)
+  const nameOf = new Map((named ?? []).map((p) => [p.id as string, p.name as string]))
+
+  const result: BulkDeleteResult = { deleted: 0, failures: [] }
+  for (const id of clean) {
+    const failed = await removeProduct(id)
+    if (!failed) result.deleted += 1
+    else {
+      const name = nameOf.get(id) ?? "A product"
+      result.failures.push(
+        failed.inOrders ? `${name} is in past orders, so it was kept. Unpublish it instead.` : `${name}: ${failed.error}`
+      )
+    }
+  }
+
+  if (result.deleted > 0) {
+    revalidatePath("/admin/products")
+    revalidateStorefront()
+  }
+  return result
 }
 
 // One-click publish/unpublish from the products list. Mirrors the form's rule: publishing an

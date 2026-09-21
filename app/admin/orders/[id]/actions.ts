@@ -9,6 +9,7 @@ import { grantReferralRewards } from "@/lib/referrals"
 import { sendOrderShippedEmail } from "@/lib/email/send-order-shipped"
 import { sendOrderCancelledEmail } from "@/lib/email/send-order-cancelled"
 import { isPlaceholderEmail } from "@/lib/manual-order"
+import { BAD_BULK_REQUEST, cleanBulkIds, type BulkDeleteResult } from "@/lib/admin-bulk"
 
 const DEFAULT_COURIER = "Leopards Courier"
 
@@ -194,9 +195,7 @@ export async function markDelivered(orderId: string) {
  * Stock: an order that hasn't shipped is still holding plants, so it is cancelled first and they go back on
  * the shelf. Shipped/delivered orders have left the greenhouse, and cancelled ones already gave theirs back.
  */
-export async function deleteOrder(orderId: string, redirectToList: boolean): Promise<{ error: string } | undefined> {
-  await requireAdmin()
-
+async function removeOrder(orderId: string): Promise<{ error: string } | undefined> {
   const { data: order, error: readError } = await supabaseAdmin
     .from("orders")
     .select("id, status")
@@ -214,11 +213,42 @@ export async function deleteOrder(orderId: string, redirectToList: boolean): Pro
 
   const { error: deleteError } = await supabaseAdmin.from("orders").delete().eq("id", orderId)
   if (deleteError) return { error: deleteError.message }
+}
 
+function refreshAfterOrderDelete() {
   revalidatePath("/admin/orders")
   revalidatePath("/admin/customers")
   revalidatePath("/admin")
+}
+
+export async function deleteOrder(orderId: string, redirectToList: boolean): Promise<{ error: string } | undefined> {
+  await requireAdmin()
+  const failed = await removeOrder(orderId)
+  if (failed) return failed
+
+  refreshAfterOrderDelete()
   if (redirectToList) redirect("/admin/orders")
+}
+
+// "Delete selected" on the orders list: each order is handled exactly like a single delete (stock returned for
+// orders that haven't shipped). One that can't be deleted is kept and reported by number.
+export async function deleteOrders(ids: string[]): Promise<BulkDeleteResult> {
+  await requireAdmin()
+  const clean = cleanBulkIds(ids)
+  if (!clean) return BAD_BULK_REQUEST
+
+  const { data: named } = await supabaseAdmin.from("orders").select("id, order_number").in("id", clean)
+  const numberOf = new Map((named ?? []).map((o) => [o.id as string, o.order_number as string]))
+
+  const result: BulkDeleteResult = { deleted: 0, failures: [] }
+  for (const id of clean) {
+    const failed = await removeOrder(id)
+    if (!failed) result.deleted += 1
+    else result.failures.push(`Order ${numberOf.get(id) ?? id}: ${failed.error}`)
+  }
+
+  if (result.deleted > 0) refreshAfterOrderDelete()
+  return result
 }
 
 export async function cancelOrder(orderId: string) {
