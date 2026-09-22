@@ -5,6 +5,7 @@ import { matchesProductFilters, parseProductFilters, type ProductFilter } from "
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { DeleteProductButton } from "./delete-product-button"
 import { ProductPhotoButton } from "./product-photo-button"
+import { VariantPhotosButton, type VariantPhotoRow } from "./variant-photos-button"
 import { PublishToggle } from "./publish-toggle"
 import { deleteProduct, deleteProducts, setProductPublished } from "./actions"
 import { Alert, Badge, ButtonLink, EmptyState, PageHeader, StatStrip, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, linkClass, rowLinkClass } from "../_components/ui"
@@ -35,13 +36,17 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   const { q, filter: rawFilter, category: rawCategory } = await searchParams
   const { query, filter, category: categoryFilter } = parseProductFilters({ q, filter: rawFilter, category: rawCategory })
 
-  const [{ data, error }, { data: categoryRows }, { data: imageRows }] = await Promise.all([
+  const [{ data, error }, { data: categoryRows }, { data: imageRows }, { data: variantRows }, { data: variantImageRows }] = await Promise.all([
     supabaseAdmin
       .from("products")
       .select("id, sku, name, category_name, price, stock_count, stock_status, published_at, weight_kg")
       .order("name"),
     supabaseAdmin.from("categories").select("name").order("sort_order"),
-    supabaseAdmin.from("product_images").select("product_id, url, is_primary, sort_order").order("sort_order"),
+    // General photos only: a variant's own photo must not become the product's thumbnail.
+    supabaseAdmin.from("product_images").select("product_id, url, is_primary, sort_order").is("variant_id", null).order("sort_order"),
+    // Active variants and their own photos, for the per-variant photo overlay on products that have several.
+    supabaseAdmin.from("product_variants").select("id, product_id, name, is_active").order("sort_order"),
+    supabaseAdmin.from("product_images").select("variant_id, url, sort_order").not("variant_id", "is", null).order("sort_order"),
   ])
 
   // First photo per product (the primary one when flagged) + how many it has.
@@ -53,6 +58,19 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
       seen.count += 1
       if (row.is_primary) seen.url = row.url
     }
+  }
+
+  // First photo of each variant (rows come sorted, so the first one seen wins), then the variants per product.
+  const photoByVariant = new Map<string, string>()
+  for (const row of (variantImageRows ?? []) as { variant_id: string; url: string }[]) {
+    if (!photoByVariant.has(row.variant_id)) photoByVariant.set(row.variant_id, row.url)
+  }
+  const variantsByProduct = new Map<string, VariantPhotoRow[]>()
+  for (const row of (variantRows ?? []) as { id: string; product_id: string; name: string; is_active: boolean | null }[]) {
+    if (row.is_active === false) continue
+    const list = variantsByProduct.get(row.product_id) ?? []
+    list.push({ id: row.id, name: row.name, url: photoByVariant.get(row.id) ?? null })
+    variantsByProduct.set(row.product_id, list)
   }
 
   if (error) {
@@ -194,6 +212,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                   const needsWeightFlag = isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
                   const isLowStock = p.stock_count !== null && p.stock_count > 0 && p.stock_count <= 5
                   const photo = photos.get(p.id)
+                  const variants = variantsByProduct.get(p.id) ?? []
 
                   return (
                     <Tr key={p.id} className="has-[[data-row-check]:checked]:bg-forest-50/60">
@@ -245,7 +264,11 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                       </Td>
                       <Td align="right">
                         <div className="flex items-start justify-end gap-2">
-                          <ProductPhotoButton productId={p.id} />
+                          {variants.length > 1 ? (
+                            <VariantPhotosButton productId={p.id} productName={p.name} variants={variants} generalUrl={photo?.url ?? null} />
+                          ) : (
+                            <ProductPhotoButton productId={p.id} />
+                          )}
                           <ButtonLink href={`/admin/products/${p.id}/edit`} size="sm">
                             Edit
                           </ButtonLink>

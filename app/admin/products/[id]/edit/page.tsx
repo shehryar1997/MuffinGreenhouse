@@ -16,7 +16,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     supabaseAdmin
       .from("products")
       .select(
-        "*, images:product_images(url, alt_text, sort_order), variants:product_variants(id, name, sku, price, stock_count, image_url, sort_order, is_active)"
+        "*, images:product_images(url, alt_text, sort_order, variant_id, is_primary), variants:product_variants(id, name, sku, price, stock_count, sort_order, is_active)"
       )
       .eq("id", id)
       .order("sort_order", { referencedTable: "product_images", ascending: true })

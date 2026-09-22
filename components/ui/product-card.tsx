@@ -8,6 +8,7 @@ import { ShoppingBag, Heart, Eye } from "lucide-react"
 import { Product } from "@/types"
 import { formatPrice } from "@/lib/utils"
 import { isPlantProduct } from "@/lib/product-categories"
+import { displayPrice, startingFromPrice } from "@/lib/product-photos"
 import { cn } from "@/lib/utils"
 import { Badge } from "./badge"
 import { Button } from "./button"
@@ -33,6 +34,8 @@ export function ProductCard({ product, index = 0, className, sizes = "(max-width
   const wishlisted = isWishlisted(product.id)
 
   const isOutOfStock = product.stockStatus === "out_of_stock"
+  // Several variants at different prices show "Starting from" the lowest; a single price is shown plain.
+  const fromPrice = startingFromPrice(product)
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -170,7 +173,9 @@ export function ProductCard({ product, index = 0, className, sizes = "(max-width
         <div className="space-y-1.5">
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-wider">{product.category.name}</p>
           <h3 className="font-medium text-foreground group-hover:text-primary transition-colors line-clamp-2">{product.name}</h3>
-          <p className="font-mono text-sm text-foreground">{formatPrice(product.price)}</p>
+          <p className="font-mono text-sm text-foreground">
+            {fromPrice !== null ? `Starting from ${formatPrice(fromPrice)}` : formatPrice(displayPrice(product))}
+          </p>
           {product.variants.length > 1 && (
             <p className="text-xs text-muted-foreground">{product.variants.length} sizes available</p>
           )}

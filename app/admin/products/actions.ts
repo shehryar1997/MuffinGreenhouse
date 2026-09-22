@@ -10,6 +10,7 @@ import { recordToFormData, type ImportRecord } from "@/lib/product-import"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 import { afterProductSaved } from "@/lib/stock-alerts"
+import { choosePrimaryUrl } from "@/lib/product-photos"
 
 // Fields copied when prefilling a new product from an existing one. Deliberately
 // excludes id, sku and slug (sku/slug are UNIQUE), image data (kept as-is in the
@@ -549,6 +550,67 @@ export async function addProductPhotos(productId: string, urls: string[]): Promi
   revalidateStorefront()
 }
 
+// Sets one variant's own photo straight from the products list (the per-variant photo overlay). The photo
+// has already been uploaded (converted to AVIF and stored in R2); this attaches its URL to the variant.
+// A variant that already has a photo gets it replaced in place (same row, same position among the product's
+// photos) and the old file is deleted from R2 unless something else still points at it. A variant with
+// several photos (added in the product form) only has its first one replaced.
+export async function setVariantPhoto(productId: string, variantId: string, url: string): Promise<ProductActionResult> {
+  await requireAdmin()
+
+  const photoUrl = (url ?? "").trim()
+  if (!photoUrl) return { error: "No photo was uploaded." }
+  if (!isAllowedImageUrl(photoUrl)) {
+    return { error: "That photo isn't from an allowed image host. Upload it with the photo button again." }
+  }
+
+  const { data: variant, error: variantError } = await supabaseAdmin
+    .from("product_variants")
+    .select("id, name, is_active")
+    .eq("id", variantId)
+    .eq("product_id", productId)
+    .maybeSingle()
+  if (variantError) return { error: `Could not read the variant: ${variantError.message}` }
+  if (!variant || variant.is_active === false) {
+    return { error: "This variant no longer exists. Reload the page and try again." }
+  }
+
+  const { data: existing, error: readError } = await supabaseAdmin
+    .from("product_images")
+    .select("id, url, sort_order, variant_id")
+    .eq("product_id", productId)
+  if (readError) return { error: `Could not read the product's photos: ${readError.message}` }
+
+  const current = (existing ?? [])
+    .filter((row) => row.variant_id === variantId)
+    .sort((a, b) => ((a.sort_order as number | null) ?? 0) - ((b.sort_order as number | null) ?? 0))[0]
+  if (current && current.url === photoUrl) return undefined
+
+  const writeError = current
+    ? (await supabaseAdmin.from("product_images").update({ url: photoUrl }).eq("id", current.id)).error
+    : (
+        await supabaseAdmin.from("product_images").insert({
+          product_id: productId,
+          variant_id: variantId,
+          url: photoUrl,
+          alt_text: variant.name as string,
+          sort_order: Math.max(-1, ...(existing ?? []).map((r) => (r.sort_order as number | null) ?? 0)) + 1,
+          is_primary: false,
+        })
+      ).error
+  if (writeError) {
+    // The new file is already in R2 but nothing points at it: drop it rather than leave an orphan.
+    await deleteUnreferencedProductImages([photoUrl])
+    return { error: `Saving the photo failed: ${writeError.message}` }
+  }
+
+  // The replaced photo's file goes too, unless another photo or record still uses that same file.
+  if (current) await deleteUnreferencedProductImages([current.url as string])
+
+  revalidatePath("/admin/products")
+  revalidateStorefront()
+}
+
 type StockStatus = "in_stock" | "low_stock" | "out_of_stock"
 function stockStatusFor(stock: number, threshold: number): StockStatus {
   if (stock <= 0) return "out_of_stock"
@@ -562,28 +624,43 @@ function stockStatusFor(stock: number, threshold: number): StockStatus {
 // (carts, orders and wishlists point at variant ids) and avoids needless writes.
 // Returns an error message, or null on success.
 async function syncImagesAndVariants(productId: string, formData: FormData): Promise<string | null> {
-  const imageError = await syncImages(productId, formData)
-  if (imageError) return imageError
-  return syncVariants(productId, formData)
+  // Variants go first: a photo can belong to a variant that is being created in this same save, so
+  // its database id has to exist before the photo rows are written.
+  const variants = await syncVariants(productId, formData)
+  if ("error" in variants) return variants.error
+  return syncImages(productId, formData, variants.idByKey)
 }
 
-async function syncImages(productId: string, formData: FormData): Promise<string | null> {
+async function syncImages(productId: string, formData: FormData, variantIdByKey: Map<string, string>): Promise<string | null> {
   const imageUrls = formData.getAll("image_url") as string[]
   const imageAlts = formData.getAll("image_alt") as string[]
+  // Which variant each photo belongs to (a variant row key, "" = general) and whether it was flagged primary.
+  const imageVariantKeys = formData.getAll("image_variant") as string[]
+  const imagePrimaryFlags = formData.getAll("image_primary") as string[]
 
-  // Drop blank and duplicate rows *before* numbering so the first real image is always primary.
+  // Drop blank and duplicate rows before numbering. A photo whose variant is unknown (removed, or unnamed
+  // and so not saved) is treated as general rather than lost.
   const seen = new Set<string>()
-  const desired: Array<{ url: string; alt_text: string }> = []
+  const desired: Array<{ url: string; alt_text: string; variant_id: string | null; flagged: boolean }> = []
   imageUrls.forEach((raw, i) => {
     const url = raw.trim()
     if (!url || seen.has(url)) return
     seen.add(url)
-    desired.push({ url, alt_text: imageAlts[i] ?? "" })
+    const variantKey = (imageVariantKeys[i] ?? "").trim()
+    desired.push({
+      url,
+      alt_text: imageAlts[i] ?? "",
+      variant_id: variantKey ? (variantIdByKey.get(variantKey) ?? null) : null,
+      flagged: imagePrimaryFlags[i] === "1",
+    })
   })
+
+  // Exactly one primary, and only ever among general photos (the shop card reads it). See choosePrimaryUrl.
+  const primaryUrl = choosePrimaryUrl(desired)
 
   const { data: existing, error: readError } = await supabaseAdmin
     .from("product_images")
-    .select("id, url, alt_text, sort_order, is_primary")
+    .select("id, url, alt_text, sort_order, is_primary, variant_id")
     .eq("product_id", productId)
   if (readError) return `Could not read the existing images: ${readError.message}`
 
@@ -596,14 +673,19 @@ async function syncImages(productId: string, formData: FormData): Promise<string
 
   desired.forEach((image, index) => {
     const row = rowByUrl.get(image.url)
-    const isPrimary = index === 0
+    const isPrimary = image.url === primaryUrl
     if (!row) {
-      toInsert.push({ product_id: productId, url: image.url, alt_text: image.alt_text, sort_order: index, is_primary: isPrimary })
+      toInsert.push({ product_id: productId, url: image.url, alt_text: image.alt_text, sort_order: index, is_primary: isPrimary, variant_id: image.variant_id })
       return
     }
     keptIds.add(row.id as string)
-    if (row.sort_order !== index || row.is_primary !== isPrimary || (row.alt_text ?? "") !== image.alt_text) {
-      toUpdate.push({ id: row.id as string, values: { sort_order: index, is_primary: isPrimary, alt_text: image.alt_text } })
+    if (
+      row.sort_order !== index ||
+      row.is_primary !== isPrimary ||
+      (row.alt_text ?? "") !== image.alt_text ||
+      ((row.variant_id as string | null) ?? null) !== image.variant_id
+    ) {
+      toUpdate.push({ id: row.id as string, values: { sort_order: index, is_primary: isPrimary, alt_text: image.alt_text, variant_id: image.variant_id } })
     }
   })
 
@@ -631,13 +713,14 @@ async function syncImages(productId: string, formData: FormData): Promise<string
   return null
 }
 
-async function syncVariants(productId: string, formData: FormData): Promise<string | null> {
+async function syncVariants(productId: string, formData: FormData): Promise<{ error: string } | { idByKey: Map<string, string> }> {
   const ids = formData.getAll("variant_id") as string[]
+  // The form's own key for each variant row, so photo rows can point at a variant that has no id yet.
+  const keys = formData.getAll("variant_key") as string[]
   const names = formData.getAll("variant_name") as string[]
   const skus = formData.getAll("variant_sku") as string[]
   const prices = formData.getAll("variant_price") as string[]
   const stocks = formData.getAll("variant_stock") as string[]
-  const imageUrls = formData.getAll("variant_image_url") as string[]
   const productSku = String(formData.get("sku") ?? "").trim()
   const threshold = Number(formData.get("low_stock_threshold") || 10)
 
@@ -646,12 +729,12 @@ async function syncVariants(productId: string, formData: FormData): Promise<stri
       const stock = Number(stocks[i] || 0)
       return {
         id: (ids[i] ?? "").trim(),
+        key: (keys[i] ?? "").trim(),
         name: name.trim(),
         sku: skus[i]?.trim() || `${productSku}-${i + 1}`,
         price: Number(prices[i] || 0),
         stock_count: stock,
         stock_status: stockStatusFor(stock, threshold),
-        image_url: imageUrls[i]?.trim() || null,
         sort_order: i,
         is_default: i === 0,
         is_active: true,
@@ -661,33 +744,31 @@ async function syncVariants(productId: string, formData: FormData): Promise<stri
     .map((row, i) => ({ ...row, sort_order: i, is_default: i === 0 }))
 
   if (rows.some((r) => !Number.isFinite(r.price) || r.price < 0 || !Number.isFinite(r.stock_count) || r.stock_count < 0)) {
-    return "Variant prices and stock must be valid, non-negative numbers."
+    return { error: "Variant prices and stock must be valid, non-negative numbers." }
   }
   if (new Set(rows.map((r) => r.sku)).size !== rows.length) {
-    return "Two variants have the same SKU. Every variant needs its own unique SKU."
-  }
-  // Same rule as the product photos: next/image only loads allow-listed hosts.
-  if (rows.some((r) => r.image_url && !isAllowedImageUrl(r.image_url))) {
-    return "A variant photo isn't from an allowed image host. Remove it and upload the photo with the upload button instead."
+    return { error: "Two variants have the same SKU. Every variant needs its own unique SKU." }
   }
 
   const { data: existing, error: readError } = await supabaseAdmin
     .from("product_variants")
-    .select("id, image_url")
+    .select("id")
     .eq("product_id", productId)
-  if (readError) return `Could not read the existing variants: ${readError.message}`
+  if (readError) return { error: `Could not read the existing variants: ${readError.message}` }
   const existingIds = new Set((existing ?? []).map((v) => v.id as string))
-  const oldImageUrls = (existing ?? []).map((v) => v.image_url as string | null).filter((u): u is string => !!u)
 
   const keptIds = new Set<string>()
-  for (const { id, ...values } of rows) {
+  const idByKey = new Map<string, string>()
+  for (const { id, key, ...values } of rows) {
     if (id && existingIds.has(id)) {
       keptIds.add(id)
+      if (key) idByKey.set(key, id)
       const { error } = await supabaseAdmin.from("product_variants").update(values).eq("id", id).eq("product_id", productId)
-      if (error) return `Saving variant “${values.name}” failed: ${friendlyDbError(error)}`
+      if (error) return { error: `Saving variant “${values.name}” failed: ${friendlyDbError(error)}` }
     } else {
-      const { error } = await supabaseAdmin.from("product_variants").insert({ ...values, product_id: productId })
-      if (error) return `Saving variant “${values.name}” failed: ${friendlyDbError(error)}`
+      const { data: created, error } = await supabaseAdmin.from("product_variants").insert({ ...values, product_id: productId }).select("id").single()
+      if (error) return { error: `Saving variant “${values.name}” failed: ${friendlyDbError(error)}` }
+      if (key) idByKey.set(key, created.id as string)
     }
   }
 
@@ -702,14 +783,10 @@ async function syncVariants(productId: string, formData: FormData): Promise<stri
         .from("product_variants")
         .update({ is_active: false, stock_count: 0, stock_status: "out_of_stock" })
         .eq("id", id)
-      if (retireError) return `Removing a variant failed: ${retireError.message}`
+      if (retireError) return { error: `Removing a variant failed: ${retireError.message}` }
     } else {
-      return `Removing a variant failed: ${error.message}`
+      return { error: `Removing a variant failed: ${error.message}` }
     }
   }
-
-  // Variant photos that were replaced, cleared or belonged to a removed variant: delete their files
-  // from R2 unless something else (another variant, a product photo...) still uses the same file.
-  await deleteUnreferencedProductImages(oldImageUrls)
-  return null
+  return { idByKey }
 }

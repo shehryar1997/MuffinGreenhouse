@@ -46,6 +46,9 @@ export interface ProductImage {
   url: string
   alt: string
   sortOrder: number
+  /** null = a general photo shown for every variant; set = only while that variant is selected. */
+  variantId?: string | null
+  isPrimary?: boolean
 }
 
 export interface CareInfo {
@@ -65,8 +68,8 @@ export interface ProductVariant {
   stockStatus: "in_stock" | "low_stock" | "out_of_stock"
   stockCount: number
   sku: string
-  /** Optional photo; replaces the main product photo while this variant is selected. */
-  imageUrl?: string
+  /** Photos tagged to this variant, in display order. Empty when the variant has none. */
+  images?: ProductImage[]
 }
 
 export interface Review {

@@ -72,6 +72,8 @@ export interface SupabaseProductImage {
   alt_text: string
   sort_order: number
   is_primary: boolean
+  // null = general photo (all variants); set = only shown when that variant is selected
+  variant_id?: string | null
 }
 
 export interface SupabaseProductVariant {
@@ -82,8 +84,6 @@ export interface SupabaseProductVariant {
   stock_status: string
   stock_count: number
   is_default: boolean
-  // Optional photo shown on the product page when this variant is selected
-  image_url?: string | null
   // false = retired: removed in the admin panel but kept because past orders reference it
   is_active?: boolean
 }

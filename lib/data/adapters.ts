@@ -2,6 +2,7 @@ import { Product, Category, ProductImage, ProductVariant, CareInfo } from '@/typ
 import { SupabaseProduct, SupabaseProductImage, SupabaseProductVariant } from '@/supabase/client'
 import { isNonPlantCategorySlug, isNonPlantCategoryName } from '@/lib/product-categories'
 import { isWithinNewArrivalWindow } from '@/lib/new-arrival'
+import { splitProductImages } from '@/lib/product-photos'
 
 /**
  * Maps a SupabaseProduct (snake_case) to the app's Product type (camelCase)
@@ -12,6 +13,11 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
   // Tools & Equipment (pots, fertilizer, media...) have no use-case tags: the admin form
   // never saves them, and this also hides any left over from before that rule existed.
   const isToolOrEquipment = isNonPlantCategorySlug(row.category_slug) || isNonPlantCategoryName(row.category_name)
+  // `images` holds the general photos (primary first) so every card and page that reads images[0] gets the
+  // general primary photo. Variant-specific photos hang off their variant. A product whose only photos are
+  // variant-specific falls back to all of them rather than showing nothing.
+  const allImages = (row.images ?? []).map(mapSupabaseImage)
+  const { general, byVariant } = splitProductImages(allImages)
   return {
     id: row.id,
     name: row.name,
@@ -23,10 +29,12 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     currency: row.currency,
     stockStatus: row.stock_status,
     stockCount: row.stock_count,
-    images: (row.images ?? []).map(mapSupabaseImage),
+    images: general.length > 0 ? general : allImages,
     careInfo: mapSupabaseCareInfo(row),
     // Retired variants (is_active = false) are never offered for sale.
-    variants: (row.variants ?? []).filter((v) => v.is_active !== false).map(mapSupabaseVariant),
+    variants: (row.variants ?? [])
+      .filter((v) => v.is_active !== false)
+      .map((v) => mapSupabaseVariant(v, byVariant.get(v.id) ?? [])),
     useCaseTags: isToolOrEquipment ? [] : row.use_case_tags ?? [],
     // The "New" badge lasts 14 days from publishing, even if the flag hasn't been cleared yet.
     isNewArrival: !!row.is_new_arrival && isWithinNewArrivalWindow(row.published_at, row.created_at),
@@ -64,10 +72,12 @@ function mapSupabaseImage(img: SupabaseProductImage): ProductImage {
     url: img.url,
     alt: img.alt_text,
     sortOrder: img.sort_order,
+    variantId: img.variant_id ?? null,
+    isPrimary: !!img.is_primary,
   }
 }
 
-function mapSupabaseVariant(variant: SupabaseProductVariant): ProductVariant {
+function mapSupabaseVariant(variant: SupabaseProductVariant, images: ProductImage[]): ProductVariant {
   return {
     id: variant.id,
     name: variant.name,
@@ -75,7 +85,7 @@ function mapSupabaseVariant(variant: SupabaseProductVariant): ProductVariant {
     stockStatus: variant.stock_status as 'in_stock' | 'low_stock' | 'out_of_stock',
     stockCount: variant.stock_count,
     sku: variant.sku,
-    imageUrl: variant.image_url || undefined,
+    images,
   }
 }
 

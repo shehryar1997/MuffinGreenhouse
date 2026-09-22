@@ -10,7 +10,6 @@ export const IMAGE_URL_COLUMNS = [
   ["product_images", "thumbnail_url"],
   ["product_images", "medium_url"],
   ["product_images", "large_url"],
-  ["product_variants", "image_url"],
   ["categories", "image_url"],
   ["events", "image_url"],
   ["journal_posts", "cover_image_url"],

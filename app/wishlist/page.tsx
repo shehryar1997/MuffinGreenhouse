@@ -18,8 +18,8 @@ export const metadata: Metadata = {
 // Match the PRODUCT_SELECT shape from lib/data/products.ts
 const PRODUCT_SELECT = `
   *,
-  images:product_images(id, url, alt_text, sort_order, is_primary),
-  variants:product_variants(id, sku, name, price, stock_status, stock_count, is_default, is_active, image_url)
+  images:product_images(id, url, alt_text, sort_order, is_primary, variant_id),
+  variants:product_variants(id, sku, name, price, stock_status, stock_count, is_default, is_active)
 `
 
 interface WishlistRow {

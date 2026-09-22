@@ -50,7 +50,9 @@ export async function GET(request: Request) {
         supabaseAdmin.from("products").select(`${EXPORT_PRODUCT_COLUMNS}, stock_status`).order("name").order("id").range(from, to) as unknown as Page<ProductRow>
       ),
       fetchAll<ImageRow>((from, to) =>
-        supabaseAdmin.from("product_images").select("product_id, url, alt_text, sort_order").order("id").range(from, to) as unknown as Page<ImageRow>
+        // General photos only: the sheet has no column for which variant a photo belongs to, so a variant's
+        // photo would re-import as a general one.
+        supabaseAdmin.from("product_images").select("product_id, url, alt_text, sort_order").is("variant_id", null).order("id").range(from, to) as unknown as Page<ImageRow>
       ),
       fetchAll<VariantRow>((from, to) =>
         supabaseAdmin.from("product_variants").select("product_id, name, sku, price, stock_count, sort_order, is_active").order("id").range(from, to) as unknown as Page<VariantRow>
