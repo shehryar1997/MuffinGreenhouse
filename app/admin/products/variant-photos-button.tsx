@@ -6,15 +6,12 @@ import { Camera, Check, ImageIcon, Loader2, X } from "lucide-react"
 import { uploadAdminImage } from "@/lib/admin-upload"
 import { cn } from "@/lib/utils"
 import { buttonClass } from "../_components/ui"
-import { addProductPhotos, setVariantPhoto } from "./actions"
+import { setVariantPhoto } from "./actions"
 
 export type VariantPhotoRow = { id: string; name: string; url: string | null }
 
 type Source = "camera" | "gallery"
 type Busy = { id: string; source: Source; label: string }
-
-// Row id used for the product's general photo (shown for every variant, used on the shop grid).
-const GENERAL = "general"
 
 // One "Photos" button for a product with several variants. It opens an overlay with a row per variant, each
 // with Camera and Gallery buttons, so a photo can be added for every variant straight from the list. Photos go
@@ -24,12 +21,10 @@ export function VariantPhotosButton({
   productId,
   productName,
   variants,
-  generalUrl,
 }: {
   productId: string
   productName: string
   variants: VariantPhotoRow[]
-  generalUrl: string | null
 }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState<Busy | null>(null)
@@ -47,7 +42,7 @@ export function VariantPhotosButton({
     try {
       const url = await uploadAdminImage(file, "products")
       setBusy({ id: target, source, label: "Saving…" })
-      const result = target === GENERAL ? await addProductPhotos(productId, [url]) : await setVariantPhoto(productId, target, url)
+      const result = await setVariantPhoto(productId, target, url)
       if (result?.error) throw new Error(result.error)
       setSaved((s) => ({ ...s, [target]: url }))
     } catch (err) {
@@ -57,10 +52,7 @@ export function VariantPhotosButton({
     }
   }
 
-  const rows: Array<{ id: string; title: string; hint?: string; url: string | null }> = [
-    { id: GENERAL, title: "Main photo", hint: "Shown for every variant and on the shop grid", url: saved[GENERAL] ?? generalUrl },
-    ...variants.map((v) => ({ id: v.id, title: v.name, url: urlFor(v) })),
-  ]
+  const rows: Array<{ id: string; title: string; url: string | null }> = variants.map((v) => ({ id: v.id, title: v.name, url: urlFor(v) }))
 
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !busy && setOpen(next)}>
@@ -81,7 +73,7 @@ export function VariantPhotosButton({
             <div className="min-w-0">
               <Dialog.Title className="truncate font-sans text-base font-semibold tracking-normal">{productName}</Dialog.Title>
               <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-                Add a photo for each variant. Picking a new photo replaces the old one.
+                Add a photo for each variant. It must show that exact size. Picking a new photo replaces the old one.
               </Dialog.Description>
             </div>
             <Dialog.Close
@@ -114,7 +106,6 @@ export function VariantPhotosButton({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{row.title}</p>
-                    {row.hint && <p className="text-xs text-muted-foreground">{row.hint}</p>}
                     {rowBusy ? (
                       <p className="text-xs text-muted-foreground">{busy?.label}</p>
                     ) : saved[row.id] ? (

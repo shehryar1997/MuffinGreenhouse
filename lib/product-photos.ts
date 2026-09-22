@@ -1,35 +1,38 @@
-// Pure helpers for choosing which product photo and price to show. A photo with no variant_id is
-// "general" and applies to every variant; a photo with a variant_id only applies while that variant
-// is selected. Kept free of React and Supabase so the rules can be tested on their own.
+// Pure helpers for choosing which product photo and price to show. Every photo belongs to a variant (there are no
+// general photos), so a shopper only ever sees the photo of the exact size or pot they are looking at. Kept free
+// of React and Supabase so the rules can be tested on their own.
 import type { Product, ProductImage } from "@/types"
 
 const bySortOrder = (a: ProductImage, b: ProductImage) => a.sortOrder - b.sortOrder
 
-export type SplitImages = {
-  /** General photos: the primary one first, then the rest by sort order. */
-  general: ProductImage[]
-  /** Variant-specific photos keyed by variant id, each list by sort order. */
-  byVariant: Map<string, ProductImage[]>
-}
-
-export function splitProductImages(images: ProductImage[]): SplitImages {
-  const sorted = [...images].sort(bySortOrder)
+/** Photos grouped by the variant they belong to, each list by sort order. Photos with no variant are ignored. */
+export function groupImagesByVariant(images: ProductImage[]): Map<string, ProductImage[]> {
   const byVariant = new Map<string, ProductImage[]>()
-  const generalRaw: ProductImage[] = []
-  for (const image of sorted) {
-    if (!image.variantId) {
-      generalRaw.push(image)
-      continue
-    }
+  for (const image of [...images].sort(bySortOrder)) {
+    if (!image.variantId) continue
     const list = byVariant.get(image.variantId) ?? []
     list.push(image)
     byVariant.set(image.variantId, list)
   }
-  // The card and the product page start on the general primary photo. With no primary flagged, the
-  // lowest sort order (already first) wins.
-  const primary = generalRaw.find((image) => image.isPrimary)
-  const general = primary ? [primary, ...generalRaw.filter((image) => image !== primary)] : generalRaw
-  return { general, byVariant }
+  return byVariant
+}
+
+/**
+ * Which variant's photo the shop card (and everything else that shows one photo per product) uses: the variant
+ * the admin ticked, when it is still offered and has a photo; otherwise the cheapest variant that has a photo;
+ * otherwise the cheapest variant. null when there are no variants.
+ */
+export function chooseCardVariantId(
+  variants: { id: string; price: number }[],
+  hasPhoto: (variantId: string) => boolean,
+  preferredId: string | null | undefined
+): string | null {
+  if (variants.length === 0) return null
+  const preferred = preferredId ? variants.find((v) => v.id === preferredId) : undefined
+  if (preferred && hasPhoto(preferred.id)) return preferred.id
+  const cheapest = (list: { id: string; price: number }[]) => list.reduce((best, v) => (v.price < best.price ? v : best))
+  const withPhoto = variants.filter((v) => hasPhoto(v.id))
+  return cheapest(withPhoto.length > 0 ? withPhoto : variants).id
 }
 
 /**
@@ -50,43 +53,26 @@ export function displayPrice(product: Pick<Product, "variants" | "price">): numb
 }
 
 /**
- * Keeps "exactly one primary among general photos" true in the admin form before anything is saved:
- * variant photos are never primary, at most one general photo is (the first one flagged wins), and when
- * there are general photos but none is flagged the first one becomes primary.
- */
-export function normalizePrimary<T extends { variant_key: number | null; is_primary: boolean }>(rows: T[]): T[] {
-  const isGeneral = (row: T) => row.variant_key === null
-  const chosen = rows.find((row) => isGeneral(row) && row.is_primary) ?? rows.find(isGeneral)
-  return rows.map((row) => {
-    const primary = row === chosen
-    return row.is_primary === primary ? row : { ...row, is_primary: primary }
-  })
-}
-
-/**
- * Server-side twin of normalizePrimary: the url that gets is_primary = true on save. It is the first
- * general photo flagged primary, else the first general photo, else none. Decided again on the server so
- * a crafted or older request cannot leave two primaries.
- */
-export function choosePrimaryUrl(photos: { url: string; variant_id: string | null; flagged: boolean }[]): string | null {
-  const general = photos.filter((photo) => photo.variant_id === null)
-  return (general.find((photo) => photo.flagged) ?? general[0])?.url ?? null
-}
-
-/**
- * The product page gallery. General photos come first (a product with only variant photos falls back to
- * its whole list), then the selected variant's own photos. The main photo is the one the shopper chose if
- * it is still in the gallery, else the general primary photo, so it never goes blank when a variant
- * without its own photos is picked.
+ * The product page gallery for the selected variant: only that variant's own photos, so switching size never
+ * shows another size's plant. The main photo is the one the shopper chose if it belongs to this variant, else the
+ * variant's first photo. A variant with no photo yields no main image (the page shows its placeholder).
  */
 export function pickGallery(
-  product: Pick<Product, "images">,
   selectedVariant: { images?: ProductImage[] } | null,
   shownImageId: string | null
 ): { galleryImages: ProductImage[]; mainImage: ProductImage | undefined } {
-  const general = product.images.filter((image) => !image.variantId)
-  const base = general.length > 0 ? general : product.images
-  const own = (selectedVariant?.images ?? []).filter((image) => !base.some((b) => b.id === image.id))
-  const galleryImages = [...base, ...own]
-  return { galleryImages, mainImage: galleryImages.find((image) => image.id === shownImageId) ?? base[0] }
+  const galleryImages = selectedVariant?.images ?? []
+  return { galleryImages, mainImage: galleryImages.find((image) => image.id === shownImageId) ?? galleryImages[0] }
+}
+
+/**
+ * Why a product can't be published yet, or null when it can: it needs at least one variant, and every variant
+ * needs a photo (so no page can fall back to another size's picture). `name` is only used in the message.
+ */
+export function publishBlocker(variants: { name: string; hasPhoto: boolean }[]): string | null {
+  if (variants.length === 0) return "Add at least one variant."
+  const missing = variants.filter((v) => !v.hasPhoto).map((v) => v.name.trim() || "Unnamed variant")
+  if (missing.length === 0) return null
+  if (variants.length === 1) return "Add a photo."
+  return `Add a photo for ${missing.join(", ")}. Every variant needs its own photo.`
 }

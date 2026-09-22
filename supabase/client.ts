@@ -33,6 +33,7 @@ export interface SupabaseProduct {
   is_new_arrival: boolean
   is_pet_safe: boolean
   is_imported: boolean
+  is_hard_leaf?: boolean
   is_featured: boolean
   category_id: string
   category_name: string
@@ -64,6 +65,8 @@ export interface SupabaseProduct {
   // Still separate linked tables, same as Airtable
   images?: SupabaseProductImage[]
   variants?: SupabaseProductVariant[]
+  // Variant whose photo the shop card shows (null = cheapest variant that has a photo)
+  card_variant_id?: string | null
 }
 
 export interface SupabaseProductImage {

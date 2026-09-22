@@ -28,11 +28,19 @@ export default function TermsConditionsPage() {
             <p>We accept bank transfer (HBL), JazzCash and Easypaisa. Send your receipt via WhatsApp. Unpaid orders are held for 24 hours, then cancelled. No card gateway.</p>
             <h2 className="font-serif text-xl text-forest-950">3. Delivery</h2>
             <p>Karachi: Rs 400 flat for up to 4 items, Rs 1,000 for 5 or more. Self-pickup: Free. Out of city: Volumetric via Leopards Air.</p>
-            <h2 className="font-serif text-xl text-forest-950">4. Reviews</h2>
+            <h2 className="font-serif text-xl text-forest-950">4. Plant Packaging</h2>
+            <p>Aroids, Hoyas and Orchids are always shipped potted, in their original pot.</p>
+            <p>
+              Sansevierias, Agaves, hard-leaf Mangaves and Cacti &amp; Succulents have leaves that can snap or break if
+              packed inside their pot for transit. These are shipped bare-root, with the pot sent separately in the
+              same box. They are tough, hardy plants and are not stressed by bare-root shipping. Simply pot the plant
+              in fresh planting media using the pot provided (or your own) once it arrives.
+            </p>
+            <h2 className="font-serif text-xl text-forest-950">5. Reviews</h2>
             <p>No fake reviews. All reviews are authentic customer feedback.</p>
-            <h2 className="font-serif text-xl text-forest-950">5. Law</h2>
+            <h2 className="font-serif text-xl text-forest-950">6. Law</h2>
             <p>Governed by Pakistani law. Karachi jurisdiction.</p>
-            <h2 className="font-serif text-xl text-forest-950">6. Contact</h2>
+            <h2 className="font-serif text-xl text-forest-950">7. Contact</h2>
             <p>WhatsApp: +92 309 5360009 | E-mail: support@muffinplants.com | Instagram: @muffinsgreenhouse</p>
           </div>
         </div>

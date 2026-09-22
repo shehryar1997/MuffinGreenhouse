@@ -7,6 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
+import { shipsBareRoot } from "@/lib/shipping"
 import { Button } from "@/components/ui/button"
 import type { CartItem } from "@/types"
 import { FreeDeliveryBar } from "./free-delivery-bar"
@@ -103,6 +104,7 @@ export function CartDrawer() {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-serif text-base text-foreground">{item.product.name}</h3>
                       {item.variant && <p className="text-xs text-muted-foreground font-mono">{item.variant.name}</p>}
+                      {shipsBareRoot(item.product) && <p className="text-xs text-forest-600 mt-0.5">Ships bare-root, pot included separately</p>}
                       <p className="font-mono text-sm text-foreground mt-1">{formatPrice(v(item))}</p>
                       <div className="flex items-center gap-3 mt-3">
                         <div className="flex items-center border border-border rounded-md overflow-hidden">

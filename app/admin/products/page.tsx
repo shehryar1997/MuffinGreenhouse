@@ -30,47 +30,45 @@ interface ProductRow {
   stock_status: string | null
   published_at: string | null
   weight_kg: number | null
+  card_variant_id: string | null
 }
 
 export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
   const { q, filter: rawFilter, category: rawCategory } = await searchParams
   const { query, filter, category: categoryFilter } = parseProductFilters({ q, filter: rawFilter, category: rawCategory })
 
-  const [{ data, error }, { data: categoryRows }, { data: imageRows }, { data: variantRows }, { data: variantImageRows }] = await Promise.all([
+  const [{ data, error }, { data: categoryRows }, { data: imageRows }, { data: variantRows }] = await Promise.all([
     supabaseAdmin
       .from("products")
-      .select("id, sku, name, category_name, price, stock_count, stock_status, published_at, weight_kg")
+      .select("id, sku, name, category_name, price, stock_count, stock_status, published_at, weight_kg, card_variant_id")
       .order("name"),
     supabaseAdmin.from("categories").select("name").order("sort_order"),
     // General photos only: a variant's own photo must not become the product's thumbnail.
-    supabaseAdmin.from("product_images").select("product_id, url, is_primary, sort_order").is("variant_id", null).order("sort_order"),
+    // Every photo belongs to a variant; the list thumbnail is the card variant's photo (worked out below).
+    supabaseAdmin.from("product_images").select("product_id, variant_id, url, sort_order").not("variant_id", "is", null).order("sort_order"),
     // Active variants and their own photos, for the per-variant photo overlay on products that have several.
-    supabaseAdmin.from("product_variants").select("id, product_id, name, is_active").order("sort_order"),
-    supabaseAdmin.from("product_images").select("variant_id, url, sort_order").not("variant_id", "is", null).order("sort_order"),
+    supabaseAdmin.from("product_variants").select("id, product_id, name, price, is_active").order("sort_order"),
   ])
 
-  // First photo per product (the primary one when flagged) + how many it has.
-  const photos = new Map<string, { url: string; count: number }>()
-  for (const row of (imageRows ?? []) as { product_id: string; url: string; is_primary: boolean | null }[]) {
-    const seen = photos.get(row.product_id)
-    if (!seen) photos.set(row.product_id, { url: row.url, count: 1 })
-    else {
-      seen.count += 1
-      if (row.is_primary) seen.url = row.url
-    }
-  }
-
-  // First photo of each variant (rows come sorted, so the first one seen wins), then the variants per product.
+  // First photo of each variant (rows come sorted, so the first one seen wins).
   const photoByVariant = new Map<string, string>()
-  for (const row of (variantImageRows ?? []) as { variant_id: string; url: string }[]) {
+  for (const row of (imageRows ?? []) as { variant_id: string; url: string }[]) {
     if (!photoByVariant.has(row.variant_id)) photoByVariant.set(row.variant_id, row.url)
   }
-  const variantsByProduct = new Map<string, VariantPhotoRow[]>()
-  for (const row of (variantRows ?? []) as { id: string; product_id: string; name: string; is_active: boolean | null }[]) {
+  // Active variants per product, each with its photo, and the product's thumbnail: the photo of its card variant.
+  const variantsByProduct = new Map<string, (VariantPhotoRow & { price: number })[]>()
+  for (const row of (variantRows ?? []) as { id: string; product_id: string; name: string; price: number; is_active: boolean | null }[]) {
     if (row.is_active === false) continue
     const list = variantsByProduct.get(row.product_id) ?? []
-    list.push({ id: row.id, name: row.name, url: photoByVariant.get(row.id) ?? null })
+    list.push({ id: row.id, name: row.name, price: row.price, url: photoByVariant.get(row.id) ?? null })
     variantsByProduct.set(row.product_id, list)
+  }
+  const thumbnailFor = (productId: string, cardVariantId: string | null) => {
+    const list = variantsByProduct.get(productId) ?? []
+    const chosen =
+      list.find((v) => v.id === cardVariantId && v.url) ??
+      [...list].filter((v) => v.url).sort((a, b) => a.price - b.price)[0]
+    return chosen?.url ?? null
   }
 
   if (error) {
@@ -211,7 +209,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                 {products.map((p) => {
                   const needsWeightFlag = isNonPlantCategoryName(p.category_name) && !(p.weight_kg && p.weight_kg > 0)
                   const isLowStock = p.stock_count !== null && p.stock_count > 0 && p.stock_count <= 5
-                  const photo = photos.get(p.id)
+                  const thumbnail = thumbnailFor(p.id, p.card_variant_id)
                   const variants = variantsByProduct.get(p.id) ?? []
 
                   return (
@@ -222,9 +220,9 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                       <Td>
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/50">
-                            {photo ? (
+                            {thumbnail ? (
                               // eslint-disable-next-line @next/next/no-img-element -- small admin thumbnail of a stored URL
-                              <img src={photo.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                              <img src={thumbnail} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                             ) : (
                               <ImageIcon className="h-4 w-4 text-muted-foreground/50" aria-label="No photo yet" />
                             )}
@@ -265,9 +263,14 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                       <Td align="right">
                         <div className="flex items-start justify-end gap-2">
                           {variants.length > 1 ? (
-                            <VariantPhotosButton productId={p.id} productName={p.name} variants={variants} generalUrl={photo?.url ?? null} />
+                            <VariantPhotosButton productId={p.id} productName={p.name} variants={variants} />
+                          ) : variants.length === 1 ? (
+                            <ProductPhotoButton productId={p.id} variantId={variants[0].id} />
                           ) : (
-                            <ProductPhotoButton productId={p.id} />
+                            // A product with no variant yet (saved before variants owned photos): saving it once adds one.
+                            <ButtonLink href={`/admin/products/${p.id}/edit`} size="sm">
+                              Add photo
+                            </ButtonLink>
                           )}
                           <ButtonLink href={`/admin/products/${p.id}/edit`} size="sm">
                             Edit

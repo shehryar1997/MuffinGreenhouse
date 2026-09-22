@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { CitySelect } from "@/components/ui/city-select"
 import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
+import { shipsBareRoot } from "@/lib/shipping"
 import { toast } from "sonner"
 import { redirect, useRouter } from "next/navigation"
 import { trackBeginCheckout } from "@/lib/analytics"
@@ -745,6 +746,7 @@ function OrderSummary({ items, subtotal, discount, couponBox, deliveryFee, freeD
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-sm leading-tight line-clamp-1">{item.product.name}</h3>
                 {item.variant && <p className="text-xs text-forest-500 mt-0.5">{item.variant.name}</p>}
+                {shipsBareRoot(item.product) && <p className="text-xs text-forest-600 mt-0.5">Ships bare-root, pot included separately</p>}
                 <p className="text-xs text-forest-500 mt-0.5">Qty: {item.quantity}</p>
               </div>
               <div className="text-right">

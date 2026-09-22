@@ -4,13 +4,15 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest, requireAdmin } from "@/lib/admin-auth"
 import { deleteUnreferencedProductImages } from "@/lib/product-images"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
+import { isMangaveCategory } from "@/lib/shipping"
 import { isAllowedImageUrl } from "@/lib/image-hosts"
 import { BAD_BULK_REQUEST, cleanBulkIds, type BulkDeleteResult } from "@/lib/admin-bulk"
 import { recordToFormData, type ImportRecord } from "@/lib/product-import"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 import { afterProductSaved } from "@/lib/stock-alerts"
-import { choosePrimaryUrl } from "@/lib/product-photos"
+import { publishBlocker } from "@/lib/product-photos"
+import { friendlyDbError, readVariantInputs, syncVariantsAndPhotos } from "@/lib/product-sync"
 
 // Fields copied when prefilling a new product from an existing one. Deliberately
 // excludes id, sku and slug (sku/slug are UNIQUE), image data (kept as-is in the
@@ -33,6 +35,7 @@ const PREFILL_COLUMNS = [
   "is_new_arrival",
   "is_pet_safe",
   "is_imported",
+  "is_hard_leaf",
   "meta_title",
   "meta_description",
   "light",
@@ -70,6 +73,7 @@ export type PrefillProduct = {
   is_new_arrival: boolean | null
   is_pet_safe: boolean | null
   is_imported: boolean | null
+  is_hard_leaf: boolean | null
   meta_title: string | null
   meta_description: string | null
   light: string | null
@@ -133,15 +137,6 @@ const NON_PLANT_LIGHT_PLACEHOLDER = "medium"
 /** What a create/update/delete action hands back to the form. `undefined` = success (the action redirects). */
 export type ProductActionResult = { error: string } | undefined
 
-type PgError = { code?: string; message: string }
-
-function friendlyDbError(error: PgError): string {
-  if (error.code === "23505") {
-    return "That SKU or slug is already used by another product. Change it and save again."
-  }
-  return error.message
-}
-
 // Blank -> null, otherwise a finite number (anything else is reported by the caller).
 function optionalNumber(formData: FormData, name: string): number | null | "invalid" {
   const raw = formData.get(name)
@@ -189,12 +184,31 @@ function parseProductFields(
   if (text("meta_title").length > 70) return { error: "SEO title is too long (70 characters max)." }
   if (text("meta_description").length > 170) return { error: "SEO description is too long (170 characters max)." }
 
-  const price = Number(formData.get("price"))
-  if (!Number.isFinite(price) || price <= 0 || price > 10_000_000) return { error: "Price must be a number greater than 0." }
+  // With variants, the product's own price and stock are derived from them (the lowest variant price and the total
+  // stock; the database keeps the stock total in step as orders come in). With none, a single "Standard" variant
+  // is created from the product's own price and stock.
+  const variantInputs = readVariantInputs(formData)
+  const hasVariants = variantInputs.length > 0
+  const standardPhoto = text("standard_photo")
 
-  const stockCount = Number(formData.get("stock_count") || 0)
+  let price: number
+  let stockCount: number
+  if (hasVariants) {
+    if (variantInputs.some((v) => !Number.isFinite(v.price) || v.price <= 0 || v.price > 10_000_000)) {
+      return { error: "Every variant needs a price greater than 0." }
+    }
+    if (variantInputs.some((v) => !Number.isInteger(v.stock) || v.stock < 0 || v.stock > 1_000_000)) {
+      return { error: "Variant stock must be a whole number, 0 or more." }
+    }
+    price = Math.min(...variantInputs.map((v) => v.price))
+    stockCount = variantInputs.reduce((sum, v) => sum + v.stock, 0)
+  } else {
+    price = Number(formData.get("price"))
+    if (!Number.isFinite(price) || price <= 0 || price > 10_000_000) return { error: "Price must be a number greater than 0." }
+    stockCount = Number(formData.get("stock_count") || 0)
+    if (!Number.isInteger(stockCount) || stockCount < 0 || stockCount > 1_000_000) return { error: "Stock must be a whole number, 0 or more." }
+  }
   const lowStock = Number(formData.get("low_stock_threshold") || 10)
-  if (!Number.isInteger(stockCount) || stockCount < 0 || stockCount > 1_000_000) return { error: "Stock must be a whole number, 0 or more." }
   if (!Number.isInteger(lowStock) || lowStock < 0 || lowStock > 100_000) return { error: "Low-stock alert level must be a whole number, 0 or more." }
 
   if (isPlant) {
@@ -209,11 +223,19 @@ function parseProductFields(
   }
 
   // next/image only loads from allow-listed hosts; an image on any other host would blank the product page.
-  for (const raw of formData.getAll("image_url") as string[]) {
-    const url = raw.trim()
+  for (const url of [...variantInputs.map((v) => v.photo), standardPhoto]) {
     if (url && !isAllowedImageUrl(url)) {
-      return { error: "One of the image addresses isn't from an allowed host. Remove it and upload the photo with the upload button instead." }
+      return { error: "One of the photos isn't from an allowed image host. Remove it and upload the photo with the upload button instead." }
     }
+  }
+
+  // A product can only go live with at least one variant and a photo on every variant, so no page can show
+  // another size's picture. Checked against the form's own rows: they are what will be saved.
+  if (formData.get("published") === "on") {
+    const blocker = publishBlocker(
+      hasVariants ? variantInputs.map((v) => ({ name: v.name, hasPhoto: !!v.photo })) : [{ name: "Standard", hasPhoto: !!standardPhoto }]
+    )
+    if (blocker) return { error: `Can't publish yet. ${blocker} Or untick Published to save it as a draft.` }
   }
 
   const compareAt = optionalNumber(formData, "compare_at_price")
@@ -261,6 +283,9 @@ function parseProductFields(
       is_new_arrival: formData.get("is_new_arrival") === "on",
       is_pet_safe: isPlant && formData.get("is_pet_safe") === "on",
       is_imported: isPlant && formData.get("is_imported") === "on",
+      // Only meaningful for Mangaves; cleared for every other category so switching away from
+      // Mangaves can't leave a stray true behind. See lib/shipping.ts.
+      is_hard_leaf: isMangaveCategory(categoryName) && formData.get("is_hard_leaf") === "on",
       is_featured: formData.get("is_featured") === "on",
       // Keep the original publish date when a published product is simply re-saved --
       // it's what the "New" badge's 14-day window counts from.
@@ -304,7 +329,7 @@ async function insertProduct(formData: FormData): Promise<{ error: string } | { 
   const { data, error } = await supabaseAdmin.from("products").insert(parsed.fields).select("id").single()
   if (error) return { error: friendlyDbError(error) }
 
-  const syncError = await syncImagesAndVariants(data.id, formData)
+  const syncError = await syncVariantsAndPhotos(data.id, formData, parsed.fields, null)
   if (syncError) {
     // Don't leave a half-created product behind -- the form still holds everything, so the user can retry.
     await supabaseAdmin.from("products").delete().eq("id", data.id)
@@ -405,7 +430,7 @@ export async function updateProduct(productId: string, formData: FormData): Prom
 
   const { data: existing, error: readError } = await supabaseAdmin
     .from("products")
-    .select("published_at, price, stock_status")
+    .select("published_at, price, stock_status, card_variant_id")
     .eq("id", productId)
     .maybeSingle()
   if (readError) return { error: readError.message }
@@ -418,7 +443,7 @@ export async function updateProduct(productId: string, formData: FormData): Prom
   const { error } = await supabaseAdmin.from("products").update(parsed.fields).eq("id", productId)
   if (error) return { error: friendlyDbError(error) }
 
-  const syncError = await syncImagesAndVariants(productId, formData)
+  const syncError = await syncVariantsAndPhotos(productId, formData, parsed.fields, (existing.card_variant_id as string | null) ?? null)
   if (syncError) return { error: `Your product details were saved, but: ${syncError}` }
 
   // Tell people waiting on this plant (back in stock) or who wishlisted it (back in stock / price drop).
@@ -500,51 +525,22 @@ export async function setProductPublished(productId: string, published: boolean)
   if (readError) return { error: readError.message }
   if (!existing) return { error: "This product no longer exists. It may have been deleted." }
 
+  if (published) {
+    const [{ data: variants, error: variantsError }, { data: photos, error: photosError }] = await Promise.all([
+      supabaseAdmin.from("product_variants").select("id, name, is_active").eq("product_id", productId),
+      supabaseAdmin.from("product_images").select("variant_id").eq("product_id", productId).not("variant_id", "is", null),
+    ])
+    if (variantsError || photosError) return { error: `Could not check the product: ${(variantsError ?? photosError)?.message}` }
+    const withPhoto = new Set((photos ?? []).map((r) => r.variant_id as string))
+    const blocker = publishBlocker(
+      (variants ?? []).filter((v) => v.is_active !== false).map((v) => ({ name: v.name as string, hasPhoto: withPhoto.has(v.id as string) }))
+    )
+    if (blocker) return { error: blocker }
+  }
+
   const publishedAt = published ? ((existing.published_at as string | null) ?? new Date().toISOString()) : null
   const { error } = await supabaseAdmin.from("products").update({ published_at: publishedAt }).eq("id", productId)
   if (error) return { error: error.message }
-
-  revalidatePath("/admin/products")
-  revalidateStorefront()
-}
-
-// Attaches already-uploaded photos to a product straight from the products list (no edit form).
-// Photos are only ever appended: the first one becomes the primary image when the product has
-// none, and existing photos are never touched or deleted.
-export async function addProductPhotos(productId: string, urls: string[]): Promise<ProductActionResult> {
-  await requireAdmin()
-
-  const wanted = Array.from(new Set(urls.map((u) => u.trim()).filter(Boolean)))
-  if (wanted.length === 0) return { error: "No photo was uploaded." }
-  if (wanted.length > 10) return { error: "Add at most 10 photos at a time." }
-  if (wanted.some((u) => !isAllowedImageUrl(u))) {
-    return { error: "One of the photos isn't from an allowed image host. Upload it with the photo button again." }
-  }
-
-  const { data: existing, error: readError } = await supabaseAdmin
-    .from("product_images")
-    .select("url, sort_order")
-    .eq("product_id", productId)
-  if (readError) return { error: `Could not read the product's photos: ${readError.message}` }
-
-  const have = new Set((existing ?? []).map((r) => r.url as string))
-  const fresh = wanted.filter((u) => !have.has(u))
-  if (fresh.length === 0) return undefined
-
-  const nextOrder = Math.max(-1, ...(existing ?? []).map((r) => (r.sort_order as number | null) ?? 0)) + 1
-  const hasPhotos = (existing ?? []).length > 0
-  const { error } = await supabaseAdmin.from("product_images").insert(
-    fresh.map((url, i) => ({
-      product_id: productId,
-      url,
-      alt_text: "",
-      sort_order: nextOrder + i,
-      is_primary: !hasPhotos && i === 0,
-    }))
-  )
-  if (error) {
-    return { error: error.code === "23503" ? "This product no longer exists. It may have been deleted." : `Saving the photo failed: ${error.message}` }
-  }
 
   revalidatePath("/admin/products")
   revalidateStorefront()
@@ -595,7 +591,7 @@ export async function setVariantPhoto(productId: string, variantId: string, url:
           url: photoUrl,
           alt_text: variant.name as string,
           sort_order: Math.max(-1, ...(existing ?? []).map((r) => (r.sort_order as number | null) ?? 0)) + 1,
-          is_primary: false,
+          is_primary: true,
         })
       ).error
   if (writeError) {
@@ -609,184 +605,4 @@ export async function setVariantPhoto(productId: string, variantId: string, url:
 
   revalidatePath("/admin/products")
   revalidateStorefront()
-}
-
-type StockStatus = "in_stock" | "low_stock" | "out_of_stock"
-function stockStatusFor(stock: number, threshold: number): StockStatus {
-  if (stock <= 0) return "out_of_stock"
-  return stock <= threshold ? "low_stock" : "in_stock"
-}
-
-// Images and variants are submitted as repeatable rows (same field name, FormData.getAll
-// reads them in order). Both are SYNCED against what's already stored -- existing rows are
-// updated in place, only genuinely new ones are inserted, only removed ones are deleted --
-// instead of wiping and recreating every row on each save. That keeps row ids stable
-// (carts, orders and wishlists point at variant ids) and avoids needless writes.
-// Returns an error message, or null on success.
-async function syncImagesAndVariants(productId: string, formData: FormData): Promise<string | null> {
-  // Variants go first: a photo can belong to a variant that is being created in this same save, so
-  // its database id has to exist before the photo rows are written.
-  const variants = await syncVariants(productId, formData)
-  if ("error" in variants) return variants.error
-  return syncImages(productId, formData, variants.idByKey)
-}
-
-async function syncImages(productId: string, formData: FormData, variantIdByKey: Map<string, string>): Promise<string | null> {
-  const imageUrls = formData.getAll("image_url") as string[]
-  const imageAlts = formData.getAll("image_alt") as string[]
-  // Which variant each photo belongs to (a variant row key, "" = general) and whether it was flagged primary.
-  const imageVariantKeys = formData.getAll("image_variant") as string[]
-  const imagePrimaryFlags = formData.getAll("image_primary") as string[]
-
-  // Drop blank and duplicate rows before numbering. A photo whose variant is unknown (removed, or unnamed
-  // and so not saved) is treated as general rather than lost.
-  const seen = new Set<string>()
-  const desired: Array<{ url: string; alt_text: string; variant_id: string | null; flagged: boolean }> = []
-  imageUrls.forEach((raw, i) => {
-    const url = raw.trim()
-    if (!url || seen.has(url)) return
-    seen.add(url)
-    const variantKey = (imageVariantKeys[i] ?? "").trim()
-    desired.push({
-      url,
-      alt_text: imageAlts[i] ?? "",
-      variant_id: variantKey ? (variantIdByKey.get(variantKey) ?? null) : null,
-      flagged: imagePrimaryFlags[i] === "1",
-    })
-  })
-
-  // Exactly one primary, and only ever among general photos (the shop card reads it). See choosePrimaryUrl.
-  const primaryUrl = choosePrimaryUrl(desired)
-
-  const { data: existing, error: readError } = await supabaseAdmin
-    .from("product_images")
-    .select("id, url, alt_text, sort_order, is_primary, variant_id")
-    .eq("product_id", productId)
-  if (readError) return `Could not read the existing images: ${readError.message}`
-
-  const rowByUrl = new Map<string, NonNullable<typeof existing>[number]>()
-  for (const row of existing ?? []) if (!rowByUrl.has(row.url as string)) rowByUrl.set(row.url as string, row)
-
-  const keptIds = new Set<string>()
-  const toInsert: Array<Record<string, unknown>> = []
-  const toUpdate: Array<{ id: string; values: Record<string, unknown> }> = []
-
-  desired.forEach((image, index) => {
-    const row = rowByUrl.get(image.url)
-    const isPrimary = image.url === primaryUrl
-    if (!row) {
-      toInsert.push({ product_id: productId, url: image.url, alt_text: image.alt_text, sort_order: index, is_primary: isPrimary, variant_id: image.variant_id })
-      return
-    }
-    keptIds.add(row.id as string)
-    if (
-      row.sort_order !== index ||
-      row.is_primary !== isPrimary ||
-      (row.alt_text ?? "") !== image.alt_text ||
-      ((row.variant_id as string | null) ?? null) !== image.variant_id
-    ) {
-      toUpdate.push({ id: row.id as string, values: { sort_order: index, is_primary: isPrimary, alt_text: image.alt_text, variant_id: image.variant_id } })
-    }
-  })
-
-  // New rows first, removals last: a failure can never leave a product with no images.
-  if (toInsert.length > 0) {
-    const { error } = await supabaseAdmin.from("product_images").insert(toInsert)
-    if (error) return `Saving images failed: ${error.message}`
-  }
-  for (const { id, values } of toUpdate) {
-    const { error } = await supabaseAdmin.from("product_images").update(values).eq("id", id)
-    if (error) return `Saving images failed: ${error.message}`
-  }
-
-  const removed = (existing ?? []).filter((row) => !keptIds.has(row.id as string))
-  if (removed.length > 0) {
-    const { error } = await supabaseAdmin
-      .from("product_images")
-      .delete()
-      .in("id", removed.map((r) => r.id as string))
-    if (error) return `Removing old images failed: ${error.message}`
-    // Photos that were replaced or removed: delete their files from Cloudflare R2 too
-    // (unless another product/category/etc. still uses the same file).
-    await deleteUnreferencedProductImages(removed.map((r) => r.url as string))
-  }
-  return null
-}
-
-async function syncVariants(productId: string, formData: FormData): Promise<{ error: string } | { idByKey: Map<string, string> }> {
-  const ids = formData.getAll("variant_id") as string[]
-  // The form's own key for each variant row, so photo rows can point at a variant that has no id yet.
-  const keys = formData.getAll("variant_key") as string[]
-  const names = formData.getAll("variant_name") as string[]
-  const skus = formData.getAll("variant_sku") as string[]
-  const prices = formData.getAll("variant_price") as string[]
-  const stocks = formData.getAll("variant_stock") as string[]
-  const productSku = String(formData.get("sku") ?? "").trim()
-  const threshold = Number(formData.get("low_stock_threshold") || 10)
-
-  const rows = names
-    .map((name, i) => {
-      const stock = Number(stocks[i] || 0)
-      return {
-        id: (ids[i] ?? "").trim(),
-        key: (keys[i] ?? "").trim(),
-        name: name.trim(),
-        sku: skus[i]?.trim() || `${productSku}-${i + 1}`,
-        price: Number(prices[i] || 0),
-        stock_count: stock,
-        stock_status: stockStatusFor(stock, threshold),
-        sort_order: i,
-        is_default: i === 0,
-        is_active: true,
-      }
-    })
-    .filter((row) => row.name.length > 0)
-    .map((row, i) => ({ ...row, sort_order: i, is_default: i === 0 }))
-
-  if (rows.some((r) => !Number.isFinite(r.price) || r.price < 0 || !Number.isFinite(r.stock_count) || r.stock_count < 0)) {
-    return { error: "Variant prices and stock must be valid, non-negative numbers." }
-  }
-  if (new Set(rows.map((r) => r.sku)).size !== rows.length) {
-    return { error: "Two variants have the same SKU. Every variant needs its own unique SKU." }
-  }
-
-  const { data: existing, error: readError } = await supabaseAdmin
-    .from("product_variants")
-    .select("id")
-    .eq("product_id", productId)
-  if (readError) return { error: `Could not read the existing variants: ${readError.message}` }
-  const existingIds = new Set((existing ?? []).map((v) => v.id as string))
-
-  const keptIds = new Set<string>()
-  const idByKey = new Map<string, string>()
-  for (const { id, key, ...values } of rows) {
-    if (id && existingIds.has(id)) {
-      keptIds.add(id)
-      if (key) idByKey.set(key, id)
-      const { error } = await supabaseAdmin.from("product_variants").update(values).eq("id", id).eq("product_id", productId)
-      if (error) return { error: `Saving variant “${values.name}” failed: ${friendlyDbError(error)}` }
-    } else {
-      const { data: created, error } = await supabaseAdmin.from("product_variants").insert({ ...values, product_id: productId }).select("id").single()
-      if (error) return { error: `Saving variant “${values.name}” failed: ${friendlyDbError(error)}` }
-      if (key) idByKey.set(key, created.id as string)
-    }
-  }
-
-  // Variants removed in the form. A variant that appears in past orders can't be deleted
-  // (order history points at it), so it is retired instead: hidden from the shop, stock zeroed.
-  for (const id of existingIds) {
-    if (keptIds.has(id)) continue
-    const { error } = await supabaseAdmin.from("product_variants").delete().eq("id", id)
-    if (!error) continue
-    if (error.code === "23503") {
-      const { error: retireError } = await supabaseAdmin
-        .from("product_variants")
-        .update({ is_active: false, stock_count: 0, stock_status: "out_of_stock" })
-        .eq("id", id)
-      if (retireError) return { error: `Removing a variant failed: ${retireError.message}` }
-    } else {
-      return { error: `Removing a variant failed: ${error.message}` }
-    }
-  }
-  return { idByKey }
 }

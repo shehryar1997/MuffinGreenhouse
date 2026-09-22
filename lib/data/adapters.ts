@@ -2,7 +2,7 @@ import { Product, Category, ProductImage, ProductVariant, CareInfo } from '@/typ
 import { SupabaseProduct, SupabaseProductImage, SupabaseProductVariant } from '@/supabase/client'
 import { isNonPlantCategorySlug, isNonPlantCategoryName } from '@/lib/product-categories'
 import { isWithinNewArrivalWindow } from '@/lib/new-arrival'
-import { splitProductImages } from '@/lib/product-photos'
+import { chooseCardVariantId, groupImagesByVariant } from '@/lib/product-photos'
 
 /**
  * Maps a SupabaseProduct (snake_case) to the app's Product type (camelCase)
@@ -13,11 +13,22 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
   // Tools & Equipment (pots, fertilizer, media...) have no use-case tags: the admin form
   // never saves them, and this also hides any left over from before that rule existed.
   const isToolOrEquipment = isNonPlantCategorySlug(row.category_slug) || isNonPlantCategoryName(row.category_name)
-  // `images` holds the general photos (primary first) so every card and page that reads images[0] gets the
-  // general primary photo. Variant-specific photos hang off their variant. A product whose only photos are
-  // variant-specific falls back to all of them rather than showing nothing.
+  // Every photo belongs to a variant. `images` holds the photos of the card variant (the one the admin ticked, else
+  // the cheapest with a photo), so every card and page that reads images[0] gets the card photo; each variant
+  // carries its own photos for the product page. A legacy product with no variants at all keeps showing its old
+  // photos until it is saved once (which gives it a Standard variant).
   const allImages = (row.images ?? []).map(mapSupabaseImage)
-  const { general, byVariant } = splitProductImages(allImages)
+  const byVariant = groupImagesByVariant(allImages)
+  // Retired variants (is_active = false) are never offered for sale.
+  const activeVariants = (row.variants ?? []).filter((v) => v.is_active !== false)
+  const cardVariantId = chooseCardVariantId(activeVariants, (id) => (byVariant.get(id)?.length ?? 0) > 0, row.card_variant_id)
+  const cardPhotos = cardVariantId ? byVariant.get(cardVariantId) ?? [] : []
+  const legacyPhotos =
+    activeVariants.length === 0
+      ? allImages
+          .filter((img) => !img.variantId)
+          .sort((a, b) => Number(!!b.isPrimary) - Number(!!a.isPrimary) || a.sortOrder - b.sortOrder)
+      : []
   return {
     id: row.id,
     name: row.name,
@@ -29,17 +40,16 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     currency: row.currency,
     stockStatus: row.stock_status,
     stockCount: row.stock_count,
-    images: general.length > 0 ? general : allImages,
+    images: cardPhotos.length > 0 ? cardPhotos : legacyPhotos,
+    cardVariantId,
     careInfo: mapSupabaseCareInfo(row),
-    // Retired variants (is_active = false) are never offered for sale.
-    variants: (row.variants ?? [])
-      .filter((v) => v.is_active !== false)
-      .map((v) => mapSupabaseVariant(v, byVariant.get(v.id) ?? [])),
+    variants: activeVariants.map((v) => mapSupabaseVariant(v, byVariant.get(v.id) ?? [])),
     useCaseTags: isToolOrEquipment ? [] : row.use_case_tags ?? [],
     // The "New" badge lasts 14 days from publishing, even if the flag hasn't been cleared yet.
     isNewArrival: !!row.is_new_arrival && isWithinNewArrivalWindow(row.published_at, row.created_at),
     isPetSafe: row.is_pet_safe,
     isImported: !!row.is_imported,
+    isHardLeaf: !!row.is_hard_leaf,
     difficulty: row.difficulty,
     lightRequirement: row.light_requirement,
     waterRequirement: row.water_requirement,

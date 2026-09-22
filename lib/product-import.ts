@@ -10,7 +10,6 @@ import { restoreFormula } from "@/lib/csv"
 export type ImportRecord = Record<string, string>
 
 export const MAX_IMPORT_ROWS = 500
-export const IMPORT_IMAGE_SLOTS = 5
 export const IMPORT_VARIANT_SLOTS = 3
 
 // Columns every file must contain. Slug is not listed: it is generated from the name when left blank.
@@ -26,16 +25,20 @@ const SIMPLE_COLUMNS = [
   "soil", "fertilizer", "toxicity", "pet_safe_note", "meta_title", "meta_description",
 ] as const
 
-/** Every column, in form order, with the given number of photo and variant slots. */
-export function columnsFor(imageSlots: number, variantSlots: number): string[] {
+/**
+ * Every column, in form order, with the given number of variant slots. Photos belong to variants: each variant slot
+ * has its own image_url, and image_url_1 is the photo of a product that has no variants (it is sold as a single
+ * "Standard" variant).
+ */
+export function columnsFor(variantSlots: number): string[] {
   return [
     ...SIMPLE_COLUMNS,
-    ...Array.from({ length: imageSlots }, (_, i) => [`image_url_${i + 1}`, `image_alt_${i + 1}`]).flat(),
-    ...Array.from({ length: variantSlots }, (_, i) => ["name", "sku", "price", "stock"].map((f) => `variant_${i + 1}_${f}`)).flat(),
+    "image_url_1",
+    ...Array.from({ length: variantSlots }, (_, i) => ["name", "sku", "price", "stock", "image_url"].map((f) => `variant_${i + 1}_${f}`)).flat(),
   ]
 }
 
-export const TEMPLATE_COLUMNS = columnsFor(IMPORT_IMAGE_SLOTS, IMPORT_VARIANT_SLOTS)
+export const TEMPLATE_COLUMNS = columnsFor(IMPORT_VARIANT_SLOTS)
 
 const simple = new Set<string>(SIMPLE_COLUMNS)
 
@@ -70,12 +73,15 @@ export function canonicalColumn(raw: string): string | null {
   if (!key) return null
   if (simple.has(key)) return key
   if (ALIASES[key]) return ALIASES[key]
-  const image = key.match(/^(?:image_url|image|photo_url|photo)_(\d+)$/)
-  if (image) return `image_url_${Number(image[1])}`
-  const alt = key.match(/^(?:image_alt|alt_text|alt)_(\d+)$/)
-  if (alt) return `image_alt_${Number(alt[1])}`
-  const variant = key.match(/^variant_(\d+)_(name|sku|price|stock|stock_count)$/)
-  if (variant) return `variant_${Number(variant[1])}_${variant[2] === "stock_count" ? "stock" : variant[2]}`
+  // Only one product-level photo exists now (the Standard variant's); older sheets with image_url_2.. or alt-text
+  // columns are still understood, those columns are just ignored.
+  const image = key.match(/^(?:image_url|image|photo_url|photo)(?:_(\d+))?$/)
+  if (image) return !image[1] || Number(image[1]) === 1 ? "image_url_1" : null
+  const variant = key.match(/^variant_(\d+)_(name|sku|price|stock|stock_count|image_url|image|photo_url|photo)$/)
+  if (variant) {
+    const field = variant[2] === "stock_count" ? "stock" : /^(image|photo)/.test(variant[2]) ? "image_url" : variant[2]
+    return `variant_${Number(variant[1])}_${field}`
+  }
   return null
 }
 
@@ -203,33 +209,34 @@ export function recordToFormData(
     }
   }
 
-  // Photos: image_url_N / image_alt_N, in numeric order. Only non-blank URLs are sent, alt text alongside.
+  // Variants: only slots with a name are saved. Price is required so a variant can't end up free by accident. Each
+  // variant has its own photo (variant_N_image_url); the product's stock and price come from its variants.
   const slots = (prefix: RegExp) =>
     Object.keys(record)
       .map((k) => Number(k.match(prefix)?.[1]))
       .filter((n) => Number.isInteger(n))
       .sort((a, b) => a - b)
-  for (const n of slots(/^image_url_(\d+)$/)) {
-    const url = get(`image_url_${n}`)
-    if (!url) continue
-    fd.append("image_url", url)
-    fd.append("image_alt", get(`image_alt_${n}`))
-  }
-
-  // Variants: only slots with a name are saved. Price is required so a variant can't end up free by accident.
   const variantSkus: string[] = []
   for (const n of slots(/^variant_(\d+)_name$/)) {
     const name = get(`variant_${n}_name`)
     if (!name) continue
     const price = cleanNumber(record[`variant_${n}_price`])
-    if (!price) return { error: `Variant ${n} (“${name}”) needs a price.` }
+    if (!price) return { error: `Variant ${n} (\u201c${name}\u201d) needs a price.` }
     const sku = get(`variant_${n}_sku`) || `${get("sku")}-${variantSkus.length + 1}`
     variantSkus.push(sku)
     fd.append("variant_id", "")
+    fd.append("variant_key", String(n))
     fd.append("variant_name", name)
     fd.append("variant_sku", sku)
     fd.append("variant_price", price)
     fd.append("variant_stock", cleanNumber(record[`variant_${n}_stock`]) || "0")
+    fd.append("variant_photo", get(`variant_${n}_image_url`))
+  }
+
+  // No variants: the product becomes a single "Standard" variant (made when it is saved) and image_url_1 is its photo.
+  if (variantSkus.length === 0) {
+    fd.set("standard_photo", get("image_url_1"))
+    variantSkus.push(`${get("sku")}-1`)
   }
 
   return { formData: fd, variantSkus }
@@ -251,16 +258,17 @@ export function templateRows(): string[][] {
     humidity: "Average to high", temperature: "18-30 C", soil: "Chunky, well-draining aroid mix",
     fertilizer: "Balanced liquid feed monthly in the growing season", toxicity: "Toxic if ingested", pet_safe_note: "Keep away from cats and dogs",
     meta_title: "Monstera Deliciosa | Muffin Greenhouse", meta_description: "Buy Monstera Deliciosa in Pakistan. Nursery-grown, delivered nationwide.",
-    image_url_1: "https://images.muffinplants.com/products/example.avif", image_alt_1: "Monstera Deliciosa in a nursery pot",
     variant_1_name: 'Medium - 6" pot', variant_1_sku: `${EXAMPLE_SKU_PREFIX}AROID-001-MED`, variant_1_price: "3500", variant_1_stock: "15",
+    variant_1_image_url: "https://images.muffinplants.com/products/example-medium.avif",
     variant_2_name: 'Large - 8" pot', variant_2_sku: `${EXAMPLE_SKU_PREFIX}AROID-001-LRG`, variant_2_price: "5500", variant_2_stock: "10",
+    variant_2_image_url: "https://images.muffinplants.com/products/example-large.avif",
   }
   const pot: ImportRecord = {
     name: "Terracotta Pot 6 inch", sku: `${EXAMPLE_SKU_PREFIX}POT-001`, slug: "terracotta-pot-6-inch", category_name: "Pots",
     short_description: "Classic unglazed terracotta pot.",
     description: "Breathable unglazed terracotta pot with a drainage hole, ideal for most houseplants.",
     price: "450", stock_count: "60", low_stock_threshold: "10", weight_kg: "0.8", published: "no",
-    image_url_1: "https://images.muffinplants.com/products/example-pot.avif", image_alt_1: "Terracotta pot",
+    image_url_1: "https://images.muffinplants.com/products/example-pot.avif",
   }
   return [TEMPLATE_COLUMNS, ...[plant, pot].map((r) => TEMPLATE_COLUMNS.map((c) => r[c] ?? ""))]
 }
@@ -268,8 +276,7 @@ export function templateRows(): string[][] {
 /* ------------------------------------------------------------------ export */
 
 export type ExportProduct = { id: string; published_at: string | null; use_case_tags: string[] | null } & Record<string, unknown>
-export type ExportImage = { url: string; alt_text: string | null }
-export type ExportVariant = { name: string; sku: string; price: number | string; stock_count: number | null }
+export type ExportVariant = { name: string; sku: string; price: number | string; stock_count: number | null; image_url: string | null }
 
 const BOOLEAN_COLUMNS = new Set(["is_new_arrival", "is_pet_safe", "is_imported", "is_featured"])
 const cellText = (v: unknown) => (v === null || v === undefined ? "" : String(v))
@@ -280,36 +287,34 @@ export const EXPORT_PRODUCT_COLUMNS = ["id", "published_at", ...SIMPLE_COLUMNS.f
 
 /**
  * Turns products into rows in the same layout as the import template, so an exported file opens in a spreadsheet
- * and maps back onto the form's fields with nothing ignored. The number of photo and variant columns grows to fit
- * the product that has the most. `images` / `variants` must already be sorted and, for variants, active-only.
+ * and maps back onto the form's fields with nothing ignored. The number of variant columns grows to fit the
+ * product that has the most. `variants` must already be sorted and active-only, each with its photo. A product
+ * whose only variant is the automatic "Standard" one is exported the way it was imported: no variant columns, its
+ * photo in image_url_1.
  */
-export function productsToRows(
-  products: ExportProduct[],
-  images: Map<string, ExportImage[]>,
-  variants: Map<string, ExportVariant[]>
-): string[][] {
-  const imageSlots = Math.max(IMPORT_IMAGE_SLOTS, ...products.map((p) => images.get(p.id)?.length ?? 0))
-  const variantSlots = Math.max(IMPORT_VARIANT_SLOTS, ...products.map((p) => variants.get(p.id)?.length ?? 0))
-  const columns = columnsFor(imageSlots, variantSlots)
+export function productsToRows(products: ExportProduct[], variants: Map<string, ExportVariant[]>): string[][] {
+  const isStandardOnly = (list: ExportVariant[]) => list.length === 1 && list[0].name.trim().toLowerCase() === "standard"
+  const namedVariants = (id: string) => {
+    const list = variants.get(id) ?? []
+    return isStandardOnly(list) ? [] : list
+  }
+  const variantSlots = Math.max(IMPORT_VARIANT_SLOTS, ...products.map((p) => namedVariants(p.id).length))
+  const columns = columnsFor(variantSlots)
 
   const rows = products.map((p) => {
-    const imgs = images.get(p.id) ?? []
-    const vars = variants.get(p.id) ?? []
+    const all = variants.get(p.id) ?? []
+    const vars = namedVariants(p.id)
     return columns.map((col) => {
       if (col === "published") return yesNo(p.published_at)
       if (BOOLEAN_COLUMNS.has(col)) return yesNo(p[col])
       if (col === "use_case_tags") return (p.use_case_tags ?? []).join("; ")
+      if (col === "image_url_1") return isStandardOnly(all) ? cellText(all[0].image_url) : ""
 
-      const image = col.match(/^image_(url|alt)_(\d+)$/)
-      if (image) {
-        const img = imgs[Number(image[2]) - 1]
-        return img ? (image[1] === "url" ? img.url : cellText(img.alt_text)) : ""
-      }
-      const variant = col.match(/^variant_(\d+)_(name|sku|price|stock)$/)
+      const variant = col.match(/^variant_(\d+)_(name|sku|price|stock|image_url)$/)
       if (variant) {
         const v = vars[Number(variant[1]) - 1]
         if (!v) return ""
-        return cellText(variant[2] === "stock" ? v.stock_count : v[variant[2] as "name" | "sku" | "price"])
+        return cellText(variant[2] === "stock" ? v.stock_count : v[variant[2] as "name" | "sku" | "price" | "image_url"])
       }
       return cellText(p[col])
     })

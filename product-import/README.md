@@ -4,7 +4,7 @@ Files
 - `products-template.csv`: two example rows (a plant and a pot). Delete them before importing (their names start with `EXAMPLE`).
 - `products-blank.csv`: headers only.
 
-One row per product. Photos are NOT in the CSV; add them afterwards with the **Photo** button on Admin → Products.
+One row per product. Photos belong to variants and are normally added afterwards from Admin → Products (the **Photo** button, or **Photos** with a counter for products with several variants). A product can only be published once it has at least one variant and every variant has a photo, so import with `published` blank and publish after adding photos.
 Open in Excel or Google Sheets and save as **CSV UTF-8**. Prices are plain numbers, no commas or "Rs" (write `3500`, not `3,500`).
 
 ## SKU and slug are generated: don't add columns for them
@@ -61,7 +61,9 @@ Both are built from the product name (and category) at import time:
 | `light`, `water`, `humidity`, `temperature`, `soil`, `fertilizer`, `toxicity`, `pet_safe_note` | Longer care text. |
 
 ## Variants (optional: sizes / pot types)
-Up to 3 per product: `variantN_name`, `variantN_sku`, `variantN_price`, `variantN_stock` (N = 1, 2, 3).
-- A variant needs at least a name. The first one is the default.
-- `variantN_sku` blank = `<generated product sku>-N` (e.g. `ARO-MD-01-1`). Leave it blank unless you need a specific one; variant SKUs must be unique.
-- Leave all four blank for a product with no variants.
+Up to 3 per product: `variant_N_name`, `variant_N_sku`, `variant_N_price`, `variant_N_stock`, `variant_N_image_url` (N = 1, 2, 3).
+- A variant needs at least a name and a price. The first one is the default.
+- `variant_N_sku` blank = `<product sku>-N`. Leave it blank unless you need a specific one; variant SKUs must be unique.
+- `variant_N_image_url` is that variant's photo (optional here; it must be an uploaded photo from your image host). It can also be added later from the admin.
+- With variants, the product's own `price` and `stock_count` are ignored: the shop shows "Starting from" the lowest variant price, and stock is the total of the variants.
+- Leave all the variant columns blank for a product with no variants. It is then sold as a single "Standard" variant using `price` and `stock_count`, and `image_url_1` is its photo.

@@ -2,12 +2,13 @@
 
 import { useRef, useState, useTransition } from "react"
 import Link from "next/link"
-import { Camera, ImageIcon, Loader2, Plus } from "lucide-react"
+import { Camera, Loader2, Plus } from "lucide-react"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
+import { isMangaveCategory } from "@/lib/shipping"
 import { uploadAdminImage } from "@/lib/admin-upload"
-import { normalizePrimary } from "@/lib/product-photos"
+import { publishBlocker } from "@/lib/product-photos"
 import { cn } from "@/lib/utils"
-import { Alert, Badge, CheckField, Field, FormActions, FormSection, buttonClass, inputClass, textareaClass } from "../_components/ui"
+import { Alert, CheckField, Field, FormActions, FormSection, buttonClass, inputClass, textareaClass } from "../_components/ui"
 import { findProductsByName, type PrefillProduct, type ProductActionResult } from "./actions"
 
 // Weight is mandatory for Tools & Equipment, so its input is tinted to stand out.
@@ -36,6 +37,7 @@ type ExistingProduct = {
   is_new_arrival: boolean
   is_pet_safe: boolean
   is_imported: boolean
+  is_hard_leaf: boolean
   is_featured: boolean
   published_at: string | null
   meta_title: string | null
@@ -55,23 +57,30 @@ type ExistingProduct = {
   box_breadth_cm: number | null
   weight_kg: number | null
   use_case_tags: string[]
-  images?: { url: string; alt_text: string; variant_id?: string | null; is_primary?: boolean | null }[]
+  // Photos in order; each belongs to a variant (variant_id null = a legacy photo from before variants owned photos).
+  images?: { url: string; variant_id?: string | null }[]
   variants?: { id?: string; name: string; sku: string; price: number; stock_count: number }[]
+  card_variant_id?: string | null
 }
 
-// A variant row in the form. `key` is a stable client-side React key (rows can be removed
-// from the middle) and is also how photo rows point at a variant that may not be saved yet; `id` is
-// the database id of an existing variant ("" for a new one), so saving updates that variant in place
-// instead of recreating it. The name is controlled so the photo rows' variant menu can show it live.
-type VariantRow = { key: number; id: string; name: string; sku: string; price: number; stock_count: number }
+// A variant row in the form. `key` is a stable client-side React key (rows can be removed from the middle) and is
+// also how the "show on card" choice points at a variant that may not be saved yet; `id` is the database id of an
+// existing variant ("" for a new one), so saving updates that variant in place instead of recreating it. The name
+// is controlled so the publish check can name the variants that still need a photo; SKU, price and stock stay
+// uncontrolled. `photo_url` is the variant's own photo ("" for none): every variant needs one to be published.
+type PhotoState = { photo_url: string; uploading: boolean; error: string | null }
+type VariantRow = PhotoState & { key: number; id: string; name: string; sku: string; price: number; stock_count: number }
 let variantRowSeq = 0
-const newVariantRow = (v?: { id?: string; name: string; sku: string; price: number; stock_count: number }): VariantRow => ({
+const newVariantRow = (v?: { id?: string; name: string; sku: string; price: number; stock_count: number }, photo_url = ""): VariantRow => ({
   key: ++variantRowSeq,
   id: v?.id ?? "",
   name: v?.name ?? "",
   sku: v?.sku ?? "",
   price: v?.price ?? 0,
   stock_count: v?.stock_count ?? 0,
+  photo_url,
+  uploading: false,
+  error: null,
 })
 
 // Fields copied from an existing product when prefilling by name. sku and slug
@@ -105,35 +114,8 @@ const PREFILL_VALUE_FIELDS = [
   "box_breadth_cm",
   "weight_kg",
 ] as const
-const PREFILL_CHECK_FIELDS = ["is_new_arrival", "is_pet_safe", "is_imported"] as const
+const PREFILL_CHECK_FIELDS = ["is_new_arrival", "is_pet_safe", "is_imported", "is_hard_leaf"] as const
 const PREFILL_TAG_FIELDS = ["use_case_tags"] as const
-
-// `variant_key` is the key of the variant row this photo belongs to, or null for a general photo that
-// applies to every variant. `is_primary` only ever applies to general photos (the shop card reads it).
-type ImageRowState = {
-  id: string
-  url: string
-  alt_text: string
-  uploading: boolean
-  error: string | null
-  variant_key: number | null
-  is_primary: boolean
-}
-let imageRowSeq = 0
-const newImageRow = (url = "", alt_text = "", variant_key: number | null = null, is_primary = false): ImageRowState => ({
-  id: `img-${++imageRowSeq}`,
-  url,
-  alt_text,
-  uploading: false,
-  error: null,
-  variant_key,
-  is_primary,
-})
-
-// Caps how many uploads a single gallery pick can queue, and how many run at once
-// (decoding several 12MP phone photos in parallel can exhaust mobile memory).
-const MAX_FILES_PER_PICK = 10
-const UPLOAD_CONCURRENCY = 2
 
 type PrefillNote = { source: string; sku: string; filled: number; kept: string[] }
 
@@ -146,17 +128,24 @@ export function ProductForm({
   product?: ExistingProduct
   action: (formData: FormData) => Promise<ProductActionResult>
 }) {
-  const [variants, setVariants] = useState<VariantRow[]>(() => (product?.variants ?? []).map((v) => newVariantRow(v)))
-  const [images, setImagesRaw] = useState<ImageRowState[]>(() => {
-    const keyByVariantId = new Map(variants.filter((v) => v.id).map((v) => [v.id, v.key]))
-    const rows = product?.images?.length
-      ? product.images.map((i) => newImageRow(i.url, i.alt_text, i.variant_id ? (keyByVariantId.get(i.variant_id) ?? null) : null, !!i.is_primary))
-      : [newImageRow()]
-    return normalizePrimary(rows)
+  // The first photo of each existing variant. A product with no variants yet is sold as one "Standard" variant
+  // built from its own price and stock (created when it is saved); its photo is `standard`.
+  const [variants, setVariants] = useState<VariantRow[]>(() => {
+    const photoByVariant = new Map<string, string>()
+    for (const image of product?.images ?? []) {
+      if (image.variant_id && !photoByVariant.has(image.variant_id)) photoByVariant.set(image.variant_id, image.url)
+    }
+    return (product?.variants ?? []).map((v) => newVariantRow(v, (v.id && photoByVariant.get(v.id)) || ""))
   })
-  // Every image update goes through here so the single-primary rule can't be broken by any of them.
-  const setImages = (update: (rows: ImageRowState[]) => ImageRowState[]) => setImagesRaw((rows) => normalizePrimary(update(rows)))
-  const [pickNotice, setPickNotice] = useState<string | null>(null)
+  const [standard, setStandard] = useState<PhotoState>(() => ({
+    // A legacy product (no variants, photos from before) keeps its first photo as the Standard variant's.
+    photo_url: product?.variants?.length ? "" : (product?.images?.[0]?.url ?? ""),
+    uploading: false,
+    error: null,
+  }))
+  // Which variant's photo the shop card shows. null = automatic (the cheapest variant that has a photo).
+  const [cardKey, setCardKey] = useState<number | null>(() => variants.find((v) => v.id && v.id === product?.card_variant_id)?.key ?? null)
+  const [wantsPublish, setWantsPublish] = useState(!!product?.published_at)
   const [categoryName, setCategoryName] = useState(product?.category_name ?? "")
   // Tools & Equipment (Fertilizer, Other Equipment, Pots, Planting Media) have no plant care
   // info, size, box dimensions or tags -- and are delivered at 120 PKR per kg, so weight is mandatory.
@@ -250,7 +239,20 @@ export function ProductForm({
     }
   }
 
-  const uploadingCount = images.filter((r) => r.uploading).length
+  const namedVariants = variants.filter((v) => v.name.trim())
+  const hasVariants = namedVariants.length > 0
+  const uploadingCount = variants.filter((v) => v.uploading).length + (standard.uploading ? 1 : 0)
+
+  // The card shows the ticked variant, or (nothing ticked) the cheapest one that has a photo.
+  const cheapestWithPhotoKey = [...namedVariants]
+    .filter((v) => v.photo_url)
+    .sort((a, b) => a.price - b.price)[0]?.key
+  const effectiveCardKey = namedVariants.some((v) => v.key === cardKey) ? cardKey : (cheapestWithPhotoKey ?? namedVariants[0]?.key ?? null)
+
+  // Why Published can't be ticked yet (the server enforces the same rule).
+  const publishProblem = publishBlocker(
+    hasVariants ? namedVariants.map((v) => ({ name: v.name, hasPhoto: !!v.photo_url })) : [{ name: "Standard", hasPhoto: !!standard.photo_url }]
+  )
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -270,50 +272,20 @@ export function ProductForm({
     })
   }
 
-  function updateRow(id: string, patch: Partial<ImageRowState>) {
-    setImages((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  function updateVariant(key: number, patch: Partial<PhotoState> & Partial<VariantRow>) {
+    setVariants((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   }
 
-  // Uploads one file into an existing row. On failure the row stays (with its
-  // error shown) so nothing is lost silently; the user can retry or remove it.
-  async function uploadIntoRow(id: string, file: File) {
-    updateRow(id, { uploading: true, error: null })
+  // Uploads one photo (downscaled, converted to AVIF, stored in R2) into a variant row or the Standard slot. On
+  // failure the row keeps its previous photo and shows the error, so nothing is lost silently.
+  async function uploadPhoto(target: number | "standard", file: File) {
+    const patch = (p: Partial<PhotoState>) => (target === "standard" ? setStandard((s) => ({ ...s, ...p })) : updateVariant(target, p))
+    patch({ uploading: true, error: null })
     try {
-      updateRow(id, { url: await uploadAdminImage(file, "products"), uploading: false })
+      patch({ photo_url: await uploadAdminImage(file, "products"), uploading: false })
     } catch (err) {
-      updateRow(id, { uploading: false, error: err instanceof Error ? err.message : "Upload failed." })
+      patch({ uploading: false, error: err instanceof Error ? err.message : "Upload failed." })
     }
-  }
-
-  // Replace the picture in one specific row (per-row Camera / Gallery buttons).
-  function replaceRowImage(id: string, files: File[]) {
-    if (files[0]) void uploadIntoRow(id, files[0])
-  }
-
-  // Add one or more photos as new rows (bottom Add photo / Add from gallery
-  // buttons). Empty rows are filled first so a fresh form doesn't keep a stray blank row.
-  function addImages(files: File[]) {
-    setPickNotice(null)
-    if (files.length === 0) return
-    if (files.length > MAX_FILES_PER_PICK) {
-      setPickNotice(`Only the first ${MAX_FILES_PER_PICK} photos were added — pick the rest in another batch.`)
-    }
-    const batch = files.slice(0, MAX_FILES_PER_PICK)
-    const blankIds = images.filter((r) => !r.url && !r.uploading).map((r) => r.id)
-    const reused = blankIds.slice(0, batch.length)
-    const fresh = Array.from({ length: batch.length - reused.length }, () => newImageRow())
-    const targetIds = [...reused, ...fresh.map((r) => r.id)]
-
-    setImages((rows) => [
-      ...rows.map((r) => (reused.includes(r.id) ? { ...r, uploading: true, error: null } : r)),
-      ...fresh.map((r) => ({ ...r, uploading: true })),
-    ])
-
-    const queue = batch.map((file, i) => ({ file, id: targetIds[i] }))
-    const worker = async () => {
-      for (let job = queue.shift(); job; job = queue.shift()) await uploadIntoRow(job.id, job.file)
-    }
-    for (let n = 0; n < Math.min(UPLOAD_CONCURRENCY, batch.length); n++) void worker()
   }
 
   return (
@@ -323,6 +295,7 @@ export function ProductForm({
       onChange={(e) => {
         const { name } = e.target as unknown as { name?: string }
         if (name) touched.current.add(name)
+        if (name === "published") setWantsPublish((e.target as unknown as HTMLInputElement).checked)
       }}
       className="max-w-5xl"
     >
@@ -412,17 +385,28 @@ export function ProductForm({
           </Field>
         </FormSection>
 
-        <FormSection title="Pricing & stock" description="Stock status (In stock / Low stock / Out of stock) is worked out automatically.">
+        <FormSection
+          title="Pricing & stock"
+          description={
+            hasVariants
+              ? "Price and stock come from the variants below: the shop shows “Starting from” the lowest price, and stock is their total. Stock status (In stock / Low stock / Out of stock) is worked out automatically."
+              : "Stock status (In stock / Low stock / Out of stock) is worked out automatically. Without variants, this product is sold as a single “Standard” option with this price and stock."
+          }
+        >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Field label="Price (PKR)" required>
-              <input type="number" name="price" defaultValue={product?.price} required className={inputClass} />
-            </Field>
+            {!hasVariants && (
+              <Field label="Price (PKR)" required>
+                <input type="number" name="price" defaultValue={product?.price} required className={inputClass} />
+              </Field>
+            )}
             <Field label="Compare-at price">
               <input type="number" name="compare_at_price" defaultValue={product?.compare_at_price ?? ""} className={inputClass} />
             </Field>
-            <Field label="Stock count" required>
-              <input type="number" name="stock_count" defaultValue={product?.stock_count ?? 0} required className={inputClass} />
-            </Field>
+            {!hasVariants && (
+              <Field label="Stock count" required>
+                <input type="number" name="stock_count" defaultValue={product?.stock_count ?? 0} required className={inputClass} />
+              </Field>
+            )}
             <Field label="Low-stock threshold" required>
               <input
                 type="number"
@@ -521,9 +505,22 @@ export function ProductForm({
                 defaultChecked={product?.is_imported}
               />
             </div>
+            {isMangaveCategory(categoryName) && (
+              <CheckField
+                name="is_hard_leaf"
+                label="Hard leaf (ships bare-root)"
+                description="Stiff, easily-broken leaves. Ships bare-root with the pot sent separately, instead of potted. Leave unticked for soft-leaf Mangaves."
+                defaultChecked={product?.is_hard_leaf}
+              />
+            )}
             <CheckField name="is_featured" label="Featured" defaultChecked={product?.is_featured} />
             <CheckField name="published" label="Published" description="Untick to keep it as a draft." defaultChecked={!!product?.published_at} />
           </div>
+          {wantsPublish && publishProblem && (
+            <p role="status" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Can&apos;t publish yet: {publishProblem} Untick Published to save it as a draft.
+            </p>
+          )}
         </FormSection>
 
         <FormSection title="Use case tags" description="Used for filtering in the shop." className={isPlantCategory ? undefined : "hidden"}>
@@ -579,43 +576,31 @@ export function ProductForm({
         </FormSection>
 
         <FormSection
-          title="Photos"
-          description="Take a photo or pick from your gallery (converted to AVIF and stored in Cloudflare R2), or paste an image URL. A general photo shows for every variant; pick a variant to show a photo only when that variant is selected (add the variants below first). Exactly one general photo is the primary photo, used on the shop grid. Replaced or removed photos are deleted from storage when you save."
-        >
-          <div className="space-y-3">
-            {images.map((img) => (
-              <ImageRow
-                key={img.id}
-                row={img}
-                variants={variants}
-                onVariantChange={(variantKey) => updateRow(img.id, { variant_key: variantKey })}
-                onMakePrimary={() => setImages((rows) => rows.map((r) => ({ ...r, is_primary: r.id === img.id })))}
-                onUrlChange={(url) => updateRow(img.id, { url })}
-                onPickFiles={(files) => replaceRowImage(img.id, files)}
-                onRemove={() => setImages((rows) => rows.filter((r) => r.id !== img.id))}
-              />
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <PickButton icon={<Camera className="h-4 w-4" />} label="Add photo" capture onFiles={addImages} />
-            <PickButton icon={<ImageIcon className="h-4 w-4" />} label="Add from gallery" multiple onFiles={addImages} />
-            <button type="button" onClick={() => setImages((rows) => [...rows, newImageRow()])} className={buttonClass({ variant: "ghost", size: "sm" })}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Add URL manually
-            </button>
-          </div>
-          {pickNotice && <p className="text-xs text-muted-foreground">{pickNotice}</p>}
-        </FormSection>
-
-        <FormSection
-          title="Variants"
-          description="Optional. Add these if the product comes in different sizes or pot types. To give a variant its own photo, upload it under Photos and choose the variant there."
+          title="Variants and photos"
+          description="Every product needs at least one variant, and every variant needs its own photo, showing the exact plant or item you will ship (not a reference image). The variant ticked under Card is the photo shown on the shop grid, with the lowest variant price. Photos are converted to AVIF and stored in Cloudflare R2; replaced ones are deleted when you save."
         >
           {variants.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No variants.</p>
+            <div className="flex items-center gap-3 rounded-md border border-border p-3">
+              <input type="hidden" name="standard_photo" value={standard.photo_url} />
+              <VariantPhoto
+                url={standard.photo_url}
+                uploading={standard.uploading}
+                error={standard.error}
+                onPick={(file) => void uploadPhoto("standard", file)}
+                onClear={() => setStandard((s) => ({ ...s, photo_url: "", error: null }))}
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Photo</p>
+                <p className="text-xs text-muted-foreground">
+                  No variants: this product is sold as one option using the price and stock above. Add variants below for different sizes or pot types.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="space-y-3">
               <div className={`hidden gap-2 px-0.5 text-xs font-medium text-muted-foreground sm:grid ${VARIANT_COLUMNS}`} aria-hidden>
+                <span>Photo</span>
+                <span>Card</span>
                 <span>Name</span>
                 <span>SKU</span>
                 <span>Price</span>
@@ -625,28 +610,54 @@ export function ProductForm({
               {variants.map((v) => (
                 <div key={v.key} className={`grid items-center gap-2 ${VARIANT_COLUMNS}`}>
                   <input type="hidden" name="variant_id" value={v.id} />
-                  {/* The key lets photo rows point at this variant even before it has a database id. */}
+                  {/* The key lets the card choice point at this variant even before it has a database id. */}
                   <input type="hidden" name="variant_key" value={v.key} />
-                  <input name="variant_name" aria-label="Variant name" value={v.name} onChange={(e) => setVariants((rows) => rows.map((row) => (row.key === v.key ? { ...row, name: e.target.value } : row)))} placeholder='e.g. Medium - 8" pot' className={inputClass} />
+                  {/* Always submitted, even empty, so the photo list stays in step with the other variant fields. */}
+                  <input type="hidden" name="variant_photo" value={v.photo_url} />
+                  <VariantPhoto
+                    url={v.photo_url}
+                    uploading={v.uploading}
+                    error={v.error}
+                    onPick={(file) => void uploadPhoto(v.key, file)}
+                    onClear={() => updateVariant(v.key, { photo_url: "", error: null })}
+                  />
+                  <label className="flex items-center gap-2 text-[13px] sm:justify-center">
+                    <input
+                      type="radio"
+                      name="card_variant_choice"
+                      checked={effectiveCardKey === v.key}
+                      onChange={() => setCardKey(v.key)}
+                      aria-label={`Show ${v.name.trim() || "this variant"} on the shop card`}
+                      className="h-4 w-4 accent-forest-700"
+                    />
+                    <span className="sm:sr-only">Show on card</span>
+                  </label>
+                  <input name="variant_name" aria-label="Variant name" value={v.name} onChange={(e) => updateVariant(v.key, { name: e.target.value })} placeholder='e.g. Medium - 8" pot' className={inputClass} />
                   <input name="variant_sku" aria-label="Variant SKU" defaultValue={v.sku} placeholder="SKU" className={cn(inputClass, "font-mono")} />
-                  <input type="number" name="variant_price" aria-label="Variant price" defaultValue={v.price} placeholder="Price" className={inputClass} />
+                  <input type="number" name="variant_price" aria-label="Variant price" defaultValue={v.price} placeholder="Price" className={inputClass} onChange={(e) => updateVariant(v.key, { price: Number(e.target.value) })} />
                   <input type="number" name="variant_stock" aria-label="Variant stock" defaultValue={v.stock_count} placeholder="Stock" className={inputClass} />
                   <button
                     type="button"
-                    onClick={() => {
-                      setVariants(variants.filter((row) => row.key !== v.key))
-                      // Photos that belonged to this variant become general photos.
-                      setImages((rows) => rows.map((r) => (r.variant_key === v.key ? { ...r, variant_key: null } : r)))
-                    }}
+                    onClick={() => setVariants(variants.filter((row) => row.key !== v.key))}
                     className={buttonClass({ variant: "ghost", size: "sm", className: "text-red-700 hover:bg-red-50 hover:text-red-800" })}
                   >
                     Remove
                   </button>
                 </div>
               ))}
+              {/* Only an explicit choice is saved; nothing ticked by hand means the shop picks the cheapest variant with a photo. */}
+              <input type="hidden" name="card_variant" value={cardKey !== null && namedVariants.some((v) => v.key === cardKey) ? cardKey : ""} />
             </div>
           )}
-          <button type="button" onClick={() => setVariants([...variants, newVariantRow()])} className={buttonClass({ variant: "secondary", size: "sm" })}>
+          <button
+            type="button"
+            onClick={() => {
+              // Adding the first variant carries over the photo already chosen for the single "Standard" option.
+              setVariants([...variants, newVariantRow(undefined, variants.length === 0 ? standard.photo_url : "")])
+              if (variants.length === 0) setStandard({ photo_url: "", uploading: false, error: null })
+            }}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
             <Plus className="h-4 w-4" aria-hidden />
             Add variant
           </button>
@@ -672,8 +683,8 @@ export function ProductForm({
   )
 }
 
-// Name | SKU | price | stock | remove: shared by the header row and every variant row so the columns line up.
-const VARIANT_COLUMNS = "sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_7rem_6rem_4.5rem]"
+// Photo | card | name | SKU | price | stock | remove: shared by the header row and every variant row so the columns line up.
+const VARIANT_COLUMNS = "sm:grid-cols-[4rem_2.75rem_minmax(0,1.6fr)_minmax(0,1fr)_7rem_6rem_4.5rem]"
 
 // Tag checkboxes drawn as toggle chips. The real checkbox stays in the DOM (visually hidden) so the form and the
 // name-prefill code keep working exactly as before.
@@ -695,150 +706,68 @@ function TagGroup({ legend, name, tags, selected }: { legend: string; name: stri
   )
 }
 
-// A file picker styled as a button. `capture` opens the camera directly on phones
-// (a normal file dialog on desktop); without it, phones offer the gallery/files.
-function PickButton({
-  icon,
-  label,
-  capture,
-  multiple,
-  disabled,
-  onFiles,
+// The variant's own photo: a square that opens the file picker (camera or gallery on a phone). Picking a file
+// replaces the photo; Clear removes it. The file itself is never part of the form submit (no name attribute): the
+// upload returns a URL, which the caller keeps in a hidden input.
+function VariantPhoto({
+  url,
+  uploading,
+  error,
+  onPick,
+  onClear,
 }: {
-  icon: React.ReactNode
-  label: string
-  capture?: boolean
-  multiple?: boolean
-  disabled?: boolean
-  onFiles: (files: File[]) => void
+  url: string
+  uploading: boolean
+  error: string | null
+  onPick: (file: File) => void
+  onClear: () => void
 }) {
-  return (
-    <label
-      className={cn(
-        buttonClass({ variant: "secondary", size: "sm" }),
-        "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-        disabled ? "cursor-wait opacity-60" : "cursor-pointer"
-      )}
-    >
-      {icon}
-      {label}
-      {/* No name attribute: the file itself must not be submitted with the form. */}
-      <input
-        type="file"
-        accept="image/*"
-        capture={capture ? "environment" : undefined}
-        multiple={multiple}
-        disabled={disabled}
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? [])
-          e.target.value = "" // allow re-selecting the same file
-          onFiles(files)
-        }}
-        className="sr-only"
-      />
-    </label>
-  )
-}
-
-function ImageRow({
-  row,
-  variants,
-  onVariantChange,
-  onMakePrimary,
-  onUrlChange,
-  onPickFiles,
-  onRemove,
-}: {
-  row: ImageRowState
-  variants: VariantRow[]
-  onVariantChange: (variantKey: number | null) => void
-  onMakePrimary: () => void
-  onUrlChange: (url: string) => void
-  onPickFiles: (files: File[]) => void
-  onRemove: () => void
-}) {
-  // image_url stays a plain editable text input: pasting a URL by hand works
-  // exactly as before; the Camera / Gallery buttons just fill it in.
-  const { url, uploading, error } = row
   const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
-  const isHttp = /^https?:\/\//i.test(url)
-  const showPreview = isHttp && brokenUrl !== url
+  const showPreview = /^https?:\/\//i.test(url) && brokenUrl !== url
 
   return (
-    <div className="flex gap-3 rounded-md border border-border p-3">
-      {/* Always submitted, even when empty, so these lists stay in step with image_url row by row. */}
-      <input type="hidden" name="image_variant" value={row.variant_key ?? ""} />
-      <input type="hidden" name="image_primary" value={row.is_primary ? "1" : "0"} />
-      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">
+    <div className="flex items-center gap-2 sm:flex-col sm:items-start sm:gap-1">
+      <label
+        className={cn(
+          "relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-input bg-muted text-muted-foreground transition-colors hover:border-primary focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+          uploading ? "cursor-wait" : "cursor-pointer",
+          url && "border-solid"
+        )}
+      >
         {showPreview ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="Preview" onError={() => setBrokenUrl(url)} className="h-full w-full object-cover" />
+          <img src={url} alt="Variant photo" onError={() => setBrokenUrl(url)} className="h-full w-full object-cover" />
         ) : (
-          <ImageIcon className="h-6 w-6 text-muted-foreground/60" aria-hidden />
+          <Camera className="h-5 w-5" aria-hidden />
         )}
         {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-surface/70">
-            <Loader2 className="h-5 w-5 animate-spin text-foreground/70" aria-label="Uploading" />
-          </div>
+          <span className="absolute inset-0 flex items-center justify-center bg-surface/70">
+            <Loader2 className="h-4 w-4 animate-spin text-foreground/70" aria-label="Uploading" />
+          </span>
         )}
-      </div>
-      <div className="min-w-0 flex-1 space-y-2">
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-          <input
-            name="image_url"
-            aria-label="Image URL"
-            value={url}
-            onChange={(e) => onUrlChange(e.target.value)}
-            placeholder="https://images.muffinplants.com/..."
-            className={inputClass}
-          />
-          <input name="image_alt" aria-label="Alt text" defaultValue={row.alt_text} placeholder="Alt text" className={inputClass} />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <PickButton
-            icon={uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-            label={uploading ? "Uploading…" : "Camera"}
-            capture
-            disabled={uploading}
-            onFiles={onPickFiles}
-          />
-          <PickButton icon={<ImageIcon className="h-4 w-4" />} label="Gallery" disabled={uploading} onFiles={onPickFiles} />
-          <button type="button" onClick={onRemove} className={buttonClass({ variant: "ghost", size: "sm", className: "text-red-700 hover:bg-red-50 hover:text-red-800" })}>
-            Remove
-          </button>
-          {row.is_primary && <Badge tone="info" dot={false} className="ml-auto">Primary photo</Badge>}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <label className="flex items-center gap-2 text-[13px]">
-            <span className="text-muted-foreground">Shown for</span>
-            <select
-              aria-label="Which variant this photo belongs to"
-              value={row.variant_key ?? ""}
-              onChange={(e) => onVariantChange(e.target.value === "" ? null : Number(e.target.value))}
-              className={cn(inputClass, "h-8 w-auto py-0")}
-            >
-              <option value="">General (all variants)</option>
-              {variants.map((v) => (
-                <option key={v.key} value={v.key}>
-                  {v.name.trim() || "Unnamed variant"}
-                </option>
-              ))}
-            </select>
-          </label>
-          {row.variant_key === null && (
-            <label className="flex items-center gap-2 text-[13px]">
-              <input type="checkbox" checked={row.is_primary} onChange={onMakePrimary} className="h-4 w-4 accent-forest-700" />
-              Primary photo (shop grid)
-            </label>
-          )}
-        </div>
-        {error && (
-          <p role="alert" className="text-xs text-red-700">
-            {error}
-          </p>
-        )}
-        {isHttp && brokenUrl === url && <p className="text-xs text-muted-foreground">Preview unavailable for this URL.</p>}
-      </div>
+        <input
+          type="file"
+          accept="image/*"
+          disabled={uploading}
+          aria-label={url ? "Replace photo" : "Add photo"}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = "" // allow re-selecting the same file
+            if (file) onPick(file)
+          }}
+          className="sr-only"
+        />
+      </label>
+      {url && !uploading && (
+        <button type="button" onClick={onClear} className="text-xs text-red-700 underline underline-offset-2 hover:text-red-800">
+          Clear
+        </button>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-red-700">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

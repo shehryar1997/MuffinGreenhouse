@@ -73,7 +73,8 @@ interface WishlistRow {
     name: string
     slug: string
     price: number
-    images: { url: string; alt_text: string | null; sort_order: number | null; variant_id: string | null; is_primary: boolean | null }[] | null
+    card_variant_id: string | null
+    images: { url: string; alt_text: string | null; sort_order: number | null; variant_id: string | null }[] | null
   } | null
 }
 
@@ -170,7 +171,7 @@ export default async function AccountPage() {
     .from("wishlist_items")
     .select(`
       id, product_id,
-      product:products(id, name, slug, price, images:product_images(url, alt_text, sort_order, variant_id, is_primary))
+      product:products(id, name, slug, price, card_variant_id, images:product_images(url, alt_text, sort_order, variant_id))
     `)
     .eq("customer_id", customer.id)
     .order("created_at", { ascending: false })
@@ -189,10 +190,14 @@ export default async function AccountPage() {
           name: item.product.name,
           slug: item.product.slug,
           price: item.product.price,
-          // General photos only, the primary one first (a variant's own photo is not the product's thumbnail).
+          // The card variant's photo first (the one the shop grid shows), then the rest.
           images: (item.product.images ?? [])
-            .filter((img) => !img.variant_id)
-            .sort((a, b) => Number(!!b.is_primary) - Number(!!a.is_primary) || (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .filter((img) => !!img.variant_id)
+            .sort(
+              (a, b) =>
+                Number(b.variant_id === item.product!.card_variant_id) - Number(a.variant_id === item.product!.card_variant_id) ||
+                (a.sort_order ?? 0) - (b.sort_order ?? 0)
+            )
             .map((img) => ({ url: img.url, alt: img.alt_text || item.product!.name })),
         }
       : null,

@@ -25,10 +25,14 @@ export interface Product {
   images: ProductImage[]
   careInfo: CareInfo
   variants: ProductVariant[]
+  /** The variant whose photo represents the product on cards and lists; also the one preselected on its page. */
+  cardVariantId?: string | null
   useCaseTags: string[]
   isNewArrival: boolean
   isPetSafe: boolean
   isImported: boolean
+  /** Mangaves only: stiff, easily-broken leaves, so it ships bare-root instead of potted. See lib/shipping.ts. */
+  isHardLeaf: boolean
   difficulty: "beginner" | "intermediate" | "expert"
   lightRequirement: "low" | "medium" | "bright" | "full_sun"
   waterRequirement: "low" | "medium" | "high"
@@ -46,7 +50,7 @@ export interface ProductImage {
   url: string
   alt: string
   sortOrder: number
-  /** null = a general photo shown for every variant; set = only while that variant is selected. */
+  /** The variant this photo belongs to. */
   variantId?: string | null
   isPrimary?: boolean
 }

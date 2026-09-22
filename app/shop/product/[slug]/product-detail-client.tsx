@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer, PawPrint } from "lucide-react"
+import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer, PawPrint, PackageOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn, formatPrice } from "@/lib/utils"
@@ -14,6 +14,7 @@ import { toast } from "sonner"
 import { Product } from "@/types"
 import { generateProductSchema, serializeJsonLd } from "@/lib/structured-data"
 import { isPlantProduct } from "@/lib/product-categories"
+import { shipsBareRoot } from "@/lib/shipping"
 import { pickGallery } from "@/lib/product-photos"
 import { NotifyMeForm } from "@/components/shop/notify-me-form"
 import { Recommendations } from "@/components/shop/recommendations"
@@ -26,8 +27,11 @@ interface ProductDetailClientProps {
 }
 
 export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDetailClientProps) {
-  const [selectedVariant, setSelectedVariant] = useState(product?.variants[0] || null)
-  // Id of the photo the shopper chose (a thumbnail, or a variant's own photo). null = the default photo.
+  // Opens on the cheapest variant, matching the "Starting from" price shown on the shop card.
+  const [selectedVariant, setSelectedVariant] = useState(
+    product?.variants.length ? product.variants.reduce((cheapest, v) => (v.price < cheapest.price ? v : cheapest)) : null
+  )
+  // Id of the thumbnail the shopper chose among the selected variant's photos. null = its first photo.
   const [shownImageId, setShownImageId] = useState<string | null>(null)
   const [requestedQuantity, setQuantity] = useState(1)
   const { addItem } = useCart()
@@ -83,14 +87,18 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
   const productSchema = generateProductSchema(product, rating)
   // Tools & Equipment (pots, fertilizer, media...) have no plant care info to show.
   const isPlant = isPlantProduct(product)
+  const bareRoot = isPlant && shipsBareRoot(product)
 
   const handleAddToCart = () => {
     // Adding opens the cart drawer, which is the confirmation (a toast on top of it said the same thing twice).
     addItem(product, selectedVariant || undefined, quantity)
   }
 
-  // General photos first, then the selected variant's own; the main photo never goes blank (see pickGallery).
-  const { galleryImages, mainImage } = pickGallery(product, selectedVariant, shownImageId)
+  // Only the selected variant's own photos are shown (see pickGallery), never another size's.
+  // A legacy product with no variants falls back to its product photos.
+  const gallery = pickGallery(selectedVariant, shownImageId)
+  const galleryImages = product.variants.length > 0 ? gallery.galleryImages : product.images
+  const mainImage = gallery.mainImage ?? (product.variants.length === 0 ? product.images[0] : undefined)
 
   const isOutOfStock = product.stockStatus === "out_of_stock"
   const currentPrice = selectedVariant?.price ?? product.price
@@ -117,7 +125,7 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
             <div className="aspect-square relative rounded-2xl overflow-hidden bg-forest-50">
               <Image
                 src={mainImage?.url || "/placeholder-plant.png"}
-                alt={mainImage?.alt || product.name}
+                alt={product.variants.length > 1 && selectedVariant ? `${product.name}, ${selectedVariant.name}` : product.name}
                 fill
                 className="object-cover"
                 priority
@@ -127,10 +135,11 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
                 {product.stockStatus === "low_stock" && <Badge variant="lowStock">Low Stock</Badge>}
                 {isPlant && product.isPetSafe && <Badge variant="outline">Pet Safe</Badge>}
                 {isPlant && product.isImported && <Badge variant="outline">Imported</Badge>}
+                {bareRoot && <Badge variant="outline">Ships bare-root</Badge>}
               </div>
             </div>
             <div className="flex gap-2 max-lg:overflow-x-auto max-lg:pb-1">
-              {galleryImages.map((img, i) => (
+              {galleryImages.length > 1 && galleryImages.map((img, i) => (
                 <button key={img.id} type="button" onClick={() => setShownImageId(img.id)} aria-label={`Show photo ${i + 1} of ${galleryImages.length}`} aria-current={mainImage?.id === img.id} className={`w-20 h-20 max-lg:shrink-0 rounded-lg overflow-hidden border-2 ${mainImage?.id === img.id ? "border-clay-500" : "border-transparent"}`}>
                   <Image src={img.url} alt={img.alt} width={80} height={80} className="object-cover w-full h-full" />
                 </button>
@@ -157,7 +166,7 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
                 <label className="font-medium text-forest-900 block mb-2">Size</label>
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
-                    <button key={v.id} type="button" onClick={() => { setSelectedVariant(v); const own = v.images?.[0]; if (own) setShownImageId(own.id) }} aria-pressed={selectedVariant?.id === v.id} disabled={v.stockStatus === "out_of_stock"}
+                    <button key={v.id} type="button" onClick={() => { setSelectedVariant(v); setShownImageId(null) }} aria-pressed={selectedVariant?.id === v.id} disabled={v.stockStatus === "out_of_stock"}
                       className={`px-4 py-2 border-2 rounded-lg ${selectedVariant?.id === v.id ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300 disabled:opacity-50"}`}>
                       <span className="text-sm font-medium">{v.name}</span>
                       <span className="ml-2 text-xs text-forest-500">{formatPrice(v.price)}</span>
@@ -249,6 +258,18 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
                   </p>
                 </div>
               </div>
+
+              {bareRoot && (
+                <div className="mt-3 flex items-start gap-3 rounded-xl border border-forest-200 bg-forest-50 p-4">
+                  <PackageOpen className="mt-0.5 h-5 w-5 shrink-0 text-forest-600" aria-hidden="true" />
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-forest-600">Packaging</p>
+                    <p className="text-sm font-semibold leading-relaxed text-forest-900">
+                      Ships bare-root, pot sent separately. This plant&apos;s leaves can snap if packed inside its pot, so we ship it bare-root with the pot boxed alongside it. It&apos;s a tough, hardy plant that isn&apos;t stressed by bare-root shipping, so just pot it up in fresh potting mix when it arrives.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {(product.careInfo.soil || product.careInfo.fertilizer) && (
                 <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
