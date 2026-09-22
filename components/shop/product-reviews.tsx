@@ -1,6 +1,7 @@
 import Image from "next/image"
 import { CheckCircle, Star } from "lucide-react"
 import type { ProductReview } from "@/lib/reviews"
+import { WriteReviewForm } from "./write-review-form"
 
 function Stars({ value, className = "h-4 w-4" }: { value: number; className?: string }) {
   return (
@@ -12,7 +13,19 @@ function Stars({ value, className = "h-4 w-4" }: { value: number; className?: st
   )
 }
 
-export function ProductReviews({ reviews, average, count }: { reviews: ProductReview[]; average: number; count: number }) {
+export function ProductReviews({
+  productId,
+  productName,
+  reviews,
+  average,
+  count,
+}: {
+  productId: string
+  productName: string
+  reviews: ProductReview[]
+  average: number
+  count: number
+}) {
   return (
     <section aria-labelledby="reviews-heading" className="mt-16 border-t border-forest-200 pt-10">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
@@ -27,16 +40,18 @@ export function ProductReviews({ reviews, average, count }: { reviews: ProductRe
       </div>
 
       {count === 0 ? (
-        <p className="text-sm text-forest-600">No reviews yet. Bought this plant? You can review it from your order page once it has shipped.</p>
+        <p className="text-sm text-forest-600">No reviews yet. Be the first to tell others how it went.</p>
       ) : (
         <ul className="grid gap-4 md:grid-cols-2">
           {reviews.map((r) => (
             <li key={r.id} className="rounded-xl border border-forest-200/60 bg-surface p-5">
               <div className="mb-2 flex items-center justify-between">
                 <Stars value={r.rating} />
-                <span className="flex items-center gap-1 text-xs text-forest-500">
-                  <CheckCircle className="h-3 w-3" aria-hidden="true" /> Verified purchase
-                </span>
+                {r.verified && (
+                  <span className="flex items-center gap-1 text-xs text-forest-500">
+                    <CheckCircle className="h-3 w-3" aria-hidden="true" /> Verified purchase
+                  </span>
+                )}
               </div>
               <p className="whitespace-pre-line text-forest-800">{r.body}</p>
               {r.imageUrl && (
@@ -52,6 +67,8 @@ export function ProductReviews({ reviews, average, count }: { reviews: ProductRe
           ))}
         </ul>
       )}
+
+      <WriteReviewForm productId={productId} productName={productName} />
     </section>
   )
 }

@@ -7,7 +7,8 @@ import { DeleteProductButton } from "./delete-product-button"
 import { ProductPhotoButton } from "./product-photo-button"
 import { VariantPhotosButton, type VariantPhotoRow } from "./variant-photos-button"
 import { PublishToggle } from "./publish-toggle"
-import { deleteProduct, deleteProducts, setProductPublished } from "./actions"
+import { BulkPublishButtons } from "./bulk-publish-buttons"
+import { deleteProduct, deleteProducts, setProductPublished, setProductsPublished } from "./actions"
 import { Alert, Badge, ButtonLink, EmptyState, PageHeader, StatStrip, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, linkClass, rowLinkClass } from "../_components/ui"
 import { fmtNumber, rs } from "../_components/format"
 import { BulkSelect, RowCheck, SelectAllCheck } from "../_components/bulk-select"
@@ -179,6 +180,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
         noun="product"
         description="Products that appear in past orders can't be deleted without breaking your order history. They are kept, and you'll see which ones. Everything else is removed for good, along with its photos."
         action={deleteProducts}
+        extraActions={<BulkPublishButtons action={setProductsPublished} />}
       >
         <div className="mt-4">
           {products.length === 0 ? (

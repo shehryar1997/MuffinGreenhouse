@@ -18,6 +18,7 @@ interface Row {
   display_name: string | null
   image_url: string | null
   is_hidden: boolean
+  verified_purchase: boolean
   created_at: string
   product: { id: string; name: string } | null
 }
@@ -27,7 +28,7 @@ export default async function AdminReviewsPage() {
 
   const { data, error } = await supabaseAdmin
     .from("reviews")
-    .select("id, rating, body, display_name, image_url, is_hidden, created_at, product:products(id, name)")
+    .select("id, rating, body, display_name, image_url, is_hidden, verified_purchase, created_at, product:products(id, name)")
     .order("created_at", { ascending: false })
     .limit(300)
   if (error) console.error("Error loading reviews:", error)
@@ -35,14 +36,21 @@ export default async function AdminReviewsPage() {
 
   const visible = rows.filter((r) => !r.is_hidden)
   const average = visible.length > 0 ? visible.reduce((s, r) => s + r.rating, 0) / visible.length : 0
+  // A review from a shipped order is never held back, so a hidden verified review was hidden by hand; a hidden
+  // unverified one (the open "Write a review" form, no order behind it) is simply waiting for its first look.
+  const pending = rows.filter((r) => r.is_hidden && !r.verified_purchase)
 
   return (
     <div>
-      <PageHeader title="Reviews" description="Reviews from customers whose order has shipped. They go live straight away; hide one to take it off the site." />
+      <PageHeader
+        title="Reviews"
+        description="Reviews from a shipped order go live straight away. Anyone else can also leave a review from the product page, but those wait here for you to approve before they show. Hide any review to take it off the site."
+      />
 
       <StatStrip
         items={[
           { label: "Reviews live", value: fmtNumber(visible.length) },
+          { label: "Pending approval", value: fmtNumber(pending.length) },
           { label: "Average rating", value: visible.length > 0 ? average.toFixed(1) : "-" },
           { label: "With photos", value: fmtNumber(visible.filter((r) => r.image_url).length) },
         ]}
@@ -62,7 +70,7 @@ export default async function AdminReviewsPage() {
             </label>
           )}
           {rows.length === 0 ? (
-            <EmptyState title="No reviews yet" description="Customers can review an item from their order page once it has shipped." />
+            <EmptyState title="No reviews yet" description="Customers can review a product from its page, or from their order page once it has shipped." />
           ) : (
             <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
               {rows.map((r) => (
@@ -87,7 +95,8 @@ export default async function AdminReviewsPage() {
                           {r.product.name}
                         </Link>
                       )}
-                      {r.is_hidden && <Badge tone="neutral">Hidden</Badge>}
+                      {r.verified_purchase && <Badge tone="success">Verified purchase</Badge>}
+                      {r.is_hidden && (r.verified_purchase ? <Badge tone="neutral">Hidden</Badge> : <Badge tone="warning">Pending approval</Badge>)}
                     </div>
                     <p className="mt-1.5 whitespace-pre-line text-foreground">{r.body}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -97,7 +106,7 @@ export default async function AdminReviewsPage() {
                   <div className="flex shrink-0 items-start gap-2">
                     <form action={setReviewHidden.bind(null, r.id, !r.is_hidden)}>
                       <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-                        {r.is_hidden ? "Show" : "Hide"}
+                        {r.is_hidden ? (r.verified_purchase ? "Show" : "Approve") : "Hide"}
                       </button>
                     </form>
                     <DeleteButton

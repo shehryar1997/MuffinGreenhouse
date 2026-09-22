@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function ReviewsPage() {
   const { data, error } = await supabaseAdmin
     .from("reviews")
-    .select("id, product_id, rating, body, display_name, image_url, created_at, product:products(name)")
+    .select("id, product_id, rating, body, display_name, image_url, created_at, verified_purchase, product:products(name)")
     .eq("is_hidden", false)
     .order("created_at", { ascending: false })
     .limit(60)
@@ -26,7 +26,7 @@ export default async function ReviewsPage() {
     customerName: (r.display_name as string | null) ?? "Anonymous",
     rating: r.rating as number,
     text: r.body as string,
-    verifiedPurchase: true,
+    verifiedPurchase: !!r.verified_purchase,
     createdAt: r.created_at as string,
     productName: (r.product as unknown as { name: string } | null)?.name,
     imageUrl: (r.image_url as string | null) ?? null,

@@ -50,6 +50,8 @@ export async function submitReview(token: string, orderItemId: string, input: Re
     body,
     display_name: input.showName ? name : null,
     image_url: imageUrl,
+    // A real order on this site backs it: goes live immediately, badged "Verified purchase".
+    verified_purchase: true,
   })
   if (error) return { error: error.code === "23505" ? "You've already reviewed this item." : "Couldn't save your review. Please try again." }
 

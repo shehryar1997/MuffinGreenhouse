@@ -15,3 +15,8 @@ export function cleanBulkIds(ids: unknown): string[] | null {
 }
 
 export const BAD_BULK_REQUEST: BulkDeleteResult = { deleted: 0, failures: [], error: "Nothing valid was selected. Refresh the page and try again." }
+
+/** What a bulk update (e.g. publish/unpublish) hands back. `failures` are ready-to-show sentences, one per item that was skipped. */
+export type BulkUpdateResult = { updated: number; failures: string[]; error?: string }
+
+export const BAD_BULK_UPDATE_REQUEST: BulkUpdateResult = { updated: 0, failures: [], error: "Nothing valid was selected. Refresh the page and try again." }

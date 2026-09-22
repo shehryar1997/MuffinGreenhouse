@@ -39,7 +39,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
     <ProductDetailClient
       product={product}
       rating={{ average, count }}
-      reviewsSlot={<ProductReviews reviews={reviews} average={average} count={count} />}
+      reviewsSlot={<ProductReviews productId={product.id} productName={product.name} reviews={reviews} average={average} count={count} />}
     />
   )
 }

@@ -16,13 +16,18 @@ interface Ctx {
   setAll: (on: boolean) => void
   total: number
   busy: boolean
+  /** Locks the whole bar (checkboxes, Clear, Delete) while another bulk action -- e.g. a publish
+   * toggle rendered via `extraActions` -- is running, so two bulk actions can't overlap. */
+  setBusy: (busy: boolean) => void
 }
 
 const BulkContext = createContext<Ctx | null>(null)
 
-function useBulk() {
+/** Read the current selection from inside a component rendered within `<BulkSelect>` -- used by
+ * RowCheck/SelectAllCheck, and by any custom action button passed as `extraActions`. */
+export function useBulk() {
   const ctx = useContext(BulkContext)
-  if (!ctx) throw new Error("RowCheck / SelectAllCheck must be used inside <BulkSelect>")
+  if (!ctx) throw new Error("useBulk (and RowCheck / SelectAllCheck) must be used inside <BulkSelect>")
   return ctx
 }
 
@@ -76,6 +81,7 @@ export function BulkSelect({
   action,
   flaggedIds = [],
   flaggedNotice,
+  extraActions,
   children,
 }: {
   /** Every id currently listed on the page. Selecting "all" means these. */
@@ -88,12 +94,15 @@ export function BulkSelect({
   /** Rows that need an extra warning (e.g. customers who have orders). `{n}` in the notice becomes their count. */
   flaggedIds?: string[]
   flaggedNotice?: string
+  /** Extra buttons (e.g. a bulk publish/unpublish toggle) shown in their own row below Clear/Delete. */
+  extraActions?: React.ReactNode
   children: React.ReactNode
 }) {
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
   const [progress, setProgress] = useState<{ done: number; of: number } | null>(null)
   const [outcome, setOutcome] = useState<BulkDeleteResult | null>(null)
+  const [externalBusy, setExternalBusy] = useState(false)
 
   // Rows that left the page (deleted, filtered out, next page) can't stay selected.
   const selected = useMemo(() => {
@@ -101,7 +110,7 @@ export function BulkSelect({
     return new Set([...picked].filter((id) => onPage.has(id)))
   }, [picked, ids])
 
-  const busy = progress !== null
+  const busy = progress !== null || externalBusy
   const count = selected.size
   const flaggedCount = flaggedIds.filter((id) => selected.has(id)).length
   const what = count === 1 ? noun : nounPlural
@@ -110,6 +119,7 @@ export function BulkSelect({
     selected,
     total: ids.length,
     busy,
+    setBusy: setExternalBusy,
     toggle: (id) => {
       setOutcome(null)
       setPicked((prev) => {
@@ -158,20 +168,25 @@ export function BulkSelect({
       {(count > 0 || summary) && (
         <div className="sticky top-[4.25rem] z-20 mb-3 space-y-2 lg:top-3">
           {count > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-border bg-surface px-4 py-2.5 shadow-sm">
-              <p className="text-sm font-medium tabular-nums text-foreground" aria-live="polite">
-                {count} {what} selected
-              </p>
-              <div className="flex items-center gap-2">
-                <button type="button" className={buttonClass({ variant: "ghost", size: "sm" })} onClick={() => ctx.setAll(false)} disabled={busy}>
-                  <X className="h-3.5 w-3.5" aria-hidden />
-                  Clear
-                </button>
-                <button type="button" className={buttonClass({ variant: "danger", size: "sm" })} onClick={() => setConfirming(true)} disabled={busy}>
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                  Delete selected
-                </button>
+            <div className="rounded-lg border border-border bg-surface px-4 py-2.5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <p className="text-sm font-medium tabular-nums text-foreground" aria-live="polite">
+                  {count} {what} selected
+                </p>
+                <div className="flex items-center gap-2">
+                  <button type="button" className={buttonClass({ variant: "ghost", size: "sm" })} onClick={() => ctx.setAll(false)} disabled={busy}>
+                    <X className="h-3.5 w-3.5" aria-hidden />
+                    Clear
+                  </button>
+                  <button type="button" className={buttonClass({ variant: "danger", size: "sm" })} onClick={() => setConfirming(true)} disabled={busy}>
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    Delete selected
+                  </button>
+                </div>
               </div>
+              {extraActions && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2">{extraActions}</div>
+              )}
             </div>
           )}
           {summary && (

@@ -6,7 +6,7 @@ import { deleteUnreferencedProductImages } from "@/lib/product-images"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { isMangaveCategory } from "@/lib/shipping"
 import { isAllowedImageUrl } from "@/lib/image-hosts"
-import { BAD_BULK_REQUEST, cleanBulkIds, type BulkDeleteResult } from "@/lib/admin-bulk"
+import { BAD_BULK_REQUEST, BAD_BULK_UPDATE_REQUEST, cleanBulkIds, type BulkDeleteResult, type BulkUpdateResult } from "@/lib/admin-bulk"
 import { recordToFormData, type ImportRecord } from "@/lib/product-import"
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
@@ -512,11 +512,11 @@ export async function deleteProducts(ids: string[]): Promise<BulkDeleteResult> {
   return result
 }
 
-// One-click publish/unpublish from the products list. Mirrors the form's rule: publishing an
-// already-published product keeps its original published_at (the "New" badge counts from it).
-export async function setProductPublished(productId: string, published: boolean): Promise<ProductActionResult> {
-  await requireAdmin()
-
+// Shared by the single toggle and the bulk publish/unpublish action. Mirrors the form's rule:
+// publishing an already-published product keeps its original published_at (the "New" badge counts
+// from it), and publishing is blocked the same way the form blocks it -- every active variant needs
+// a photo. No revalidating here, so the bulk action only does it once at the end.
+async function applyProductPublished(productId: string, published: boolean): Promise<{ error: string } | null> {
   const { data: existing, error: readError } = await supabaseAdmin
     .from("products")
     .select("published_at")
@@ -541,9 +541,41 @@ export async function setProductPublished(productId: string, published: boolean)
   const publishedAt = published ? ((existing.published_at as string | null) ?? new Date().toISOString()) : null
   const { error } = await supabaseAdmin.from("products").update({ published_at: publishedAt }).eq("id", productId)
   if (error) return { error: error.message }
+  return null
+}
+
+// One-click publish/unpublish from the products list.
+export async function setProductPublished(productId: string, published: boolean): Promise<ProductActionResult> {
+  await requireAdmin()
+  const failed = await applyProductPublished(productId, published)
+  if (failed) return failed
 
   revalidatePath("/admin/products")
   revalidateStorefront()
+}
+
+// "Publish selected" / "Unpublish selected" on the products list. Products that can't be published
+// (missing a variant photo) are kept as drafts and reported by name; unpublishing never fails this way.
+export async function setProductsPublished(ids: string[], published: boolean): Promise<BulkUpdateResult> {
+  await requireAdmin()
+  const clean = cleanBulkIds(ids)
+  if (!clean) return BAD_BULK_UPDATE_REQUEST
+
+  const { data: named } = await supabaseAdmin.from("products").select("id, name").in("id", clean)
+  const nameOf = new Map((named ?? []).map((p) => [p.id as string, p.name as string]))
+
+  const result: BulkUpdateResult = { updated: 0, failures: [] }
+  for (const id of clean) {
+    const failed = await applyProductPublished(id, published)
+    if (!failed) result.updated += 1
+    else result.failures.push(`${nameOf.get(id) ?? "A product"}: ${failed.error}`)
+  }
+
+  if (result.updated > 0) {
+    revalidatePath("/admin/products")
+    revalidateStorefront()
+  }
+  return result
 }
 
 // Sets one variant's own photo straight from the products list (the per-variant photo overlay). The photo
