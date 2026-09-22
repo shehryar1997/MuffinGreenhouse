@@ -6,7 +6,8 @@ import { z } from "zod"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest } from "@/lib/admin-auth"
 import { pakistanCities } from "@/data/pakistan-cities"
-import { calculateDeliveryFee, type DeliveryFeeDimensions } from "@/lib/delivery-fee"
+import { calculateDeliveryFee, mergeParcel, type DeliveryFeeDimensions } from "@/lib/delivery-fee"
+import { dbSubtotal } from "@/lib/coupons"
 import { MANUAL_ORDER_NOTE, normalizePkPhone, placeholderEmailForPhone } from "@/lib/manual-order"
 
 export type CreateManualOrderState = { error: string } | undefined
@@ -141,22 +142,39 @@ export async function createManualOrder(_prev: CreateManualOrderState, formData:
   if (deliveryFee === null) {
     deliveryFee = 0
     if (body.deliveryType === "delivery") {
-      const { data: rows } = await supabaseAdmin
-        .from("products")
-        .select("id, box_height_cm, box_width_cm, box_breadth_cm, category_slug, weight_kg")
-        .in("id", [...new Set(body.items.map((i) => i.productId))])
+      const variantIds = [...new Set(body.items.flatMap((i) => (i.variantId ? [i.variantId] : [])))]
+      const [{ data: rows }, { data: variantRows }] = await Promise.all([
+        supabaseAdmin
+          .from("products")
+          .select("id, box_height_cm, box_width_cm, box_breadth_cm, category_slug, weight_kg")
+          .in("id", [...new Set(body.items.map((i) => i.productId))]),
+        variantIds.length
+          ? supabaseAdmin.from("product_variants").select("id, weight_kg, box_height_cm, box_width_cm, box_breadth_cm").in("id", variantIds)
+          : Promise.resolve({ data: [] as Array<{ id: string; weight_kg: number | null; box_height_cm: number | null; box_width_cm: number | null; box_breadth_cm: number | null }> }),
+      ])
       const dims = new Map<string, DeliveryFeeDimensions>(
         (rows ?? []).map((r) => [
           r.id,
           { categorySlug: r.category_slug, boxHeightCm: r.box_height_cm, boxWidthCm: r.box_width_cm, boxBreadthCm: r.box_breadth_cm, weightKg: r.weight_kg },
         ])
       )
+      const sizeParcel = new Map(
+        (variantRows ?? []).map((v) => [v.id, { weightKg: v.weight_kg, boxHeightCm: v.box_height_cm, boxWidthCm: v.box_width_cm, boxBreadthCm: v.box_breadth_cm }])
+      )
       deliveryFee = calculateDeliveryFee({
         deliveryType: "delivery",
         city: deliveryCity,
-        items: body.items.map((i) => ({ dim: dims.get(i.productId), quantity: i.quantity })),
+        items: body.items.map((i) => {
+          const dim = dims.get(i.productId)
+          return { dim: dim ? mergeParcel(dim, i.variantId ? sizeParcel.get(i.variantId) : null) : undefined, quantity: i.quantity }
+        }),
       })
     }
+  }
+
+  // The database caps a discount at the order's subtotal; say so here instead of silently recording less.
+  if (body.discount > 0 && body.discount > (await dbSubtotal(body.items))) {
+    return { error: "The discount is bigger than the order total." }
   }
 
   const { data, error } = await supabaseAdmin.rpc("create_order", {
@@ -171,11 +189,15 @@ export async function createManualOrder(_prev: CreateManualOrderState, formData:
     p_delivery_fee: deliveryFee,
     p_discount_amount: body.discount,
     p_customer_notes: null,
+    // Staff can record a WhatsApp sale of a product that isn't published on the website (yet).
+    p_allow_unpublished: true,
   })
   if (error) {
     console.error("Manual order: create_order failed:", error)
     if (/insufficient stock/i.test(error.message)) return { error: "One of those plants doesn't have enough stock for that quantity. Lower the quantity or update the stock first." }
     if (/not found/i.test(error.message)) return { error: "One of the selected products no longer exists. Refresh the page and try again." }
+    if (/no longer available/i.test(error.message)) return { error: "One of the selected sizes was removed from its product. Refresh the page and pick another size." }
+    if (/A size must be chosen/i.test(error.message)) return { error: "Pick a size for every product." }
     return { error: "Couldn't create the order. Nothing was saved. Try again." }
   }
 

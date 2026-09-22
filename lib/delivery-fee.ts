@@ -29,6 +29,29 @@ export interface DeliveryFeeDimensions {
   weightKg: number | null
 }
 
+/** Key for a cart line's parcel: sizes can have their own weight and box, so the key includes the size. */
+export function parcelKey(productId: string, variantId?: string | null): string {
+  return variantId ? `${productId}:${variantId}` : productId
+}
+
+type ParcelFields = Pick<DeliveryFeeDimensions, "boxHeightCm" | "boxWidthCm" | "boxBreadthCm" | "weightKg">
+
+/**
+ * A size's parcel: its own weight and box when set in the admin panel, else the product's. The box is taken as a
+ * whole (all three sides from the size, or all three from the product) so a mix of two boxes never happens.
+ */
+export function mergeParcel(product: DeliveryFeeDimensions, variant?: Partial<ParcelFields> | null): DeliveryFeeDimensions {
+  if (!variant) return product
+  const variantBox = !!(variant.boxHeightCm && variant.boxWidthCm && variant.boxBreadthCm)
+  return {
+    categorySlug: product.categorySlug,
+    boxHeightCm: variantBox ? variant.boxHeightCm! : product.boxHeightCm,
+    boxWidthCm: variantBox ? variant.boxWidthCm! : product.boxWidthCm,
+    boxBreadthCm: variantBox ? variant.boxBreadthCm! : product.boxBreadthCm,
+    weightKg: variant.weightKg && variant.weightKg > 0 ? variant.weightKg : product.weightKg,
+  }
+}
+
 export interface DeliveryFeeItem {
   dim?: DeliveryFeeDimensions | null
   quantity: number

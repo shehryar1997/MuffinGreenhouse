@@ -1,11 +1,8 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import Link from "next/link"
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/privacy-policy" },
-  title: "Privacy Policy",
-  description: "How Muffin Greenhouse collects, uses, and protects your personal data.",
-}
+export const metadata: Metadata = pageMetadata({ title: "Privacy Policy", description: "How Muffin Plants collects, uses, and protects your personal data.", path: "/privacy-policy" })
 
 export default function PrivacyPolicyPage() {
   return (
@@ -38,7 +35,7 @@ export default function PrivacyPolicyPage() {
             <div>
               <h2 className="font-serif text-2xl text-forest-950 mb-3">1. Introduction</h2>
               <p className="leading-relaxed">
-                Muffin Greenhouse operates the website muffinplants.com. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or make a purchase. By using our services, you consent to the practices described herein.
+                Muffin Plants operates the website muffinplants.com. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website or make a purchase. By using our services, you consent to the practices described herein.
               </p>
             </div>
 

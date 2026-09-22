@@ -168,8 +168,8 @@ export default async function EventAttendeesPage({
                 const cancelled = !!r.cancelled_at
                 const waMessage =
                   Number(r.amount_due) > 0 && r.payment_status === "pending" && !cancelled
-                    ? `Hi ${r.guest_name.split(" ")[0]}! This is Muffin Greenhouse about "${event.title}" (${r.reference}). We're holding your spot. Please send ${rs(Number(r.amount_due))} and share the receipt here to confirm.`
-                    : `Hi ${r.guest_name.split(" ")[0]}! This is Muffin Greenhouse about "${event.title}" (${r.reference}).`
+                    ? `Hi ${r.guest_name.split(" ")[0]}! This is Muffin Plants about "${event.title}" (${r.reference}). We're holding your spot. Please send ${rs(Number(r.amount_due))} and share the receipt here to confirm.`
+                    : `Hi ${r.guest_name.split(" ")[0]}! This is Muffin Plants about "${event.title}" (${r.reference}).`
                 const wa = whatsAppLink(r.guest_phone, waMessage)
                 return (
                   <li key={r.id} className={cn("p-5", cancelled && "bg-muted/30")}>

@@ -59,10 +59,12 @@ export function ShopAllClient({ products, currentPage, totalPages, totalCount, f
                       <div>
                         <select 
                           className="font-mono text-sm text-forest-700 bg-surface border border-forest-200 rounded px-3 py-1.5 max-lg:min-h-11 focus:outline-none focus:ring-2 focus:ring-clay-300"
-                          value={filters.sort || 'new'}
-                          onChange={(e) => updateFilter('sort', e.target.value)}
+                          value={filters.sort || 'featured'}
+                          onChange={(e) => updateFilter('sort', e.target.value === 'featured' ? undefined : e.target.value)}
+                          aria-label="Sort products"
                         >
-                          <option value="new">Sort by: Newest</option>
+                          <option value="featured">Sort by: Recommended</option>
+                          <option value="new">Newest</option>
                           <option value="price-asc">Price: Low to High</option>
                           <option value="price-desc">Price: High to Low</option>
                           <option value="name">Name: A to Z</option>

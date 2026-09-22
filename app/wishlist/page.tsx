@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import { cookies } from "next/headers"
 import Link from "next/link"
 import { Heart, ShoppingBag, User } from "lucide-react"
@@ -9,11 +10,7 @@ import { mapSupabaseProductToProduct } from "@/lib/data/adapters"
 import { Product } from "@/types"
 import { SupabaseProduct } from "@/supabase/client"
 
-export const metadata: Metadata = {
-  title: "Wishlist",
-  description: "Your saved plants and favourites at Muffin Greenhouse.",
-  robots: { index: false },
-}
+export const metadata: Metadata = pageMetadata({ title: "Wishlist", description: "Your saved plants and favourites at Muffin Plants.", noindex: true })
 
 // Match the PRODUCT_SELECT shape from lib/data/products.ts
 const PRODUCT_SELECT = `

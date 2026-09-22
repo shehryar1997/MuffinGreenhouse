@@ -1,5 +1,7 @@
 "use server"
 
+import { canDeleteOrder, ORDER_KEPT_MESSAGE } from "../delete-order-description"
+
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 import { supabaseAdmin } from "@/supabase/admin-client"
@@ -198,11 +200,12 @@ export async function markDelivered(orderId: string) {
 async function removeOrder(orderId: string): Promise<{ error: string } | undefined> {
   const { data: order, error: readError } = await supabaseAdmin
     .from("orders")
-    .select("id, status")
+    .select("id, status, payment_status")
     .eq("id", orderId)
     .maybeSingle()
   if (readError) return { error: readError.message }
   if (!order) return { error: "This order no longer exists." }
+  if (!canDeleteOrder(order as { status: string; payment_status: string })) return { error: ORDER_KEPT_MESSAGE }
 
   if (order.status !== "cancelled" && order.status !== "shipped" && order.status !== "delivered") {
     const { error: releaseError } = await supabaseAdmin.rpc("cancel_order", { p_order_id: orderId, p_reason: "deleted" })
@@ -294,4 +297,14 @@ export async function cancelOrder(orderId: string) {
   }
 
   redirect(`/admin/orders/${orderId}`)
+}
+
+/** A staff note on the order's timeline (e.g. "Customer asked to deliver after 5 pm"). */
+export async function addOrderNote(orderId: string, formData: FormData): Promise<void> {
+  await requireAdmin()
+  const note = String(formData.get("note") ?? "").trim().slice(0, 1000)
+  if (!note) return
+  const { error } = await supabaseAdmin.from("order_events").insert({ order_id: orderId, event_type: "note", note, actor: "staff" })
+  if (error) throw new Error(`Couldn't save the note: ${error.message}`)
+  revalidatePath(`/admin/orders/${orderId}`)
 }

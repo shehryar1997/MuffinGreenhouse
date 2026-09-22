@@ -1,10 +1,10 @@
-// Muffin Nursery — Navigation Configuration
+// Muffin Plants — Navigation Configuration
 // Single source of truth for header, footer, mega-menu, and mobile nav
 
 import { NavItem, MegaMenuSection } from "@/types"
 
 export const siteConfig = {
-  name: "Muffin",
+  name: "Muffin Plants",
   tagline: "Good plants. Good energy.",
   description: "A plant nursery for Karachi, Pakistan. Plants sourced from around the world and propagated here, for real homes, with honest care advice.",
   url: "https://www.muffinplants.com",

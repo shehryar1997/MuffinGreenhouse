@@ -7,8 +7,10 @@ import { fmtDate, fmtNumber, plural, rs } from "../_components/format"
 import { realEmail } from "@/lib/manual-order"
 import { DeleteButton } from "../_components/delete-button"
 import { deleteOrder, deleteOrders } from "./[id]/actions"
-import { deleteOrderDescription } from "./delete-order-description"
+import { canDeleteOrder, deleteOrderDescription } from "./delete-order-description"
 import { BulkSelect, RowCheck, SelectAllCheck } from "../_components/bulk-select"
+import { OrdersSearchFilters } from "./orders-search-filters"
+import { sanitizeSearchTerm } from "@/lib/search-term"
 
 export const dynamic = "force-dynamic"
 const PAGE_SIZE = 25
@@ -27,13 +29,16 @@ interface OrderRow {
 }
 
 const STATUSES = ["all", "pending", "confirmed", "shipped", "delivered", "cancelled"]
+const PAYMENTS = ["pending", "paid", "failed", "refunded"]
 
-export default async function AdminOrdersPage(props: { searchParams: Promise<{ status?: string; page?: string }> }) {
+export default async function AdminOrdersPage(props: { searchParams: Promise<{ status?: string; page?: string; q?: string; payment?: string }> }) {
   await requireAdmin()
   const params = await props.searchParams
 
-  const { status, page } = params
-  const currentPage = Math.max(1, parseInt(page || "1", 10))
+  const status = params.status && STATUSES.includes(params.status) ? params.status : undefined
+  const payment = params.payment && PAYMENTS.includes(params.payment) ? params.payment : ""
+  const q = sanitizeSearchTerm(params.q)
+  const currentPage = Math.max(1, parseInt(params.page || "1", 10) || 1)
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
@@ -47,6 +52,21 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
   if (status && status !== "all") {
     query = query.eq("status", status)
   }
+  if (payment) {
+    query = query.eq("payment_status", payment)
+    // "Awaiting payment" means orders that can still be paid: cancelled ones are over.
+    if (payment === "pending" && !status) query = query.neq("status", "cancelled")
+  }
+  if (q) {
+    // Customers matching the name, e-mail or phone (phones compared by their last digits, so "0300 1234567"
+    // finds "+92 300 1234567"), plus the order number itself.
+    const digits = q.replace(/\D/g, "")
+    const phoneTail = digits.length >= 6 ? digits.slice(-7) : ""
+    const customerFilters = [`name.ilike.%${q}%`, `email.ilike.%${q}%`, ...(phoneTail ? [`phone.ilike.%${phoneTail}%`] : [])]
+    const { data: matches } = await supabaseAdmin.from("customers").select("id").or(customerFilters.join(",")).limit(200)
+    const ids = (matches ?? []).map((m) => m.id as string)
+    query = query.or([`order_number.ilike.%${q}%`, ...(ids.length ? [`customer_id.in.(${ids.join(",")})`] : [])].join(","))
+  }
 
   const { data: orders, count, error } = await query
 
@@ -57,13 +77,19 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
   const totalCount = count ?? 0
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
   const ordersList = orders || []
-  const pageHref = (p: number) => `/admin/orders?page=${p}${status ? `&status=${status}` : ""}`
+  const pageHref = (p: number) => {
+    const search = new URLSearchParams({ page: String(p) })
+    if (status) search.set("status", status)
+    if (payment) search.set("payment", payment)
+    if (q) search.set("q", q)
+    return `/admin/orders?${search.toString()}`
+  }
 
   return (
     <div>
       <PageHeader
         title="Orders"
-        description={`${plural(totalCount, "order")}${status && status !== "all" ? ` ${status}` : ""}`}
+        description={`${plural(totalCount, "order")}${status && status !== "all" ? ` ${status}` : ""}${payment === "pending" ? " awaiting payment" : payment ? ` · payment ${payment}` : ""}${q ? ` matching “${q}”` : ""}`}
         actions={
           <ButtonLink href="/admin/orders/new" variant="primary">
             <Plus className="h-4 w-4" aria-hidden />
@@ -78,7 +104,8 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
         </Alert>
       )}
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-3">
+        <OrdersSearchFilters q={q} status={status ?? "all"} payment={payment} />
         <FilterTabs
           label="Order status"
           items={STATUSES.map((s) => ({
@@ -92,11 +119,11 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
       <BulkSelect
         ids={ordersList.map((o: OrderRow) => o.id)}
         noun="order"
-        description="Orders that haven't shipped are cancelled first, so their plants go back in stock. Shipped and delivered orders are deleted without returning stock. They disappear from your order list, customer history and revenue totals, and customers are not e-mailed. This cannot be undone."
+        description="Only unpaid orders that haven't shipped (tests, duplicates, no-shows) can be deleted: they are cancelled first, so their plants go back in stock. Paid, shipped and delivered orders are kept as your sales record and are reported instead. Customers are not e-mailed. This cannot be undone."
         action={deleteOrders}
       >
         {ordersList.length === 0 ? (
-          <EmptyState title="No orders found" description={status && status !== "all" ? `Nothing is marked ${status} right now.` : "Orders show up here as customers place them."} />
+          <EmptyState title="No orders found" description={q ? `No order matches “${q}”.` : status && status !== "all" ? `Nothing is marked ${status} right now.` : payment ? "No orders with that payment status." : "Orders show up here as customers place them."} />
         ) : (
           <TableShell minWidth="min-w-[860px]">
             <Thead>
@@ -137,13 +164,15 @@ export default async function AdminOrdersPage(props: { searchParams: Promise<{ s
                         <Link href={`/admin/orders/${o.id}`} className={buttonClass({ size: "sm" })}>
                           View
                         </Link>
-                        <DeleteButton
-                          title="Delete this order?"
-                          description={deleteOrderDescription(o.order_number, o.status)}
-                          confirmLabel="Delete order"
-                          fallbackError="Couldn't delete the order. Check your connection and try again."
-                          action={deleteOrder.bind(null, o.id, false)}
-                        />
+                        {canDeleteOrder(o) && (
+                          <DeleteButton
+                            title="Delete this order?"
+                            description={deleteOrderDescription(o.order_number, o.status)}
+                            confirmLabel="Delete order"
+                            fallbackError="Couldn't delete the order. Check your connection and try again."
+                            action={deleteOrder.bind(null, o.id, false)}
+                          />
+                        )}
                       </div>
                     </Td>
                   </Tr>

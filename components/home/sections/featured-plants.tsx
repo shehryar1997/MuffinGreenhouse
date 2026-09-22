@@ -7,10 +7,16 @@ import { SectionLabel } from "@/components/home/shared/section-label"
 import { PlantTile } from "@/components/home/shared/plant-tile"
 import type { Product } from "@/types"
 
-/** In-stock first, then new arrivals, then newest. */
+/** In-stock first, then products ticked "Featured" in the admin panel, then new arrivals, then newest. */
 export function pickFeatured(products: Product[], limit = 4): Product[] {
   return [...products]
-    .sort((a, b) => Number(b.stockStatus !== "out_of_stock") - Number(a.stockStatus !== "out_of_stock") || Number(b.isNewArrival) - Number(a.isNewArrival) || b.createdAt.localeCompare(a.createdAt))
+    .sort(
+      (a, b) =>
+        Number(b.stockStatus !== "out_of_stock") - Number(a.stockStatus !== "out_of_stock") ||
+        Number(!!b.isFeatured) - Number(!!a.isFeatured) ||
+        Number(b.isNewArrival) - Number(a.isNewArrival) ||
+        b.createdAt.localeCompare(a.createdAt)
+    )
     .slice(0, limit)
 }
 

@@ -4,6 +4,7 @@ import { SearchPageClient } from "./search-page-client"
 import { searchProducts } from "@/lib/data/products"
 import { sanitizeSearchTerm } from "@/lib/search-term"
 import { shopByNeedCategories } from "@/config/nav.config"
+import { pageMetadata } from "@/lib/seo"
 
 interface SearchPageProps {
   searchParams: Promise<{ q?: string; page?: string }>
@@ -14,18 +15,10 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   const query = q ? sanitizeSearchTerm(q) : ""
   
   if (!query) {
-    return {
-      title: "Search | Muffin",
-      description: "Search for plants at Muffin Nursery",
-      robots: { index: false }
-    }
+    return pageMetadata({ title: "Search", description: "Search for plants at Muffin Plants.", noindex: true })
   }
   
-  return {
-    title: `Search: "${query}" | Muffin`,
-    description: `Search results for "${query}" at Muffin Nursery`,
-    robots: { index: false }
-  }
+  return pageMetadata({ title: `Search: "${query}"`, description: `Search results for "${query}" at Muffin Plants.`, noindex: true })
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {

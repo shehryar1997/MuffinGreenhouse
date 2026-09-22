@@ -1,11 +1,8 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import OurStoryPageClient from "./our-story-client"
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/our-story" },
-  title: "Our Story",
-  description: "From humble beginnings to Karachi's trusted plant nursery. Learn how we grow healthy, acclimated plants for Pakistani homes.",
-}
+export const metadata: Metadata = pageMetadata({ title: "Our Story", description: "How Muffin Plants started: plants sourced from around the world and propagated in Karachi, with honest care advice for Pakistani homes.", path: "/our-story" })
 
 export default function OurStoryPage() {
   return <OurStoryPageClient />

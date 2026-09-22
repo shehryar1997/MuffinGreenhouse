@@ -1,5 +1,5 @@
 import Link from "next/link"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import { ArrowRight, Leaf } from "lucide-react"
 import type { JournalPost } from "@/types"
 import { readingMinutes } from "@/lib/data/journal"

@@ -140,7 +140,7 @@ export function EventForm({
             </Field>
           </div>
           <Field label="Location" required hint="For a private venue, say “Address shared on WhatsApp after you book”.">
-            <input name="location" required maxLength={200} defaultValue={initial.location} className={inputClass} placeholder="Muffin Greenhouse, Karachi" />
+            <input name="location" required maxLength={200} defaultValue={initial.location} className={inputClass} placeholder="Muffin Plants, Karachi" />
           </Field>
         </FormSection>
 

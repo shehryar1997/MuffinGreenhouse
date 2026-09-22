@@ -34,7 +34,7 @@ export function OurStorySection({ n }: { n: string }) {
                 <span className="flex h-20 w-20 rotate-[-8deg] items-center justify-center rounded-full bg-paper shadow-lg ring-1 ring-forest-200/60">
                   <Image src="/logo-nav.png" alt="" width={37} height={40} className="h-11 w-auto" />
                 </span>
-                <p className="max-w-[14rem] font-mono text-xs uppercase leading-relaxed tracking-widest text-forest-600">Muffin Greenhouse · Karachi</p>
+                <p className="max-w-[14rem] font-mono text-xs uppercase leading-relaxed tracking-widest text-forest-600">Muffin Plants · Karachi</p>
               </div>
             </FadeIn>
           </div>

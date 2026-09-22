@@ -1,15 +1,22 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import Link from "next/link"
 import { ProductCard } from "@/components/ui/product-card"
-import { getPaginatedProductsByCategory, categoryMeta } from "@/lib/data/products"
+import { getPaginatedProductsByCategory } from "@/lib/data/catalog"
+import { getCategoryCopy } from "@/lib/data/categories"
 import { generateCategoryBreadcrumb, serializeJsonLd } from "@/lib/structured-data"
 
 export const revalidate = 300
 
-export const metadata: Metadata = {
-  title: "Tools & Equipment",
-  description: "Pots, fertilizer, planting media and plant care tools in one place. Everything your plants need, with delivery in Karachi and across Pakistan.",
-  alternates: { canonical: "/shop/tools-equipment" },
+export async function generateMetadata(): Promise<Metadata> {
+  const counts = await Promise.all(SECTION_SLUGS.map((slug) => getPaginatedProductsByCategory(slug, 1, 1)))
+  return pageMetadata({
+    title: "Plant Pots, Soil, Fertilizer & Tools",
+    description: "Pots, fertilizer, planting media and plant care tools in one place. Delivered in Karachi and across Pakistan.",
+    path: "/shop/tools-equipment",
+    // Nothing in any of its sections yet: keep the page out of search until there is.
+    noindex: counts.every((c) => c.totalCount === 0),
+  })
 }
 
 // Order of the sections on the page; each slug has its own /shop/<slug> page with the full list.
@@ -21,8 +28,8 @@ const PRODUCTS_PER_SECTION = 8
 export default async function ToolsEquipmentPage() {
   const sections = await Promise.all(
     SECTION_SLUGS.map(async (slug) => {
-      const { products, totalCount } = await getPaginatedProductsByCategory(slug, 1, PRODUCTS_PER_SECTION)
-      return { slug, meta: categoryMeta[slug], products, totalCount }
+      const [{ products, totalCount }, copy] = await Promise.all([getPaginatedProductsByCategory(slug, 1, PRODUCTS_PER_SECTION), getCategoryCopy(slug)])
+      return { slug, meta: { title: copy?.title ?? slug, description: copy?.description ?? "" }, products, totalCount }
     })
   )
   const breadcrumbSchema = generateCategoryBreadcrumb("Tools & Equipment", "tools-equipment")

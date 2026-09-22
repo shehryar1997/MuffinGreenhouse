@@ -8,7 +8,7 @@ import { findMatchingPlants } from "@/lib/muffin-engine"
 import { getAllProducts } from "@/lib/data/products"
 import type { Product } from "@/types"
 import Link from "next/link"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import { formatPrice } from "@/lib/utils"
 
 const questions = [

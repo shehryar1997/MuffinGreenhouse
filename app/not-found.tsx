@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Home, Leaf, ArrowRight } from "lucide-react"
 
 export const metadata = {
-  title: "Page Not Found - Muffin / greenhouse",
+  title: "Page Not Found",
   description: "Looks like this page took a little detour. Let us help you find your way back to the plants.",
 }
 

@@ -35,20 +35,26 @@ export function chooseCardVariantId(
   return cheapest(withPhoto.length > 0 ? withPhoto : variants).id
 }
 
+// Prices a shopper can actually pay: sizes in stock, or every size when all are sold out.
+function buyablePrices(product: Pick<Product, "variants">): number[] {
+  const inStock = product.variants.filter((variant) => variant.stockStatus !== "out_of_stock")
+  return (inStock.length > 0 ? inStock : product.variants).map((variant) => variant.price)
+}
+
 /**
- * The lowest active variant price, or null when the price doesn't vary and should be shown plain
- * (no variants, exactly one variant, or every variant costs the same).
+ * The lowest price among the sizes in stock, or null when the price doesn't vary and should be shown plain
+ * (no variants, exactly one, or every size in stock costs the same).
  */
 export function startingFromPrice(product: Pick<Product, "variants">): number | null {
-  const prices = product.variants.map((variant) => variant.price)
+  const prices = buyablePrices(product)
   if (prices.length <= 1) return null
   const min = Math.min(...prices)
   return prices.every((price) => price === min) ? null : min
 }
 
-/** The price to show on a card: the lowest variant price when there are variants, else the product price. */
+/** The price to show on a card: the lowest in-stock size price when there are variants, else the product price. */
 export function displayPrice(product: Pick<Product, "variants" | "price">): number {
-  const prices = product.variants.map((variant) => variant.price)
+  const prices = buyablePrices(product)
   return prices.length > 0 ? Math.min(...prices) : product.price
 }
 

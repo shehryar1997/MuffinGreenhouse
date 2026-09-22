@@ -72,11 +72,11 @@ const chapters: Chapter[] = [
       "With him, the team grew from just me to seven of us today, and it keeps growing.",
       "We're looking forward to people joining us, and to building this community together.",
     ],
-    photo: { src: "", alt: "The Muffin Greenhouse team" },
+    photo: { src: "", alt: "The Muffin Plants team" },
   },
   {
     label: "Today",
-    title: "What Muffin Greenhouse is for",
+    title: "What Muffin Plants is for",
     body: [
       "A place to find rare aroids, sansevierias, hoyas, orchids and more. Next to them, premium tools, and not cheap ones on purpose. These plants deserve a good tool, and the person working with them should enjoy using it.",
       "It is built for the person who bought their first plant last week and for the collector who has been chasing species for years.",
@@ -90,7 +90,7 @@ const chapters: Chapter[] = [
       "I'll be hosting events to teach the community, writing plenty of journal posts, and sharing everything I've learned about these plants.",
       "My hope is simple: that this hobby becomes common in Pakistan. That more people learn about these plants, become collectors, and discover how therapeutic gardening can be.",
     ],
-    photo: { src: "", alt: "Muffin Greenhouse community event" },
+    photo: { src: "", alt: "Muffin Plants community event" },
   },
 ]
 

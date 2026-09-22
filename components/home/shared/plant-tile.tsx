@@ -1,9 +1,10 @@
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import Link from "next/link"
 import { ArrowRight, Droplets, PawPrint, Sun } from "lucide-react"
 import { PhotoFallback } from "@/components/home/shared/plant-art"
 import { isPlantProduct } from "@/lib/product-categories"
 import { formatPrice } from "@/lib/utils"
+import { displayPrice, startingFromPrice } from "@/lib/product-photos"
 import type { Product } from "@/types"
 
 const LIGHT: Record<string, string> = { low: "Low light", medium: "Medium light", bright: "Bright light", full_sun: "Full sun" }
@@ -47,14 +48,16 @@ export function PlantTile({ product, ratio = "aspect-[4/5]", priority = false }:
       <div className="mt-4">
         <p className="font-mono text-xs lg:text-[11px] uppercase tracking-widest text-muted-foreground">{product.category.name}</p>
         <h3 className="mt-1 font-serif text-xl leading-tight text-foreground transition-colors group-hover:text-primary">{product.name}</h3>
-        <p className="mt-1 font-mono text-sm text-foreground">{formatPrice(product.price)}</p>
+        <p className="mt-1 font-mono text-sm text-foreground">
+          {startingFromPrice(product) !== null ? `From ${formatPrice(startingFromPrice(product)!)}` : formatPrice(displayPrice(product))}
+        </p>
         {isPlant && (
           <p className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <Sun className="h-3.5 w-3.5" aria-hidden="true" /> {LIGHT[product.lightRequirement] ?? "Light varies"}
+              <Sun className="h-3.5 w-3.5" aria-hidden="true" /> {product.lightSummary || LIGHT[product.lightRequirement] || "Light varies"}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Droplets className="h-3.5 w-3.5" aria-hidden="true" /> {WATER[product.waterRequirement] ?? "Water varies"}
+              <Droplets className="h-3.5 w-3.5" aria-hidden="true" /> {product.waterSummary || WATER[product.waterRequirement] || "Water varies"}
             </span>
             {product.isPetSafe && (
               <span className="inline-flex items-center gap-1.5 text-sprout-700">

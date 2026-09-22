@@ -1,6 +1,7 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { REVIEWS_CACHE_TAG } from "@/lib/cache-tags"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { requireAdmin } from "@/lib/admin-auth"
 import { BAD_BULK_REQUEST, cleanBulkIds, type BulkDeleteResult } from "@/lib/admin-bulk"
@@ -8,6 +9,7 @@ import { BAD_BULK_REQUEST, cleanBulkIds, type BulkDeleteResult } from "@/lib/adm
 function refresh(slug?: string | null) {
   revalidatePath("/admin/reviews")
   revalidatePath("/reviews")
+  revalidateTag(REVIEWS_CACHE_TAG, { expire: 0 })
   if (slug) revalidatePath(`/shop/product/${slug}`)
 }
 

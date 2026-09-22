@@ -1,6 +1,8 @@
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3"
 
-export const PUBLIC_BASE_URL = "https://images.muffinplants.com"
+import { PUBLIC_BASE_URL } from "@/lib/r2-url"
+import { uploadSiblingKeys } from "@/lib/image-urls"
+export { PUBLIC_BASE_URL }
 // The bucket's public r2.dev address -- older product images were saved with this host.
 const LEGACY_PUBLIC_BASE_URL = "https://pub-81f46d28c378411d9acc02aef58b2bee.r2.dev"
 const PUBLIC_URL_PREFIXES = [`${PUBLIC_BASE_URL}/`, `${LEGACY_PUBLIC_BASE_URL}/`]
@@ -85,7 +87,8 @@ export function urlVariantsForKey(key: string): string[] {
  * the save that triggered it (the file just stays orphaned until the sweeper runs).
  */
 export async function deleteR2Keys(keys: string[]): Promise<number> {
-  const unique = Array.from(new Set(keys))
+  // An uploaded photo has sized copies and a social JPEG next to it: they go with it.
+  const unique = Array.from(new Set(keys.flatMap(uploadSiblingKeys)))
   if (unique.length === 0) return 0
   let deleted = 0
   try {

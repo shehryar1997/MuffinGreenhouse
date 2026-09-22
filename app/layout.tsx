@@ -8,6 +8,7 @@ import { WishlistProvider } from "@/components/providers/wishlist-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { SiteChrome } from "@/components/layout/site-chrome"
 import { generateOrganizationSchema, generateWebSiteSchema, serializeJsonLd } from "@/lib/structured-data"
+import { DEFAULT_OG_IMAGE } from "@/lib/seo"
 import "./globals.css"
 
 const playfair = Playfair_Display({
@@ -37,16 +38,17 @@ export const metadata: Metadata = {
   // Lets the file-based opengraph-image / twitter-image (and any relative canonical) resolve to absolute URLs.
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Buy Plants Online in Karachi - Muffin Greenhouse",
-    template: "%s - Muffin Greenhouse",
+    default: "Muffin Plants: Buy Indoor Plants Online in Karachi & Pakistan",
+    template: "%s - Muffin Plants",
   },
-  description: "Healthy indoor plants sourced from around the world and propagated in Karachi. Pots, plant care supplies and honest care tips, delivered across Pakistan.",
+  description: "Indoor plants sourced from around the world and propagated in Karachi. Pots, plant care supplies and honest care tips, delivered across Pakistan.",
+  applicationName: "Muffin Plants",
+  // Pages set their own social preview through pageMetadata() (lib/seo.ts); this is only the fallback.
   openGraph: {
-    title: "Muffin Greenhouse - Good Plants. Good Energy.",
-    description: "Indoor plants sourced worldwide and propagated in Karachi. Delivery across Pakistan.",
     type: "website",
     locale: "en_PK",
-    siteName: "Muffin Greenhouse",
+    siteName: "Muffin Plants",
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: { card: "summary_large_image" },
   // ponytail: no site-wide canonical here. A single root canonical is inherited by every page that doesn't set

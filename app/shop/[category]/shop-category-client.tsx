@@ -25,9 +25,11 @@ interface ShopCategoryClientProps {
   totalCount: number
   filters: FilterParams
   priceBounds: { min: number; max: number }
+  /** Buying-guide text from Admin > Categories, shown under the grid. */
+  guide?: React.ReactNode
 }
 
-export function ShopCategoryClient({ products, meta, categorySlug, currentPage, totalPages, totalCount, filters: initialFilters, priceBounds }: ShopCategoryClientProps) {
+export function ShopCategoryClient({ products, meta, categorySlug, currentPage, totalPages, totalCount, filters: initialFilters, priceBounds, guide }: ShopCategoryClientProps) {
   const isPlantCategory = !isNonPlantCategorySlug(categorySlug)
   const breadcrumbSchema = generateCategoryBreadcrumb(meta.title, categorySlug, currentPage > 1 ? currentPage : undefined)
 
@@ -81,10 +83,12 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
                         <div>
                           <select 
                             className="font-mono text-sm text-forest-700 bg-surface border border-forest-200 rounded px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-clay-300"
-                            value={filters.sort || 'new'}
-                            onChange={(e) => updateFilter('sort', e.target.value)}
+                            value={filters.sort || 'featured'}
+                            onChange={(e) => updateFilter('sort', e.target.value === 'featured' ? undefined : e.target.value)}
+                          aria-label="Sort products"
                           >
-                            <option value="new">Sort by: Newest</option>
+                            <option value="featured">Sort by: Recommended</option>
+                          <option value="new">Newest</option>
                             <option value="price-asc">Price: Low to High</option>
                             <option value="price-desc">Price: High to Low</option>
                             <option value="name">Name: A to Z</option>
@@ -116,6 +120,14 @@ export function ShopCategoryClient({ products, meta, categorySlug, currentPage, 
                     <Suspense fallback={null}>
                       <Pagination currentPage={currentPage} totalPages={totalPages} />
                     </Suspense>
+                    {guide && (
+                      <section aria-labelledby="category-guide" className="mt-12 max-w-3xl border-t border-forest-200 pt-8">
+                        <h2 id="category-guide" className="font-serif text-2xl text-forest-900 mb-4">About {meta.title}</h2>
+                        <div className="space-y-3 text-forest-700 [&_h2]:font-serif [&_h2]:text-xl [&_h2]:text-forest-900 [&_h3]:font-medium [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5">
+                          {guide}
+                        </div>
+                      </section>
+                    )}
                   </div>
                 </div>
               </div>

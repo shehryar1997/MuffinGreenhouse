@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import Link from "next/link"
 import { ProductCard } from "@/components/ui/product-card"
 import { formatPrice } from "@/lib/utils"
 import type { Product } from "@/types"
 
-// "Customers who bought this also bought": fetched on the client so each visit shows a fresh pick.
+// "You might also like": fetched on the client so each visit shows a fresh pick.
 // `compact` is the slim list used inside the cart drawer.
 export function Recommendations({ excludeIds, compact = false, onNavigate }: { excludeIds: string[]; compact?: boolean; onNavigate?: () => void }) {
   const [products, setProducts] = useState<Product[]>([])
@@ -29,7 +29,7 @@ export function Recommendations({ excludeIds, compact = false, onNavigate }: { e
   if (compact) {
     return (
       <section aria-labelledby="cart-recs" className="border-t border-border pt-5">
-        <h3 id="cart-recs" className="mb-3 font-mono text-xs uppercase text-muted-foreground">Customers who bought this also bought</h3>
+        <h3 id="cart-recs" className="mb-3 font-mono text-xs uppercase text-muted-foreground">You might also like</h3>
         <ul className="space-y-3">
           {products.map((p) => (
             <li key={p.id}>
@@ -51,7 +51,7 @@ export function Recommendations({ excludeIds, compact = false, onNavigate }: { e
 
   return (
     <section aria-labelledby="pdp-recs" className="mt-16 border-t border-forest-200 pt-10">
-      <h2 id="pdp-recs" className="mb-6 font-serif text-2xl text-forest-900">Customers who bought this also bought</h2>
+      <h2 id="pdp-recs" className="mb-6 font-serif text-2xl text-forest-900">You might also like</h2>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
         {products.map((p, i) => (
           <ProductCard key={p.id} product={p} index={i} sizes="(max-width: 1024px) 50vw, 25vw" />

@@ -1,10 +1,7 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/terms-conditions" },
-  title: "Terms & Conditions",
-  description: "Terms of service for using Muffin Greenhouse website.",
-}
+export const metadata: Metadata = pageMetadata({ title: "Terms & Conditions", description: "Terms of service for shopping at muffinplants.com.", path: "/terms-conditions" })
 
 export default function TermsConditionsPage() {
   return (
@@ -21,7 +18,7 @@ export default function TermsConditionsPage() {
             <p className="text-sm text-amber-700">This document is a first draft and requires review by a qualified Pakistani lawyer before launch.</p>
           </div>
           <div className="space-y-4 text-forest-950/80">
-            <p>Muffin Greenhouse operates muffinplants.com. By using our services, you agree to these Terms.</p>
+            <p>Muffin Plants operates muffinplants.com. By using our services, you agree to these Terms.</p>
             <h2 className="font-serif text-xl text-forest-950">1. Eligibility</h2>
             <p>You must be 18+ and have capacity to contract under Pakistani law.</p>
             <h2 className="font-serif text-xl text-forest-950">2. Payment</h2>

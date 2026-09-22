@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from "react"
-import { getAllProducts } from "@/lib/data/products"
+import { getSearchIndex } from "@/lib/data/products"
 import { debounce } from "@/lib/utils"
 
 // Fuzzy search result with match positions for highlighting
@@ -96,30 +96,8 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   
   // Store all products in a ref for client-side filtering
   const allProductsRef = useRef<SearchResult[]>([])
+  const queryRef = useRef("")
   
-  // Load products on mount
-  useEffect(() => {
-    if (allProductsRef.current.length === 0) {
-      getAllProducts().then(products => {
-        allProductsRef.current = products.map(p => ({
-          id: p.id,
-          name: p.name,
-          slug: p.slug,
-          price: p.price,
-          primary_image: p.images[0]?.url || null,
-          category_name: p.category?.name || '',
-          matchScore: 0,
-          nameMatches: [],
-          categoryMatches: [],
-        }))
-      })
-    }
-  }, [])
-
-  const openSearch = useCallback(() => {
-    setState((prev) => ({ ...prev, isOpen: true }))
-  }, [])
-
   const closeSearch = useCallback(() => {
     setState((prev) => ({ ...prev, isOpen: false }))
   }, [])
@@ -185,10 +163,35 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // The search index is loaded the first time the drawer opens, not on every page view.
+  const indexRequested = useRef(false)
+  const loadIndex = useCallback(() => {
+    if (indexRequested.current) return
+    indexRequested.current = true
+    getSearchIndex()
+      .then((rows) => {
+        allProductsRef.current = rows.map((row) => ({ ...row, matchScore: 0, nameMatches: [], categoryMatches: [] }))
+        setState((prev) => ({ ...prev, hasLoadedProducts: true }))
+        // A query typed while the index was loading is searched as soon as it arrives.
+        if (queryRef.current.trim()) performSearchRef.current(queryRef.current)
+      })
+      .catch((err) => {
+        indexRequested.current = false
+        console.error("Search index failed to load:", err)
+      })
+  }, [])
+
+  const openSearch = useCallback(() => {
+    loadIndex()
+    setState((prev) => ({ ...prev, isOpen: true }))
+  }, [loadIndex])
+
   const setQuery = useCallback((query: string) => {
+    queryRef.current = query
+    loadIndex()
     setState((prev) => ({ ...prev, query, isLoading: query.length > 0 }))
     debouncedSearchRef.current?.(query)
-  }, [])
+  }, [loadIndex])
 
   const clearSearch = useCallback(() => {
     setState({

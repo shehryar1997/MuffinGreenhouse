@@ -1,4 +1,5 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { CATEGORIES_CACHE_TAG, PRODUCTS_CACHE_TAG } from "@/lib/cache-tags";
 import { NextRequest, NextResponse } from "next/server";
 import { safeEqual } from "@/lib/safe-compare";
 
@@ -35,10 +36,16 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body = (await request.json()) as WebhookPayload;
 
+    // Cached product reads (lib/data/catalog.ts) are dropped at once: this webhook also fires for stock changes
+    // made by orders, cancellations and the 24-hour expiry, which never pass through the admin panel.
+    revalidateTag(PRODUCTS_CACHE_TAG, { expire: 0 });
+    if (body.table === "categories") revalidateTag(CATEGORIES_CACHE_TAG, { expire: 0 });
+
     // Always revalidate these paths
     revalidatePath("/shop/all");
     revalidatePath("/shop/tools-equipment");
     revalidatePath("/");
+    revalidatePath("/sitemap.xml");
 
     // Revalidate product detail page if slug is present
     if (body.record?.slug) {

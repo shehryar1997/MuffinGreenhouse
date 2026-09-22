@@ -1,7 +1,9 @@
 // SERVER-ONLY. Product review reads. Two ways to leave a review: a shipped order (verified purchase, goes live
 // immediately) or the open "Write a review" form on the product page (no order needed, held for admin approval
 // first). An admin can hide any review either way.
+import { unstable_cache } from "next/cache"
 import { supabaseAdmin } from "@/supabase/admin-client"
+import { REVIEWS_CACHE_TAG } from "@/lib/cache-tags"
 
 export interface ProductReview {
   id: string
@@ -14,7 +16,7 @@ export interface ProductReview {
   verified: boolean
 }
 
-export async function getProductReviews(productId: string): Promise<{ reviews: ProductReview[]; average: number; count: number }> {
+async function loadProductReviews(productId: string): Promise<{ reviews: ProductReview[]; average: number; count: number }> {
   const { data, error } = await supabaseAdmin
     .from("reviews")
     .select("id, rating, body, display_name, image_url, created_at, verified_purchase")
@@ -39,3 +41,7 @@ export async function getProductReviews(productId: string): Promise<{ reviews: P
   const average = count > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / count : 0
   return { reviews, average, count }
 }
+
+// Cached so product pages can be served from the cache instead of rendering on every visit. Any review change
+// (a new review, an approval, a hide or a delete) expires REVIEWS_CACHE_TAG.
+export const getProductReviews = unstable_cache(loadProductReviews, ["product-reviews"], { tags: [REVIEWS_CACHE_TAG], revalidate: 300 })

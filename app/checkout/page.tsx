@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CitySelect } from "@/components/ui/city-select"
@@ -19,6 +19,7 @@ import {
   KARACHI_LARGE_ORDER_DELIVERY_FEE,
   KARACHI_LARGE_ORDER_ITEM_THRESHOLD,
   qualifiesForFreeDelivery,
+  parcelKey,
 } from "@/lib/delivery-fee"
 import { PAYMENT_SUMMARY_KEY_PREFIX } from "@/lib/checkout-summary"
 import { Package, Truck, Check, AlertCircle, Loader2 } from "lucide-react"
@@ -76,7 +77,7 @@ interface ProductDimensions {
 type CheckoutStep = 1 | 2
 
 export default function CheckoutPage() {
-  const { cart, itemCount, clearCart } = useCart()
+  const { cart, itemCount, clearCart, refreshCart } = useCart()
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<CheckoutStep>(1)
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
@@ -103,7 +104,7 @@ export default function CheckoutPage() {
   const subtotal = cart.subtotal
   // Karachi flat rate shown on the Home Delivery button; mirrors plantDeliveryFee (plant lines only).
   const karachiFee = useMemo(
-    () => karachiDeliveryFee(cart.items.filter((item) => !isEquipmentItem({ dim: productDimensions[item.product.id], quantity: item.quantity })).length),
+    () => karachiDeliveryFee(cart.items.filter((item) => !isEquipmentItem({ dim: productDimensions[parcelKey(item.product.id, item.variant?.id)] ?? productDimensions[item.product.id], quantity: item.quantity })).length),
     [cart.items, productDimensions]
   )
   const discount = appliedCoupon?.discount ?? 0
@@ -208,13 +209,13 @@ export default function CheckoutPage() {
     await checkCustomerEmail(formData.email)
   }
 
-  const fetchProductDimensions = useCallback(async (productIds: string[], signal?: AbortSignal): Promise<Record<string, ProductDimensions>> => {
-    if (productIds.length === 0) return {}
+  const fetchProductDimensions = useCallback(async (lines: { productId: string; variantId: string | null }[], signal?: AbortSignal): Promise<Record<string, ProductDimensions>> => {
+    if (lines.length === 0) return {}
     try {
       const response = await fetch("/api/product-dimensions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productIds }),
+        body: JSON.stringify({ items: lines }),
         signal,
       })
       if (!response.ok) throw new Error("Failed to fetch product dimensions")
@@ -238,12 +239,14 @@ export default function CheckoutPage() {
     setIsCalculatingDeliveryFee(true)
     setDeliveryFeeError(null)
     try {
-      const productIds = cart.items.map(item => item.product.id)
-      const dimensions = Object.keys(productDimensions).length > 0 ? productDimensions : await fetchProductDimensions(productIds)
+      const lines = cart.items.map((item) => ({ productId: item.product.id, variantId: item.variant?.id ?? null }))
+      // Re-fetch when the cart holds a line the stored parcels don't cover (e.g. after a cart refresh).
+      const covered = lines.every((l) => productDimensions[parcelKey(l.productId, l.variantId)])
+      const dimensions = covered ? productDimensions : await fetchProductDimensions(lines)
       const calculatedFee = computeDeliveryFee({
         deliveryType,
         city: formData.city,
-        items: cart.items.map((item) => ({ dim: dimensions[item.product.id], quantity: item.quantity })),
+        items: cart.items.map((item) => ({ dim: dimensions[parcelKey(item.product.id, item.variant?.id)] ?? dimensions[item.product.id], quantity: item.quantity })),
       })
       setDeliveryFee(calculatedFee)
     } catch (err) {
@@ -254,6 +257,11 @@ export default function CheckoutPage() {
       setIsCalculatingDeliveryFee(false)
     }
   }, [cart.items, formData.city, deliveryType, productDimensions, fetchProductDimensions])
+
+  // Prices and stock may have changed since the cart was filled: bring it up to date before the customer reviews it.
+  useEffect(() => {
+    void refreshCart({ force: true })
+  }, [refreshCart])
 
   useEffect(() => {
     // Data-fetching effect: calculateDeliveryFee flags "loading" before it awaits the network.
@@ -325,6 +333,16 @@ export default function CheckoutPage() {
   const handlePlaceOrder = async () => {
     setIsPlacingOrder(true)
     try {
+      // Last check against the shop: if a price, stock level or product changed, show the updated cart instead of
+      // charging something the customer hasn't seen.
+      const changes = await refreshCart({ force: true })
+      if (changes && changes.length > 0) {
+        toast.error("Your cart was updated. Please check the order summary, then place your order again.")
+        setCurrentStep(1)
+        window.scrollTo({ top: 0, behavior: "smooth" })
+        return
+      }
+
       const payload = {
         customerId: signedInCustomer?.id || null,
         customerEmail: formData.email,
@@ -371,6 +389,8 @@ export default function CheckoutPage() {
       router.push(result.redirectTo)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to place order")
+      // Most failures here are stock or availability changes: show the customer their cart as it is now.
+      void refreshCart({ force: true })
     } finally {
       setIsPlacingOrder(false)
     }

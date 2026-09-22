@@ -31,7 +31,7 @@ export const HERO_SLIDES: readonly HeroSlide[] = [
     image: "/hero/plants.avif",
     alt: "A greenhouse aisle filled with monsteras, anthuriums and snake plants",
     headline: ["Good plants.", "Good energy."],
-    subcopy: "Green things worth collecting, sourced from around the world and acclimated for Pakistan.",
+    subcopy: "Rare aroids, hoyas, sansevierias and easy indoor plants, sourced from around the world, propagated in Karachi and delivered across Pakistan.",
     ctaLabel: "Shop plants",
     ctaHref: "/shop/all",
     secondaryCta: { label: "Find your plant", href: "/plant-finder" },

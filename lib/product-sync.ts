@@ -13,7 +13,25 @@ export function friendlyDbError(error: PgError): string {
 }
 
 // A variant row as submitted by the product form (or built from a CSV row): repeatable fields read in order.
-export type VariantInput = { id: string; key: string; name: string; sku: string; price: number; stock: number; photo: string }
+export type VariantInput = {
+  id: string
+  key: string
+  name: string
+  sku: string
+  price: number
+  stock: number
+  photo: string
+  compareAt: number | null
+  weightKg: number | null
+  boxHeightCm: number | null
+  boxWidthCm: number | null
+  boxBreadthCm: number | null
+}
+
+// Blank -> null; anything else a number (NaN when it isn't one, which the caller reports).
+const optional = (raw: string | undefined) => (raw === undefined || raw.trim() === "" ? null : Number(raw))
+// "Medium - 8\" pot" -> "MEDIUM-8-POT": readable SKUs for sizes typed without one.
+const skuPart = (name: string) => name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 16)
 
 export function readVariantInputs(formData: FormData): VariantInput[] {
   const ids = formData.getAll("variant_id") as string[]
@@ -24,17 +42,34 @@ export function readVariantInputs(formData: FormData): VariantInput[] {
   const prices = formData.getAll("variant_price") as string[]
   const stocks = formData.getAll("variant_stock") as string[]
   const photos = formData.getAll("variant_photo") as string[]
+  const compareAts = formData.getAll("variant_compare_at") as string[]
+  const weights = formData.getAll("variant_weight") as string[]
+  const boxH = formData.getAll("variant_box_h") as string[]
+  const boxW = formData.getAll("variant_box_w") as string[]
+  const boxB = formData.getAll("variant_box_b") as string[]
   const productSku = String(formData.get("sku") ?? "").trim()
+  const used = new Set<string>()
   return names
-    .map((name, i) => ({
-      id: (ids[i] ?? "").trim(),
-      key: (keys[i] ?? "").trim(),
-      name: name.trim(),
-      sku: skus[i]?.trim() || `${productSku}-${i + 1}`,
-      price: Number(prices[i] || 0),
-      stock: Number(stocks[i] || 0),
-      photo: (photos[i] ?? "").trim(),
-    }))
+    .map((name, i) => {
+      // An empty SKU becomes the product SKU plus the size ("MON-DEL-MEDIUM"), numbered if that is taken.
+      let sku = skus[i]?.trim() || `${productSku}-${skuPart(name.trim()) || i + 1}`
+      if (!skus[i]?.trim() && used.has(sku)) sku = `${sku}-${i + 1}`
+      used.add(sku)
+      return {
+        id: (ids[i] ?? "").trim(),
+        key: (keys[i] ?? "").trim(),
+        name: name.trim(),
+        sku,
+        price: Number(prices[i] || 0),
+        stock: Number(stocks[i] || 0),
+        photo: (photos[i] ?? "").trim(),
+        compareAt: optional(compareAts[i]),
+        weightKg: optional(weights[i]),
+        boxHeightCm: optional(boxH[i]),
+        boxWidthCm: optional(boxW[i]),
+        boxBreadthCm: optional(boxB[i]),
+      }
+    })
     .filter((v) => v.name.length > 0)
 }
 
@@ -78,7 +113,7 @@ export type SyncedVariants = {
 
 export async function syncVariants(productId: string, formData: FormData, fields: Record<string, unknown>): Promise<{ error: string } | SyncedVariants> {
   const named = readVariantInputs(formData)
-  const threshold = Number(fields.low_stock_threshold ?? 10)
+  const threshold = Number(fields.low_stock_threshold ?? 3)
 
   const { data: existing, error: readError } = await supabaseAdmin
     .from("product_variants")
@@ -100,6 +135,11 @@ export async function syncVariants(productId: string, formData: FormData, fields
         price: Number(fields.price),
         stock: Number(fields.stock_count),
         photo: String(formData.get("standard_photo") ?? "").trim(),
+        compareAt: (fields.compare_at_price as number | null) ?? null,
+        weightKg: null,
+        boxHeightCm: null,
+        boxWidthCm: null,
+        boxBreadthCm: null,
       },
     ]
   }
@@ -113,7 +153,14 @@ export async function syncVariants(productId: string, formData: FormData, fields
       sku: r.sku,
       price: r.price,
       stock_count: r.stock,
+      // Also recomputed by the database trigger; set here so the row is right even before it runs.
       stock_status: stockStatusFor(r.stock, threshold),
+      // 0 means "not set" for these (the database only accepts positive box sizes).
+      compare_at_price: r.compareAt || null,
+      weight_kg: r.weightKg || null,
+      box_height_cm: r.boxHeightCm || null,
+      box_width_cm: r.boxWidthCm || null,
+      box_breadth_cm: r.boxBreadthCm || null,
       sort_order: i,
       is_default: i === 0,
       is_active: true,

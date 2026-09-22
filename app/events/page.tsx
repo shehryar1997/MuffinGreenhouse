@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import Link from "next/link"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import { ArrowRight, CalendarDays, Clock, Leaf, MapPin, MessageCircle, Sparkles, Users } from "lucide-react"
 import { getPastEvents, getUpcomingEvents } from "@/lib/data/events"
 import { EventCard, eventStatusLabel } from "@/components/events/event-card"
@@ -10,10 +11,10 @@ import { EVENT_TYPE_LABEL, formatEventDate, formatEventPrice, formatEventTime } 
 
 export const revalidate = 60
 
-export const metadata: Metadata = {
-  title: "Plant Workshops & Events in Karachi",
-  description: "Repotting workshops, plant walks and plant-parent classes in Karachi. Small groups, real plants, hands in the soil.",
-  alternates: { canonical: "/events" },
+export async function generateMetadata(): Promise<Metadata> {
+  const [upcoming, past] = await Promise.all([getUpcomingEvents(), getPastEvents()])
+  // No event ever published yet: a placeholder page, kept out of search until there is one.
+  return pageMetadata({ title: "Plant Workshops & Events in Karachi", description: "Repotting workshops, plant walks and plant-parent classes in Karachi. Small groups, real plants, hands in the soil.", path: "/events", noindex: upcoming.length + past.length === 0 })
 }
 
 const whatsappHref = `https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, "")}?text=${encodeURIComponent("Hi Muffin! Please let me know when the next workshop is announced.")}`

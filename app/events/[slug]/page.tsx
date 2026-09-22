@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import { cookies } from "next/headers"
 import { notFound } from "next/navigation"
 import { ArrowLeft, CalendarDays, Clock, Leaf, MapPin, Sparkles } from "lucide-react"
@@ -9,17 +9,20 @@ import { createServerClient } from "@/lib/supabase/server-client"
 import { EVENT_TYPE_LABEL, formatEventDate, formatEventPrice, formatEventTime } from "@/lib/event-format"
 import { serializeJsonLd } from "@/lib/structured-data"
 import { RegistrationCard } from "./registration-card"
+import { pageMetadata, snippet } from "@/lib/seo"
+import { socialImageUrl } from "@/lib/image-urls"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const event = await getEventBySlug(slug)
-  if (!event) return { title: "Event not found" }
-  return {
+  if (!event) return { title: "Event not found", robots: { index: false, follow: true } }
+  const social = socialImageUrl(event.image)
+  return pageMetadata({
     title: event.title,
-    description: `${event.description.slice(0, 150).trim()} ${formatEventDate(event.datetime)}, Karachi.`.trim(),
-    alternates: { canonical: `/events/${slug}` },
-    openGraph: event.image ? { images: [event.image] } : undefined,
-  }
+    description: snippet(`${formatEventDate(event.datetime)}, Karachi. ${event.description}`),
+    path: `/events/${slug}`,
+    images: social ? [{ url: social, alt: event.title }] : undefined,
+  })
 }
 
 // Signed-in customers get their details pre-filled; everyone else books as a guest.
@@ -63,7 +66,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
       priceCurrency: "PKR",
       availability: event.spotsRemaining > 0 ? "https://schema.org/InStock" : "https://schema.org/SoldOut",
     },
-    organizer: { "@type": "Organization", name: "Muffin Greenhouse" },
+    organizer: { "@type": "Organization", name: "Muffin Plants" },
   }
 
   return (

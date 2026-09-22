@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import { notFound } from "next/navigation"
 import { ArrowLeft, MessageCircle } from "lucide-react"
 import { getJournalPostBySlug, getPublishedPosts, readingMinutes } from "@/lib/data/journal"
@@ -10,24 +10,24 @@ import { Markdown } from "@/components/journal/markdown"
 import { PostCard } from "@/components/journal/post-card"
 import { Button } from "@/components/ui/button"
 import { siteConfig } from "@/config/nav.config"
+import { pageMetadata, snippet } from "@/lib/seo"
+import { socialImageUrl } from "@/lib/image-urls"
 
 export const revalidate = 60
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const post = await getJournalPostBySlug(slug)
-  if (!post) return { title: "Post not found" }
-  return {
+  if (!post) return { title: "Post not found", robots: { index: false, follow: true } }
+  const social = socialImageUrl(post.coverImage)
+  const base = pageMetadata({
     title: post.metaTitle || post.title,
-    description: post.metaDescription || post.excerpt,
-    alternates: { canonical: `/journal/${slug}` },
-    openGraph: {
-      type: "article",
-      publishedTime: post.publishedAt ?? undefined,
-      authors: [post.author],
-      images: post.coverImage ? [post.coverImage] : undefined,
-    },
-  }
+    description: post.metaDescription || snippet(post.excerpt),
+    path: `/journal/${slug}`,
+    type: "article",
+    images: social ? [{ url: social, alt: post.title }] : undefined,
+  })
+  return { ...base, openGraph: { ...base.openGraph, type: "article", publishedTime: post.publishedAt ?? undefined, authors: [post.author] } }
 }
 
 export default async function JournalPostPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -45,7 +45,7 @@ export default async function JournalPostPage({ params }: { params: Promise<{ sl
     headline: post.title,
     description: post.excerpt,
     author: { "@type": "Person", name: post.author },
-    publisher: { "@type": "Organization", name: "Muffin Greenhouse" },
+    publisher: { "@type": "Organization", name: "Muffin Plants" },
     ...(post.publishedAt ? { datePublished: post.publishedAt } : {}),
     ...(post.coverImage ? { image: [post.coverImage] } : {}),
   }

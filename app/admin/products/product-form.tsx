@@ -2,12 +2,13 @@
 
 import { useRef, useState, useTransition } from "react"
 import Link from "next/link"
-import { Camera, Loader2, Plus } from "lucide-react"
+import { Camera, ChevronDown, Loader2, Plus } from "lucide-react"
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { isMangaveCategory } from "@/lib/shipping"
 import { uploadAdminImage } from "@/lib/admin-upload"
 import { publishBlocker } from "@/lib/product-photos"
-import { cn } from "@/lib/utils"
+import { cn, slugify } from "@/lib/utils"
+import { RichEditor } from "../journal/rich-editor"
 import { Alert, CheckField, Field, FormActions, FormSection, buttonClass, inputClass, textareaClass } from "../_components/ui"
 import { findProductsByName, type PrefillProduct, type ProductActionResult } from "./actions"
 
@@ -56,11 +57,25 @@ type ExistingProduct = {
   box_width_cm: number | null
   box_breadth_cm: number | null
   weight_kg: number | null
+  sort_position?: number | null
   use_case_tags: string[]
   // Photos in order; each belongs to a variant (variant_id null = a legacy photo from before variants owned photos).
   images?: { url: string; variant_id?: string | null }[]
-  variants?: { id?: string; name: string; sku: string; price: number; stock_count: number }[]
+  variants?: VariantSource[]
   card_variant_id?: string | null
+}
+
+type VariantSource = {
+  id?: string
+  name: string
+  sku: string
+  price: number
+  stock_count: number
+  compare_at_price?: number | null
+  weight_kg?: number | null
+  box_height_cm?: number | null
+  box_width_cm?: number | null
+  box_breadth_cm?: number | null
 }
 
 // A variant row in the form. `key` is a stable client-side React key (rows can be removed from the middle) and is
@@ -69,15 +84,22 @@ type ExistingProduct = {
 // is controlled so the publish check can name the variants that still need a photo; SKU, price and stock stay
 // uncontrolled. `photo_url` is the variant's own photo ("" for none): every variant needs one to be published.
 type PhotoState = { photo_url: string; uploading: boolean; error: string | null }
-type VariantRow = PhotoState & { key: number; id: string; name: string; sku: string; price: number; stock_count: number }
+type VariantRow = PhotoState & VariantSource & { key: number; id: string; open: boolean }
 let variantRowSeq = 0
-const newVariantRow = (v?: { id?: string; name: string; sku: string; price: number; stock_count: number }, photo_url = ""): VariantRow => ({
+const newVariantRow = (v?: VariantSource, photo_url = ""): VariantRow => ({
   key: ++variantRowSeq,
   id: v?.id ?? "",
   name: v?.name ?? "",
   sku: v?.sku ?? "",
   price: v?.price ?? 0,
   stock_count: v?.stock_count ?? 0,
+  compare_at_price: v?.compare_at_price ?? null,
+  weight_kg: v?.weight_kg ?? null,
+  box_height_cm: v?.box_height_cm ?? null,
+  box_width_cm: v?.box_width_cm ?? null,
+  box_breadth_cm: v?.box_breadth_cm ?? null,
+  // Sizes that already have their own "was" price, weight or box open with those fields showing.
+  open: !!(v?.compare_at_price || v?.weight_kg || v?.box_height_cm),
   photo_url,
   uploading: false,
   error: null,
@@ -147,6 +169,9 @@ export function ProductForm({
   const [cardKey, setCardKey] = useState<number | null>(() => variants.find((v) => v.id && v.id === product?.card_variant_id)?.key ?? null)
   const [wantsPublish, setWantsPublish] = useState(!!product?.published_at)
   const [categoryName, setCategoryName] = useState(product?.category_name ?? "")
+  const [descriptionSeed, setDescriptionSeed] = useState({ key: 0, text: product?.description ?? "" })
+  // Search listing, previewed live as Google would show it.
+  const [seo, setSeo] = useState({ name: product?.name ?? "", title: product?.meta_title ?? "", description: product?.meta_description ?? "", summary: product?.short_description ?? "", slug: product?.slug ?? "" })
   // Tools & Equipment (Fertilizer, Other Equipment, Pots, Planting Media) have no plant care
   // info, size, box dimensions or tags -- and are delivered at 120 PKR per kg, so weight is mandatory.
   const isPlantCategory = !isNonPlantCategoryName(categoryName)
@@ -178,6 +203,12 @@ export function ProductForm({
     for (const name of PREFILL_VALUE_FIELDS) {
       if (touched.current.has(name)) {
         kept.push(name)
+        continue
+      }
+      if (name === "description") {
+        // The description lives in the rich editor: re-seed it rather than writing to its hidden input.
+        setDescriptionSeed((seed) => ({ key: seed.key + 1, text: src.description ?? "" }))
+        filled++
         continue
       }
       const el = form.elements.namedItem(name)
@@ -216,6 +247,12 @@ export function ProductForm({
   async function handleNameBlur(e: React.FocusEvent<HTMLInputElement>) {
     if (product) return // editing an existing product: never prefill
     const raw = e.currentTarget.value
+    // A new product gets a slug from its name, unless one was typed.
+    const slugInput = formRef.current?.elements.namedItem("slug")
+    if (slugInput instanceof HTMLInputElement && !slugInput.value.trim() && raw.trim()) {
+      slugInput.value = slugify(raw).slice(0, 100)
+      setSeo((s) => ({ ...s, slug: slugInput.value }))
+    }
     const key = raw.trim().replace(/\s+/g, " ").toLowerCase()
     if (!key || key === lastLookup.current) return
     lastLookup.current = key
@@ -305,13 +342,13 @@ export function ProductForm({
         <FormSection title="Basics" description="What the product is called and how it's identified.">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Product name" required>
-              <input name="name" defaultValue={product?.name} required onBlur={handleNameBlur} className={inputClass} />
+              <input name="name" defaultValue={product?.name} required onBlur={handleNameBlur} onChange={(e) => setSeo((s) => ({ ...s, name: e.target.value }))} className={inputClass} />
             </Field>
             <Field label="SKU" required>
               <input name="sku" defaultValue={product?.sku} required className={cn(inputClass, "font-mono")} />
             </Field>
             <Field label="Slug" required>
-              <input name="slug" defaultValue={product?.slug} required className={cn(inputClass, "font-mono")} />
+              <input name="slug" defaultValue={product?.slug} required onChange={(e) => setSeo((s) => ({ ...s, slug: e.target.value }))} className={cn(inputClass, "font-mono")} />
             </Field>
             <Field label="Category" required>
               <select
@@ -319,7 +356,14 @@ export function ProductForm({
                 defaultValue={product?.category_name ?? ""}
                 required
                 className={inputClass}
-                onChange={(e) => setCategoryName(e.target.value)}
+                onChange={(e) => {
+                  setCategoryName(e.target.value)
+                  // New products: rare plants usually come in ones and twos, supplies by the dozen.
+                  const threshold = formRef.current?.elements.namedItem("low_stock_threshold")
+                  if (!product && threshold instanceof HTMLInputElement && !touched.current.has("low_stock_threshold")) {
+                    threshold.value = isNonPlantCategoryName(e.target.value) ? "10" : "3"
+                  }
+                }}
               >
                 <option value="">Select…</option>
                 {lookups.categories.map((c) => (
@@ -377,12 +421,32 @@ export function ProductForm({
               </button>
             </div>
           )}
-          <Field label="Short description">
-            <input name="short_description" defaultValue={product?.short_description ?? ""} className={inputClass} />
+          <Field
+            label="One-line summary"
+            hint={<CharCount value={seo.summary} ideal={120} max={300}>Shown under the name on the product page.</CharCount>}
+          >
+            <input
+              name="short_description"
+              defaultValue={product?.short_description ?? ""}
+              maxLength={300}
+              onChange={(e) => setSeo((s) => ({ ...s, summary: e.target.value }))}
+              placeholder="e.g. A fast-growing climber with deeply split leaves, easy in bright shade."
+              className={inputClass}
+            />
           </Field>
-          <Field label="Full description" required>
-            <textarea name="description" defaultValue={product?.description} required rows={4} className={textareaClass} />
-          </Field>
+          <div>
+            <p className="mb-1.5 block text-[13px] font-medium text-foreground">
+              Full description<span aria-hidden className="ml-0.5 text-primary">*</span>
+            </p>
+            <RichEditor
+              key={descriptionSeed.key}
+              name="description"
+              initialMarkdown={descriptionSeed.text}
+              allowImages={false}
+              label="Full description"
+              placeholder="What the plant is, its size and pot, how it grows, what arrives in the box. Aim for 200-300 words."
+            />
+          </div>
         </FormSection>
 
         <FormSection
@@ -399,19 +463,22 @@ export function ProductForm({
                 <input type="number" name="price" defaultValue={product?.price} required className={inputClass} />
               </Field>
             )}
-            <Field label="Compare-at price">
-              <input type="number" name="compare_at_price" defaultValue={product?.compare_at_price ?? ""} className={inputClass} />
-            </Field>
+            {!hasVariants && (
+              <Field label="Was price" hint="Shown struck through when higher than the price.">
+                <input type="number" name="compare_at_price" defaultValue={product?.compare_at_price ?? ""} className={inputClass} />
+              </Field>
+            )}
             {!hasVariants && (
               <Field label="Stock count" required>
                 <input type="number" name="stock_count" defaultValue={product?.stock_count ?? 0} required className={inputClass} />
               </Field>
             )}
-            <Field label="Low-stock threshold" required>
+            <Field label="Low-stock level" required hint="“Only N left” shows at or below this.">
               <input
                 type="number"
                 name="low_stock_threshold"
-                defaultValue={product?.low_stock_threshold ?? 10}
+                defaultValue={product?.low_stock_threshold ?? 3}
+                min={0}
                 required
                 className={inputClass}
               />
@@ -513,9 +580,17 @@ export function ProductForm({
                 defaultChecked={product?.is_hard_leaf}
               />
             )}
-            <CheckField name="is_featured" label="Featured" defaultChecked={product?.is_featured} />
+            <CheckField
+              name="is_featured"
+              label="Featured"
+              description="Shown first on the homepage and at the top of the shop's Recommended order."
+              defaultChecked={product?.is_featured}
+            />
             <CheckField name="published" label="Published" description="Untick to keep it as a draft." defaultChecked={!!product?.published_at} />
           </div>
+          <Field label="Shop order" hint="Optional. Lower numbers come first in the Recommended order (after featured products). Leave empty for newest first." className="sm:max-w-xs">
+            <input type="number" name="sort_position" min={0} max={100000} defaultValue={product?.sort_position ?? ""} className={inputClass} />
+          </Field>
           {wantsPublish && publishProblem && (
             <p role="status" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               Can&apos;t publish yet: {publishProblem} Untick Published to save it as a draft.
@@ -564,15 +639,18 @@ export function ProductForm({
           </Field>
         </FormSection>
 
-        <FormSection title="Search listing" description="How the product appears in search results.">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Meta title">
-              <input name="meta_title" defaultValue={product?.meta_title ?? ""} className={inputClass} />
-            </Field>
-            <Field label="Meta description">
-              <input name="meta_description" defaultValue={product?.meta_description ?? ""} className={inputClass} />
-            </Field>
-          </div>
+        <FormSection title="Search listing" description="How the product appears on Google and when its link is shared. Leave empty to use the name and summary.">
+          <Field label="SEO title" hint={<CharCount value={seo.title} ideal={60} max={70}>e.g. “Monstera Deliciosa Price in Pakistan”.</CharCount>}>
+            <input name="meta_title" maxLength={70} defaultValue={product?.meta_title ?? ""} onChange={(e) => setSeo((s) => ({ ...s, title: e.target.value }))} className={inputClass} />
+          </Field>
+          <Field label="SEO description" hint={<CharCount value={seo.description} ideal={155} max={170}>Plant, size, a price hint and delivery.</CharCount>}>
+            <textarea name="meta_description" maxLength={170} rows={2} defaultValue={product?.meta_description ?? ""} onChange={(e) => setSeo((s) => ({ ...s, description: e.target.value }))} className={textareaClass} />
+          </Field>
+          <SearchPreview
+            title={seo.title || (seo.name ? `${seo.name} Price in Pakistan` : "")}
+            slug={seo.slug}
+            description={seo.description || seo.summary}
+          />
         </FormSection>
 
         <FormSection
@@ -633,16 +711,49 @@ export function ProductForm({
                     <span className="sm:sr-only">Show on card</span>
                   </label>
                   <input name="variant_name" aria-label="Variant name" value={v.name} onChange={(e) => updateVariant(v.key, { name: e.target.value })} placeholder='e.g. Medium - 8" pot' className={inputClass} />
-                  <input name="variant_sku" aria-label="Variant SKU" defaultValue={v.sku} placeholder="SKU" className={cn(inputClass, "font-mono")} />
+                  <input name="variant_sku" aria-label="Variant SKU" defaultValue={v.sku} placeholder="Auto" title="Leave empty to use the product SKU plus the size" className={cn(inputClass, "font-mono")} />
                   <input type="number" name="variant_price" aria-label="Variant price" defaultValue={v.price} placeholder="Price" className={inputClass} onChange={(e) => updateVariant(v.key, { price: Number(e.target.value) })} />
                   <input type="number" name="variant_stock" aria-label="Variant stock" defaultValue={v.stock_count} placeholder="Stock" className={inputClass} />
-                  <button
-                    type="button"
-                    onClick={() => setVariants(variants.filter((row) => row.key !== v.key))}
-                    className={buttonClass({ variant: "ghost", size: "sm", className: "text-red-700 hover:bg-red-50 hover:text-red-800" })}
-                  >
-                    Remove
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => updateVariant(v.key, { open: !v.open })}
+                      aria-expanded={v.open}
+                      aria-label={`More details for ${v.name.trim() || "this variant"}`}
+                      title="Was price, weight and box size"
+                      className={buttonClass({ variant: "ghost", size: "sm" })}
+                    >
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", v.open && "rotate-180")} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVariants(variants.filter((row) => row.key !== v.key))}
+                      className={buttonClass({ variant: "ghost", size: "sm", className: "text-red-700 hover:bg-red-50 hover:text-red-800" })}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  {/* Per-size extras. Always in the form (hidden when collapsed) so every size submits the same fields. */}
+                  <div className={cn("grid gap-2 rounded-md bg-muted/40 p-3 sm:col-span-full sm:grid-cols-5", !v.open && "hidden")}>
+                    <Field label="Was price">
+                      <input type="number" name="variant_compare_at" defaultValue={v.compare_at_price ?? ""} min={0} className={inputClass} />
+                    </Field>
+                    <Field label="Weight (kg)">
+                      <input type="number" name="variant_weight" defaultValue={v.weight_kg ?? ""} min={0} step="0.01" className={inputClass} />
+                    </Field>
+                    <Field label="Box H (cm)">
+                      <input type="number" name="variant_box_h" defaultValue={v.box_height_cm ?? ""} min={0} className={inputClass} />
+                    </Field>
+                    <Field label="Box W (cm)">
+                      <input type="number" name="variant_box_w" defaultValue={v.box_width_cm ?? ""} min={0} className={inputClass} />
+                    </Field>
+                    <Field label="Box B (cm)">
+                      <input type="number" name="variant_box_b" defaultValue={v.box_breadth_cm ?? ""} min={0} className={inputClass} />
+                    </Field>
+                    <p className="text-xs text-muted-foreground sm:col-span-full">
+                      Leave empty to use the product&apos;s weight and box. A bigger pot ships heavier, so give large sizes their own.
+                    </p>
+                  </div>
                 </div>
               ))}
               {/* Only an explicit choice is saved; nothing ticked by hand means the shop picks the cheapest variant with a photo. */}
@@ -768,6 +879,32 @@ function VariantPhoto({
           {error}
         </p>
       )}
+    </div>
+  )
+}
+
+/** Character count for a field, green in the ideal range, amber when close to the limit. */
+function CharCount({ value, ideal, max, children }: { value: string; ideal: number; max: number; children?: React.ReactNode }) {
+  const n = value.trim().length
+  return (
+    <span className="flex flex-wrap justify-between gap-2">
+      <span>{children}</span>
+      <span className={cn("tabular-nums", n === 0 ? "" : n <= ideal ? "text-forest-700" : n <= max ? "text-amber-700" : "text-red-700")}>
+        {n}/{ideal}
+      </span>
+    </span>
+  )
+}
+
+/** Roughly how the product shows in Google results (title cut at ~60 characters, description at ~155). */
+function SearchPreview({ title, slug, description }: { title: string; slug: string; description: string }) {
+  const cut = (text: string, max: number) => (text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text)
+  return (
+    <div className="rounded-md border border-border bg-background p-4" aria-label="Search result preview">
+      <p className="text-xs text-muted-foreground">Preview</p>
+      <p className="mt-2 truncate text-xs text-[#4d5156]">muffinplants.com › shop › product › {slug || "your-product"}</p>
+      <p className="mt-0.5 text-[17px] leading-snug text-[#1a0dab]">{cut(`${title || "Product name"} - Muffin Plants`, 62)}</p>
+      <p className="mt-0.5 text-[13px] leading-5 text-[#4d5156]">{cut(description || "Add a summary or SEO description to control this text.", 158)}</p>
     </div>
   )
 }

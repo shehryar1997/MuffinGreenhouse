@@ -1,51 +1,53 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { getProductsByUseCase, useCases } from "@/lib/data/products"
+import { useCases } from "@/lib/data/products"
+import { getProductsByUseCase } from "@/lib/data/catalog"
+import { pageMetadata } from "@/lib/seo"
 import { ProductCard } from "@/components/ui/product-card"
 import { UseCaseHeader } from "./use-case-header"
 
 // ISR: revalidate every 5 minutes + on product updates via /api/revalidate
 export const revalidate = 300
 
-// SEO-optimized metadata for use case pages
+export async function generateStaticParams() {
+  return Object.keys(useCases).map((slug) => ({ slug }))
+}
+
+// Search listing for each "shop by need" page. Descriptions stay general: they must stay true whatever is in stock.
 const useCaseMetadata: Record<string, { title: string; description: string }> = {
   "low-light-survivors": {
-    title: "Low-Light Indoor Plants",
-    description: "Snake plants, ZZ plants, and other shade-loving plants that thrive in dim Karachi apartments. Shop online with home delivery.",
+    title: "Low-Light Indoor Plants in Pakistan",
+    description: "Plants that cope with dim rooms and north-facing windows, chosen for Karachi apartments. Delivered across Pakistan with care notes.",
   },
   "balcony-rooftop": {
-    title: "Balcony & Rooftop Plants",
-    description: "Heat and wind-tolerant plants for Karachi balconies and rooftop gardens. Sun-loving succulents and hardy varieties available.",
+    title: "Balcony & Rooftop Plants for Karachi",
+    description: "Sun, heat and wind-tolerant plants for balconies and rooftop gardens in Karachi's climate. Delivered across Pakistan.",
   },
   "air-purifying": {
-    title: "Air-Purifying Plants",
-    description: "NASA-recommended air-cleaning plants including Peace Lily, Snake Plant, and Pothos. Clean your Karachi home air naturally.",
+    title: "Air-Purifying Indoor Plants",
+    description: "Leafy indoor plants often chosen to freshen up a room, with honest care notes for Pakistani homes. Delivered across Pakistan.",
   },
   "pet-safe": {
     title: "Pet-Safe Indoor Plants",
-    description: "Non-toxic plants safe for cats and dogs including spider plants, calatheas, and ferns. Pet-friendly greenery for Karachi homes.",
+    description: "Plants that are not toxic to cats and dogs, for homes with pets. Every plant's pet safety is marked on its page.",
   },
   "beginner-proof": {
     title: "Easy Care Plants for Beginners",
-    description: "Hard-to-kill plants perfect for new plant parents in Karachi. Low maintenance options with included care guides. Shop online.",
+    description: "Forgiving, low-maintenance plants for new plant parents, each with simple care notes. Delivered across Pakistan.",
   },
   "statement-plants": {
     title: "Large Statement Plants",
-    description: "Bold, dramatic plants that transform your space: Fiddle Leaf Figs, Monsteras, and Bird of Paradise. Delivery in Karachi.",
+    description: "Big, bold plants that anchor a room or a terrace. Delivered with care in Karachi and across Pakistan.",
   },
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const meta = useCaseMetadata[slug] || {
-    title: `${slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, " ")} Plants`,
-    description: "Shop plants curated for your needs. Delivery available in Karachi.",
-  }
-  return {
-    title: meta.title,
-    description: meta.description,
-    alternates: { canonical: `/shop-by-need/${slug}` },
-  }
+  const meta = useCaseMetadata[slug]
+  if (!meta || !useCases[slug]) return { title: "Not found", robots: { index: false, follow: true } }
+  const products = await getProductsByUseCase(slug)
+  // Keep the page out of search while nothing is tagged for it.
+  return pageMetadata({ title: meta.title, description: meta.description, path: `/shop-by-need/${slug}`, noindex: products.length === 0 })
 }
 
 interface ShopByNeedPageProps {

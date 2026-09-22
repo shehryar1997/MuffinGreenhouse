@@ -13,7 +13,8 @@ export function FadeIn({ children, delay = 0, className }: { children: React.Rea
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 20 }}
+      // Half-visible rather than hidden until scripts run, so the section is readable on a slow connection.
+      initial={{ opacity: 0.5, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6, delay }}
@@ -30,7 +31,8 @@ export function KineticHeading({ children, delay = 0 }: { children: React.ReactN
   }
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      // Starts half-visible, not invisible: the heading stays readable if scripts are slow or blocked.
+      initial={{ opacity: 0.5, y: 8 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.4, delay }}
@@ -47,7 +49,8 @@ export function KineticLine({ children, className = "", delay = 0 }: { children:
   }
   return (
     <motion.span
-      initial={{ opacity: 0, y: 16 }}
+      // Starts half-visible, not invisible: the heading stays readable if scripts are slow or blocked.
+      initial={{ opacity: 0.5, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{
@@ -68,40 +71,30 @@ export function LiftText({ children, className = "" }: { children: string; class
   if (prefersReducedMotion) {
     return <span className={className}>{children}</span>
   }
-  // Letters are separate blocks so they can lift one by one, but each word is kept whole and the spaces stay real
-  // spaces: a long line wraps between words (it used to break in the middle of a word on phones).
+  // Words lift one after another on hover. Screen readers get the plain line (the animated copy is hidden from
+  // them): letter-by-letter spans used to be read out one letter at a time and made the page much heavier.
   const words = children.split(" ")
-  let index = 0
   return (
     <span
       className={`inline-block ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {words.map((word, w) => (
-        <span key={w}>
-          <span className="inline-block whitespace-nowrap">
-            {word.split("").map((letter) => {
-              const i = index++
-              return (
-                <motion.span
-                  key={i}
-                  className="inline-block"
-                  animate={isHovered ? { y: -3 } : { y: 0 }}
-                  transition={{
-                    duration: 0.25,
-                    delay: i * 0.02,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                >
-                  {letter}
-                </motion.span>
-              )
-            })}
-          </span>
-          {w < words.length - 1 && " "}
-        </span>
-      ))}
+      <span className="sr-only">{children}</span>
+      <span aria-hidden="true">
+        {words.map((word, w) => (
+          <React.Fragment key={w}>
+            <motion.span
+              className="inline-block whitespace-nowrap"
+              animate={isHovered ? { y: -3 } : { y: 0 }}
+              transition={{ duration: 0.25, delay: w * 0.05, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {word}
+            </motion.span>
+            {w < words.length - 1 && " "}
+          </React.Fragment>
+        ))}
+      </span>
     </span>
   )
 }

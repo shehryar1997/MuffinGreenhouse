@@ -1,12 +1,13 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import { notFound } from "next/navigation"
 import { Check, ChevronDown } from "lucide-react"
 import { siteConfig } from "@/config/nav.config"
 import { SERVICE_CITY, getService, services } from "@/lib/services"
 import { serializeJsonLd } from "@/lib/structured-data"
 import { CallButton, CtaBand, ServiceCard, StickyCtaBar, WhatsAppButton, accentFor } from "../_components/service-ui"
+import { pageMetadata } from "@/lib/seo"
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -18,11 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const service = getService(slug)
   if (!service) return {}
-  return {
-    title: service.metaTitle,
-    description: service.metaDescription,
-    alternates: { canonical: `/services/${service.slug}` },
-  }
+  return pageMetadata({ title: service.metaTitle, description: service.metaDescription, path: `/services/${service.slug}` })
 }
 
 const sectionHeading = "mb-5 font-serif text-xl text-foreground sm:text-2xl"

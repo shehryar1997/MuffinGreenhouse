@@ -52,7 +52,7 @@ export default async function AdminLoginPage({
           <BrandLogo className="h-16" />
           <div>
             <p className="font-serif text-[34px] leading-none tracking-tight text-foreground">Muffin</p>
-            <p className="mt-2 text-sm text-muted-foreground">Greenhouse admin</p>
+            <p className="mt-2 text-sm text-muted-foreground">Muffin Plants admin</p>
           </div>
         </div>
 

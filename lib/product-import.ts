@@ -257,7 +257,7 @@ export function templateRows(): string[][] {
     light: "Bright, indirect light. Avoid harsh afternoon sun.", water: "Every 7-10 days; let the top layer dry out.",
     humidity: "Average to high", temperature: "18-30 C", soil: "Chunky, well-draining aroid mix",
     fertilizer: "Balanced liquid feed monthly in the growing season", toxicity: "Toxic if ingested", pet_safe_note: "Keep away from cats and dogs",
-    meta_title: "Monstera Deliciosa | Muffin Greenhouse", meta_description: "Buy Monstera Deliciosa in Pakistan. Nursery-grown, delivered nationwide.",
+    meta_title: "Monstera Deliciosa Price in Pakistan", meta_description: "Buy Monstera Deliciosa in Pakistan. Nursery-grown, delivered nationwide.",
     variant_1_name: 'Medium - 6" pot', variant_1_sku: `${EXAMPLE_SKU_PREFIX}AROID-001-MED`, variant_1_price: "3500", variant_1_stock: "15",
     variant_1_image_url: "https://images.muffinplants.com/products/example-medium.avif",
     variant_2_name: 'Large - 8" pot', variant_2_sku: `${EXAMPLE_SKU_PREFIX}AROID-001-LRG`, variant_2_price: "5500", variant_2_stock: "10",

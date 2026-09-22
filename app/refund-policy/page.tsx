@@ -1,11 +1,8 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import Link from "next/link"
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/refund-policy" },
-  title: "Refund Policy",
-  description: "Refund, return, and cancellation policies for plant orders.",
-}
+export const metadata: Metadata = pageMetadata({ title: "Refund Policy", description: "Refund, return, and cancellation policies for plant orders at Muffin Plants.", path: "/refund-policy" })
 
 export default function RefundPolicyPage() {
   return (

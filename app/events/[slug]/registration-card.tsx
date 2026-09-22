@@ -215,7 +215,7 @@ function BookedView({ event, booking, name, email }: { event: Event; booking: Ex
     startIso: event.datetime,
     endIso: event.endDatetime,
     location: event.location,
-    details: `Muffin Greenhouse · booking ${booking.reference}`,
+    details: `Muffin Plants · booking ${booking.reference}`,
   })
 
   return (

@@ -4,12 +4,13 @@ import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SERVICE_CITY, generalWhatsappMessage, getService, services } from "@/lib/services"
 import { CallButton, CtaBand, ServiceCard, WhatsAppButton } from "./_components/service-ui"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: `Garden & Plant Services in ${SERVICE_CITY}`,
   description: `Landscaping, garden maintenance and expert plant visits in ${SERVICE_CITY}. Tell us about your space and we will take it from there.`,
-  alternates: { canonical: "/services" },
-}
+  path: "/services",
+})
 
 const steps = [
   { title: "Message us", description: "Tell us about your space and what you need." },

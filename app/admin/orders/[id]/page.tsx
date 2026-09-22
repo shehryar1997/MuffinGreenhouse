@@ -2,12 +2,13 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { MessageCircle, Printer } from "lucide-react"
 import { supabaseAdmin } from "@/supabase/admin-client"
-import { markPaid, markDelivered, cancelOrder, deleteOrder } from "./actions"
+import { markPaid, markDelivered, cancelOrder, deleteOrder, addOrderNote } from "./actions"
 import { MarkShippedDialog } from "./mark-shipped-dialog"
 import { DeleteButton } from "../../_components/delete-button"
-import { deleteOrderDescription } from "../delete-order-description"
+import { canDeleteOrder, deleteOrderDescription } from "../delete-order-description"
 import { ConfirmSubmitButton } from "../../_components/confirm-submit-button"
-import { Alert, ButtonLink, OrderStatusBadge, PageHeader, Panel, PaymentStatusBadge, buttonClass, linkClass, waButtonClass } from "../../_components/ui"
+import { Alert, ButtonLink, OrderStatusBadge, PageHeader, Panel, PaymentStatusBadge, buttonClass, inputClass, linkClass, waButtonClass } from "../../_components/ui"
+import { SubmitButton } from "../../_components/submit-button"
 import { fmtDateTime, rs } from "../../_components/format"
 import { whatsAppLink } from "@/lib/whatsapp-link"
 import { paymentAccountsAsText } from "@/config/payment-accounts"
@@ -29,7 +30,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     .select(
       `id, order_number, status, payment_status, payment_method, delivery_type, subtotal,
        delivery_fee, discount_amount, coupon_code, total, customer_notes, internal_notes, created_at,
-       tracking_number, courier,
+       tracking_number, courier, receipt_url,
        customer:customers(id, name, email, phone),
        address:addresses(label, street, city, province, phone),
        order_items:order_items(id, product_name, variant_name, quantity, unit_price, total_price)`
@@ -40,6 +41,15 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   if (!order) {
     notFound()
   }
+
+  // Who changed what, and when (written by the database, see order_events), plus staff notes.
+  const { data: eventRows } = await supabaseAdmin
+    .from("order_events")
+    .select("id, event_type, from_value, to_value, note, actor, created_at")
+    .eq("order_id", id)
+    .order("created_at", { ascending: false })
+    .limit(100)
+  const events = (eventRows ?? []) as Array<{ id: number; event_type: string; from_value: string | null; to_value: string | null; note: string | null; actor: string; created_at: string }>
 
   const customer = order.customer as unknown as { id: string; name: string | null; email: string; phone: string | null } | null
   const address = order.address as unknown as { label: string; street: string; city: string; province: string; phone: string | null } | null
@@ -90,14 +100,16 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
               <Printer className="h-4 w-4" aria-hidden />
               Packing slip
             </ButtonLink>
-            <DeleteButton
-              size="md"
-              title="Delete this order?"
-              description={deleteOrderDescription(order.order_number, order.status)}
-              confirmLabel="Delete order"
-              fallbackError="Couldn't delete the order. Check your connection and try again."
-              action={deleteOrder.bind(null, order.id, true)}
-            />
+            {canDeleteOrder(order) && (
+              <DeleteButton
+                size="md"
+                title="Delete this order?"
+                description={deleteOrderDescription(order.order_number, order.status)}
+                confirmLabel="Delete order"
+                fallbackError="Couldn't delete the order. Check your connection and try again."
+                action={deleteOrder.bind(null, order.id, true)}
+              />
+            )}
           </>
         }
       />
@@ -291,7 +303,37 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   <PaymentStatusBadge status={order.payment_status} />
                 </dd>
               </div>
+              {order.receipt_url && (
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="text-muted-foreground">Receipt</dt>
+                  <dd>
+                    <a href={order.receipt_url} target="_blank" rel="noopener noreferrer" className={linkClass}>View receipt</a>
+                  </dd>
+                </div>
+              )}
             </dl>
+          </Panel>
+
+          <Panel title="Activity">
+            <form action={addOrderNote.bind(null, order.id)} className="space-y-2">
+              <label htmlFor="order-note" className="sr-only">Add a note</label>
+              <textarea id="order-note" name="note" rows={2} maxLength={1000} required placeholder="Add a note for the team" className={cn(inputClass, "h-auto py-2")} />
+              <SubmitButton size="sm">Add note</SubmitButton>
+            </form>
+            {events.length > 0 ? (
+              <ol className="mt-4 space-y-3 border-t border-border pt-4">
+                {events.map((e) => (
+                  <li key={e.id} className="text-[13px]">
+                    <p className="text-foreground">{describeOrderEvent(e)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {fmtDateTime(e.created_at)} · {e.actor === "customer" ? "Customer" : e.actor === "system" ? "Automatic" : "Staff"}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-3 text-[13px] text-muted-foreground">Changes to this order will be listed here.</p>
+            )}
           </Panel>
 
           {order.internal_notes && (
@@ -303,4 +345,25 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       </div>
     </div>
   )
+}
+
+const PAYMENT_WORDS: Record<string, string> = { pending: "unpaid", paid: "paid", failed: "failed", refunded: "refunded" }
+
+function describeOrderEvent(e: { event_type: string; from_value: string | null; to_value: string | null; note: string | null }): string {
+  switch (e.event_type) {
+    case "created":
+      return e.note ? `Order placed (${e.note.toLowerCase()})` : "Order placed"
+    case "status":
+      return `Status: ${e.from_value ?? "?"} → ${e.to_value ?? "?"}${e.note ? ` (${e.note})` : ""}`
+    case "payment":
+      return `Payment: ${PAYMENT_WORDS[e.from_value ?? ""] ?? e.from_value} → ${PAYMENT_WORDS[e.to_value ?? ""] ?? e.to_value}`
+    case "tracking":
+      return e.to_value ? `Tracking set: ${e.to_value}` : "Tracking removed"
+    case "receipt":
+      return "Payment receipt uploaded"
+    case "note":
+      return `Note: ${e.note ?? ""}`
+    default:
+      return e.event_type
+  }
 }

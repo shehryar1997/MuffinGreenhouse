@@ -1,10 +1,7 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/cookie-policy" },
-  title: "Cookie Policy",
-  description: "Information about cookies used on Muffin Greenhouse.",
-}
+export const metadata: Metadata = pageMetadata({ title: "Cookie Policy", description: "Information about the cookies used on muffinplants.com.", path: "/cookie-policy" })
 
 export default function CookiePolicyPage() {
   return (

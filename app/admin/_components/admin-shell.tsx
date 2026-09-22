@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import * as Dialog from "@radix-ui/react-dialog"
 import { toast } from "sonner"
-import { BellRing, BookOpen, CalendarDays, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, Package, ShoppingBag, Star, Ticket, Users, X } from "lucide-react"
+import { BellRing, BookOpen, CalendarDays, ExternalLink, LayoutDashboard, LogOut, Mail, Menu, Package, ShoppingBag, Star, Ticket, Users, X, FolderTree } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BrandLogo } from "./brand-logo"
 
@@ -18,6 +18,7 @@ const NAV: Array<{ heading?: string; items: NavEntry[] }> = [
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
       { href: "/admin/products", label: "Products", icon: Package },
+      { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/customers", label: "Customers", icon: Users },
       { href: "/admin/coupons", label: "Coupons", icon: Ticket },
       { href: "/admin/notify", label: "Notify list", icon: BellRing },
@@ -79,7 +80,7 @@ function SidebarBody({ pathname, onNavigate }: { pathname: string; onNavigate?: 
         <BrandLogo chip className="h-11 w-11" />
         <span className="min-w-0">
           <span className="block font-serif text-[22px] leading-none tracking-tight text-paper">Muffin</span>
-          <span className="mt-1.5 block text-xs text-paper/60">Greenhouse admin</span>
+          <span className="mt-1.5 block text-xs text-paper/60">Store admin</span>
         </span>
       </Link>
 

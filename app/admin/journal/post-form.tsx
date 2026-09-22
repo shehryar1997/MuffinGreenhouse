@@ -28,7 +28,7 @@ const EMPTY: PostFormValues = {
   title: "",
   slug: "",
   excerpt: "",
-  author: "Muffin Greenhouse",
+  author: "Muffin Plants",
   content: "",
   cover_image_url: null,
   tags: "",

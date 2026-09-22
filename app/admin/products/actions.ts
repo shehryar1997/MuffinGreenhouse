@@ -9,7 +9,8 @@ import { isAllowedImageUrl } from "@/lib/image-hosts"
 import { BAD_BULK_REQUEST, BAD_BULK_UPDATE_REQUEST, cleanBulkIds, type BulkDeleteResult, type BulkUpdateResult } from "@/lib/admin-bulk"
 import { recordToFormData, type ImportRecord } from "@/lib/product-import"
 import { redirect } from "next/navigation"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { PRODUCTS_CACHE_TAG } from "@/lib/cache-tags"
 import { afterProductSaved } from "@/lib/stock-alerts"
 import { publishBlocker } from "@/lib/product-photos"
 import { friendlyDbError, readVariantInputs, syncVariantsAndPhotos } from "@/lib/product-sync"
@@ -180,7 +181,7 @@ function parseProductFields(
   }
   if (text("description").length < 10) return { error: "Description is too short. Write at least a sentence for customers." }
   if (text("description").length > 5000) return { error: "Description is too long (5,000 characters max)." }
-  if (text("short_description").length > 300) return { error: "Short description is too long (300 characters max)." }
+  if (text("short_description").length > 300) return { error: "The one-line summary is too long (300 characters max)." }
   if (text("meta_title").length > 70) return { error: "SEO title is too long (70 characters max)." }
   if (text("meta_description").length > 170) return { error: "SEO description is too long (170 characters max)." }
 
@@ -200,6 +201,13 @@ function parseProductFields(
     if (variantInputs.some((v) => !Number.isInteger(v.stock) || v.stock < 0 || v.stock > 1_000_000)) {
       return { error: "Variant stock must be a whole number, 0 or more." }
     }
+    for (const v of variantInputs) {
+      const extras = [v.compareAt, v.weightKg, v.boxHeightCm, v.boxWidthCm, v.boxBreadthCm]
+      if (extras.some((n) => n !== null && (!Number.isFinite(n) || n < 0))) return { error: `“${v.name}”: was price, weight and box sizes must be numbers, 0 or more.` }
+      if (v.compareAt !== null && v.compareAt > 0 && v.compareAt <= v.price) return { error: `“${v.name}”: the was price must be higher than its price, or left empty.` }
+      const box = [v.boxHeightCm, v.boxWidthCm, v.boxBreadthCm].filter((n) => n !== null && n > 0).length
+      if (box !== 0 && box !== 3) return { error: `“${v.name}”: fill in all three box sizes, or none.` }
+    }
     price = Math.min(...variantInputs.map((v) => v.price))
     stockCount = variantInputs.reduce((sum, v) => sum + v.stock, 0)
   } else {
@@ -208,7 +216,7 @@ function parseProductFields(
     stockCount = Number(formData.get("stock_count") || 0)
     if (!Number.isInteger(stockCount) || stockCount < 0 || stockCount > 1_000_000) return { error: "Stock must be a whole number, 0 or more." }
   }
-  const lowStock = Number(formData.get("low_stock_threshold") || 10)
+  const lowStock = Number(formData.get("low_stock_threshold") ?? 3)
   if (!Number.isInteger(lowStock) || lowStock < 0 || lowStock > 100_000) return { error: "Low-stock alert level must be a whole number, 0 or more." }
 
   if (isPlant) {
@@ -238,7 +246,12 @@ function parseProductFields(
     if (blocker) return { error: `Can't publish yet. ${blocker} Or untick Published to save it as a draft.` }
   }
 
-  const compareAt = optionalNumber(formData, "compare_at_price")
+  // With several sizes the "was" price is set per size; a product-level one would only be true for one of them.
+  const compareAt = hasVariants ? null : optionalNumber(formData, "compare_at_price")
+  const sortPosition = optionalNumber(formData, "sort_position")
+  if (sortPosition === "invalid" || (typeof sortPosition === "number" && (!Number.isInteger(sortPosition) || sortPosition < 0 || sortPosition > 100_000))) {
+    return { error: "Shop order must be a whole number (0 or more), or left empty." }
+  }
   const weight = optionalNumber(formData, "weight_kg")
   const boxHeight = optionalNumber(formData, "box_height_cm")
   const boxWidth = optionalNumber(formData, "box_width_cm")
@@ -287,6 +300,7 @@ function parseProductFields(
       // Mangaves can't leave a stray true behind. See lib/shipping.ts.
       is_hard_leaf: isMangaveCategory(categoryName) && formData.get("is_hard_leaf") === "on",
       is_featured: formData.get("is_featured") === "on",
+      sort_position: sortPosition,
       // Keep the original publish date when a published product is simply re-saved --
       // it's what the "New" badge's 14-day window counts from.
       published_at: formData.get("published") === "on" ? (existingPublishedAt ?? new Date().toISOString()) : null,
@@ -318,6 +332,7 @@ function parseProductFields(
 // The storefront is ISR-cached; the DB webhook also revalidates, but doing it here means a
 // save is visible on the site immediately even if that webhook is down.
 function revalidateStorefront() {
+  revalidateTag(PRODUCTS_CACHE_TAG, { expire: 0 })
   revalidatePath("/", "layout")
 }
 
@@ -637,4 +652,257 @@ export async function setVariantPhoto(productId: string, variantId: string, url:
 
   revalidatePath("/admin/products")
   revalidateStorefront()
+}
+
+export type RestockLine = { variantId: string; stock: number; price: number }
+
+/**
+ * Quick restock / price change from the products list, without opening the whole form. Each changed size goes
+ * through admin_adjust_variant(), which records the change (and the optional note, e.g. "Shipment from Thailand")
+ * in the stock history. Customers waiting for a sold-out plant are e-mailed when it comes back.
+ */
+export async function restockProduct(productId: string, lines: RestockLine[], note: string): Promise<ProductActionResult> {
+  await requireAdmin()
+  if (!Array.isArray(lines) || lines.length === 0 || lines.length > 50) return { error: "Nothing to save." }
+
+  const { data: before, error: readError } = await supabaseAdmin
+    .from("products")
+    .select("price, stock_status, variants:product_variants(id, stock_count, price, is_active)")
+    .eq("id", productId)
+    .maybeSingle()
+  if (readError) return { error: readError.message }
+  if (!before) return { error: "This product no longer exists. It may have been deleted." }
+
+  const current = new Map(((before.variants ?? []) as { id: string; stock_count: number; price: number; is_active: boolean | null }[]).map((v) => [v.id, v]))
+  const cleanNote = String(note ?? "").trim().slice(0, 200)
+  let changed = 0
+  for (const line of lines) {
+    const existing = current.get(line.variantId)
+    if (!existing || existing.is_active === false) return { error: "One of the sizes no longer exists. Reload the page and try again." }
+    if (!Number.isInteger(line.stock) || line.stock < 0 || line.stock > 1_000_000) return { error: "Stock must be a whole number, 0 or more." }
+    if (!Number.isFinite(line.price) || line.price <= 0 || line.price > 10_000_000) return { error: "Every size needs a price greater than 0." }
+    if (line.stock === existing.stock_count && Number(line.price) === Number(existing.price)) continue
+    const { error } = await supabaseAdmin.rpc("admin_adjust_variant", {
+      p_variant_id: line.variantId,
+      p_stock: line.stock,
+      p_price: Number(line.price) === Number(existing.price) ? null : line.price,
+      p_note: cleanNote || null,
+    })
+    if (error) return { error: `Saving failed: ${error.message}` }
+    changed++
+  }
+  if (changed === 0) return undefined
+
+  try {
+    await afterProductSaved(productId, { price: Number(before.price), stock_status: String(before.stock_status) })
+  } catch (alertError) {
+    console.error("Stock/price alerts failed:", alertError)
+  }
+  revalidatePath("/admin/products")
+  revalidatePath(`/admin/products/${productId}/edit`)
+  revalidateStorefront()
+}
+
+/**
+ * Copies a product as a new draft, for entering a similar plant quickly: every detail is copied except photos
+ * (they must show the new plant), stock (starts at 0) and the Featured flag. SKU and slug get a free "-copy" suffix.
+ */
+export async function duplicateProduct(productId: string): Promise<ProductActionResult> {
+  await requireAdmin()
+  const { data: source, error } = await supabaseAdmin
+    .from("products")
+    .select("*, variants:product_variants(name, sku, price, compare_at_price, weight_kg, box_height_cm, box_width_cm, box_breadth_cm, sort_order, is_active)")
+    .eq("id", productId)
+    .maybeSingle()
+  if (error) return { error: error.message }
+  if (!source) return { error: "This product no longer exists. It may have been deleted." }
+
+  const free = async (column: "sku" | "slug", base: string) => {
+    for (let n = 1; n < 50; n++) {
+      const candidate = column === "sku" ? `${base}-COPY${n > 1 ? n : ""}`.slice(0, 40) : `${base}-copy${n > 1 ? `-${n}` : ""}`.slice(0, 100)
+      const { count } = await supabaseAdmin.from("products").select("id", { count: "exact", head: true }).eq(column, candidate)
+      if (!count) return candidate
+    }
+    return null
+  }
+  const sku = await free("sku", String(source.sku))
+  const slug = await free("slug", String(source.slug))
+  if (!sku || !slug) return { error: "Couldn't find a free SKU or slug for the copy. Rename the earlier copies first." }
+
+  const {
+    id: _id, created_at: _c, updated_at: _u, search_vector: _sv, is_sold_out: _so, stock_status: _st, card_variant_id: _cv,
+    category_id: _cid, category_slug: _cs, variants, ...fields
+  } = source as Record<string, unknown> & { variants: Record<string, unknown>[] | null }
+  void [_id, _c, _u, _sv, _so, _st, _cv, _cid, _cs]
+  const { data: created, error: insertError } = await supabaseAdmin
+    .from("products")
+    .insert({ ...fields, sku, slug, name: `${source.name} (copy)`.slice(0, 120), published_at: null, is_featured: false, stock_count: 0 })
+    .select("id")
+    .single()
+  if (insertError || !created) return { error: insertError ? friendlyDbError(insertError) : "Couldn't create the copy." }
+
+  const sizes = (variants ?? []).filter((v) => v.is_active !== false)
+  if (sizes.length > 0) {
+    const { error: variantError } = await supabaseAdmin.from("product_variants").insert(
+      sizes.map((v, i) => ({
+        product_id: created.id,
+        name: v.name,
+        sku: `${sku}-${i + 1}`.slice(0, 60),
+        price: v.price,
+        compare_at_price: v.compare_at_price,
+        weight_kg: v.weight_kg,
+        box_height_cm: v.box_height_cm,
+        box_width_cm: v.box_width_cm,
+        box_breadth_cm: v.box_breadth_cm,
+        stock_count: 0,
+        sort_order: i,
+        is_default: i === 0,
+        is_active: true,
+      }))
+    )
+    if (variantError) {
+      await supabaseAdmin.from("products").delete().eq("id", created.id)
+      return { error: `Couldn't copy the sizes: ${friendlyDbError(variantError)}` }
+    }
+  }
+  revalidatePath("/admin/products")
+  redirect(`/admin/products/${created.id}/edit?copied=1`)
+}
+
+export type UpdateRowResult = { line: number; ok: boolean; message?: string; changes?: string[] }
+
+const YES = new Set(["yes", "y", "true", "1", "published"])
+const NO = new Set(["no", "n", "false", "0", "draft", "unpublished"])
+
+/**
+ * "Update from CSV" on the products list: change prices, stock and published state of existing products from a
+ * spreadsheet (the easiest way is to Export CSV, edit, and upload it back). Rows are matched by product SKU; sizes
+ * by their variant SKU (variant_N_sku). Empty cells leave a value unchanged; nothing else about a product is
+ * touched. With `dryRun` nothing is written and each row lists what would change.
+ */
+export async function updateProductsFromRows(rows: ImportRowInput[], dryRun: boolean): Promise<{ results: UpdateRowResult[]; error?: string }> {
+  if (!(await isAdminRequest())) return { results: [], error: "Your admin session has expired. Log in again." }
+  if (rows.length > MAX_ROWS_PER_CALL) return { results: [], error: `Too many rows in one batch (max ${MAX_ROWS_PER_CALL}).` }
+
+  const skus = [...new Set(rows.map((r) => String(r.values.sku ?? "").trim()).filter(Boolean))]
+  const { data: products, error } = skus.length
+    ? await supabaseAdmin
+        .from("products")
+        .select("id, sku, name, price, stock_status, published_at, variants:product_variants(id, sku, name, price, stock_count, is_active)")
+        .in("sku", skus)
+    : { data: [], error: null }
+  if (error) return { results: [], error: error.message }
+  type V = { id: string; sku: string; name: string; price: number; stock_count: number; is_active: boolean | null }
+  const bySku = new Map((products ?? []).map((p) => [String(p.sku).toLowerCase(), p as typeof p & { variants: V[] }]))
+
+  const num = (raw: string | undefined) => (raw === undefined || raw.trim() === "" ? null : Number(raw.replace(/,/g, "")))
+  const results: UpdateRowResult[] = []
+  let anyWritten = false
+
+  for (const { line, values } of rows) {
+    const sku = String(values.sku ?? "").trim()
+    if (!sku) {
+      results.push({ line, ok: false, message: "No SKU: rows are matched to products by SKU." })
+      continue
+    }
+    const product = bySku.get(sku.toLowerCase())
+    if (!product) {
+      results.push({ line, ok: false, message: `No product with SKU “${sku}”. Use Add product / Import CSV to create new ones.` })
+      continue
+    }
+    const active = (product.variants ?? []).filter((v) => v.is_active !== false)
+    const planned: { variant: V; stock: number; price: number }[] = []
+    let problem: string | null = null
+
+    const plan = (variant: V, priceRaw: string | undefined, stockRaw: string | undefined) => {
+      const price = num(priceRaw)
+      const stock = num(stockRaw)
+      if (price !== null && (!Number.isFinite(price) || price <= 0 || price > 10_000_000)) return `Price for “${variant.name}” must be a number greater than 0.`
+      if (stock !== null && (!Number.isInteger(stock) || stock < 0 || stock > 1_000_000)) return `Stock for “${variant.name}” must be a whole number, 0 or more.`
+      const next = { variant, price: price ?? Number(variant.price), stock: stock ?? variant.stock_count }
+      if (next.price !== Number(variant.price) || next.stock !== variant.stock_count) planned.push(next)
+      return null
+    }
+
+    const variantSlots = [...new Set(Object.keys(values).map((k) => k.match(/^variant_(\d+)_sku$/)?.[1]).filter((n): n is string => !!n))]
+    const sized = variantSlots.filter((n) => String(values[`variant_${n}_sku`] ?? "").trim())
+    if (sized.length > 0) {
+      for (const n of sized) {
+        const variantSku = String(values[`variant_${n}_sku`]).trim().toLowerCase()
+        const variant = active.find((v) => v.sku.toLowerCase() === variantSku)
+        if (!variant) {
+          problem = `Size SKU “${values[`variant_${n}_sku`]}” isn't one of this product's sizes.`
+          break
+        }
+        problem = plan(variant, values[`variant_${n}_price`], values[`variant_${n}_stock`])
+        if (problem) break
+      }
+    } else if (active.length === 1) {
+      problem = plan(active[0], values.price, values.stock_count)
+    } else if ((values.price ?? "").trim() || (values.stock_count ?? "").trim()) {
+      problem = "This product has several sizes: put prices and stock in the variant columns (variant_1_sku, variant_1_price, variant_1_stock...)."
+    }
+
+    const publishRaw = String(values.published ?? "").trim().toLowerCase()
+    const publish = YES.has(publishRaw) ? true : NO.has(publishRaw) ? false : null
+    if (publishRaw && publish === null) problem ??= `Published must be yes or no (got “${values.published}”).`
+    const publishChange = publish !== null && publish !== !!product.published_at ? publish : null
+
+    if (problem) {
+      results.push({ line, ok: false, message: problem })
+      continue
+    }
+    const changes = [
+      ...planned.map(({ variant, price, stock }) => {
+        const bits = []
+        if (price !== Number(variant.price)) bits.push(`price ${variant.price} → ${price}`)
+        if (stock !== variant.stock_count) bits.push(`stock ${variant.stock_count} → ${stock}`)
+        return `${active.length > 1 ? `${variant.name}: ` : ""}${bits.join(", ")}`
+      }),
+      ...(publishChange === null ? [] : [publishChange ? "publish" : "unpublish"]),
+    ]
+    if (changes.length === 0) {
+      results.push({ line, ok: true, message: "No changes.", changes: [] })
+      continue
+    }
+    if (dryRun) {
+      results.push({ line, ok: true, changes })
+      continue
+    }
+
+    let failed: string | null = null
+    for (const { variant, price, stock } of planned) {
+      const { error: adjustError } = await supabaseAdmin.rpc("admin_adjust_variant", {
+        p_variant_id: variant.id,
+        p_stock: stock,
+        p_price: price === Number(variant.price) ? null : price,
+        p_note: "CSV update",
+      })
+      if (adjustError) {
+        failed = adjustError.message
+        break
+      }
+    }
+    if (!failed && publishChange !== null) {
+      const published = await applyProductPublished(product.id as string, publishChange)
+      if (published) failed = published.error
+    }
+    if (failed) {
+      results.push({ line, ok: false, message: `Saving failed: ${failed}` })
+      continue
+    }
+    anyWritten = true
+    try {
+      await afterProductSaved(product.id as string, { price: Number(product.price), stock_status: String(product.stock_status) })
+    } catch (alertError) {
+      console.error("Stock/price alerts failed:", alertError)
+    }
+    results.push({ line, ok: true, changes })
+  }
+
+  if (anyWritten) {
+    revalidatePath("/admin/products")
+    revalidateStorefront()
+  }
+  return { results }
 }

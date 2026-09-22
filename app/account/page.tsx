@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import Link from "next/link"
@@ -11,11 +12,7 @@ import { nowMs } from "@/lib/now"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { REFERRAL_FRIEND_DISCOUNT, REFERRAL_MIN_ORDER, REFERRER_CODE_REWARD, REFERRER_EMAIL_REWARD, getOrCreateReferralCode } from "@/lib/referrals"
 
-export const metadata: Metadata = {
-  title: "Your Account",
-  description: "View your orders, saved addresses, and wishlist. Manage your Muffin Greenhouse account.",
-  robots: { index: false, follow: false },
-}
+export const metadata: Metadata = pageMetadata({ title: "Your Account", description: "View your orders, saved addresses, and wishlist. Manage your Muffin Plants account.", noindex: true })
 
 // Types for Supabase data
 interface Address {

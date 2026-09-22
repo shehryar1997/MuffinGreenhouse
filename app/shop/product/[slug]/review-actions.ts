@@ -1,6 +1,7 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+import { REVIEWS_CACHE_TAG } from "@/lib/cache-tags"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { allowHit, callerIp } from "@/lib/db-rate-limit"
 import { PUBLIC_BASE_URL } from "@/lib/r2"
@@ -56,6 +57,7 @@ export async function submitPublicReview(productId: string, input: PublicReviewI
   if (error) return { error: "Couldn't save your review. Please try again." }
 
   revalidatePath("/admin/reviews")
+  revalidateTag(REVIEWS_CACHE_TAG, { expire: 0 })
   if (product.slug) revalidatePath(`/shop/product/${product.slug}`)
   return { ok: true }
 }

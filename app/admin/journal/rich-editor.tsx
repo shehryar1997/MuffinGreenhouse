@@ -108,7 +108,21 @@ function cleanHref(raw: string): string | null {
   return null
 }
 
-export function RichEditor({ name, initialMarkdown }: { name: string; initialMarkdown: string }) {
+// `allowImages={false}` hides the image button: product descriptions stay text only, because every product photo
+// must belong to a size (see lib/product-photos.ts).
+export function RichEditor({
+  name,
+  initialMarkdown,
+  allowImages = true,
+  label,
+  placeholder = "Start writing your article. Press Enter for a new paragraph.",
+}: {
+  name: string
+  initialMarkdown: string
+  allowImages?: boolean
+  label?: string
+  placeholder?: string
+}) {
   const editorRef = useRef<HTMLDivElement>(null)
   const savedRange = useRef<Range | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
@@ -447,9 +461,11 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
         <ToolButton label="Remove link" onClick={removeLink}>
           <Unlink className="h-4 w-4" />
         </ToolButton>
-        <ToolButton label="Insert image" onClick={openImagePanel}>
-          <ImagePlus className="h-4 w-4" />
-        </ToolButton>
+        {allowImages && (
+          <ToolButton label="Insert image" onClick={openImagePanel}>
+            <ImagePlus className="h-4 w-4" />
+          </ToolButton>
+        )}
       </div>
 
       {panel === "link" && (
@@ -554,7 +570,7 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
       <div className="relative">
         {isEmpty && (
           <p className="pointer-events-none absolute left-5 top-5 text-[1.0625rem] text-muted-foreground" aria-hidden>
-            Start writing your article. Press Enter for a new paragraph.
+            {placeholder}
           </p>
         )}
         <div
@@ -563,7 +579,7 @@ export function RichEditor({ name, initialMarkdown }: { name: string; initialMar
           suppressContentEditableWarning
           role="textbox"
           aria-multiline="true"
-          aria-label="Article"
+          aria-label={label ?? "Article"}
           spellCheck
           onInput={sync}
           onBlur={sync}

@@ -170,7 +170,7 @@ export default function RegisterPage() {
           </h1>
           {step === "register" ? (
             <p className="mt-2 text-forest-600">
-              Join Muffin Nursery for a personalized plant shopping experience
+              Join Muffin Plants for a personalized plant shopping experience
             </p>
           ) : (
             <p className="mt-2 text-forest-600" id="verify-instructions">

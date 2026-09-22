@@ -227,9 +227,10 @@ export function ProductFilters({ products, children, initialFilters }: ProductFi
       )
     }
     
-    if (filters.sort && filters.sort !== 'new') {
+    if (filters.sort && filters.sort !== 'featured') {
       const label = filters.sort === 'price-asc' ? 'Price: Low to High' :
-                   filters.sort === 'price-desc' ? 'Price: High to Low' : 'Name: A to Z'
+                   filters.sort === 'price-desc' ? 'Price: High to Low' :
+                   filters.sort === 'new' ? 'Newest' : 'Name: A to Z'
       chips.push(
         <button
           key="sort"

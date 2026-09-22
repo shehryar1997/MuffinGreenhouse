@@ -1,14 +1,24 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import { redirect } from "next/navigation"
-import { getPaginatedProducts, PRODUCTS_PER_PAGE, FilterParams, getPriceBounds } from "@/lib/data/products"
+import { PRODUCTS_PER_PAGE, type FilterParams } from "@/lib/data/products"
+import { getPaginatedProducts, getPriceBounds } from "@/lib/data/catalog"
 import { ShopAllClient } from "./shop-all-client"
 
 export const revalidate = 300
 
-export const metadata: Metadata = {
-  title: "All Plants",
-  description: "Browse our full collection of indoor plants sourced worldwide and propagated in Karachi. Home delivery available in Karachi and across Pakistan.",
-  alternates: { canonical: "/shop/all" },
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ page?: string; [key: string]: string | undefined }> }): Promise<Metadata> {
+  const sp = await searchParams
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1)
+  const filtered = Object.keys(sp).some((k) => k !== "page")
+  // An empty shop is a thin page: keep it out of search until something is on sale.
+  const { totalCount } = await getPaginatedProducts(1, 1)
+  return pageMetadata({
+    title: page > 1 ? `Buy Indoor Plants Online in Pakistan (page ${page})` : "Buy Indoor Plants Online in Pakistan",
+    description: "Browse every plant in stock: aroids, hoyas, sansevierias, agaves and more, sourced worldwide and propagated in Karachi. Delivered across Pakistan.",
+    path: page > 1 && !filtered ? `/shop/all?page=${page}` : "/shop/all",
+    noindex: totalCount === 0,
+  })
 }
 
 interface ShopAllPageProps {
@@ -20,7 +30,7 @@ interface ShopAllPageProps {
     min?: string
     max?: string
     stock?: 'in'
-    sort?: 'new' | 'price-asc' | 'price-desc' | 'name'
+    sort?: 'featured' | 'new' | 'price-asc' | 'price-desc' | 'name'
   }>
 }
 
@@ -50,14 +60,14 @@ export default async function ShopAllPage({ searchParams }: ShopAllPageProps) {
   if (params.stock === 'in') {
     filters.stock = 'in'
   }
-  if (params.sort && ['new', 'price-asc', 'price-desc', 'name'].includes(params.sort)) {
+  if (params.sort && ['featured', 'new', 'price-asc', 'price-desc', 'name'].includes(params.sort)) {
     filters.sort = params.sort
   }
 
   const { products, totalCount } = await getPaginatedProducts(requestedPage, PRODUCTS_PER_PAGE, filters)
   const totalPages = Math.max(1, Math.ceil(totalCount / PRODUCTS_PER_PAGE))
 
-  if (requestedPage > totalPages && totalPages > 0) {
+  if (requestedPage > totalPages && totalPages > 0 && totalCount > 0) {
     redirect(totalPages > 1 ? `/shop/all?page=${totalPages}` : "/shop/all")
   }
 

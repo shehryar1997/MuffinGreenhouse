@@ -1,4 +1,4 @@
-// Muffin Nursery — Core Type Definitions
+// Muffin Plants — Core Type Definitions
 
 export interface Category {
   id: string
@@ -17,6 +17,11 @@ export interface Product {
   slug: string
   category: Category
   description: string
+  /** One-line summary shown under the product name and used as the fallback search snippet. */
+  shortDescription?: string
+  /** Admin-written search listing; the page falls back to the name / short description. */
+  metaTitle?: string
+  metaDescription?: string
   price: number
   compareAtPrice?: number
   currency: string
@@ -24,11 +29,16 @@ export interface Product {
   stockCount: number
   images: ProductImage[]
   careInfo: CareInfo
+  /** Short care lines for cards, e.g. "Bright, indirect" / "Water weekly". */
+  lightSummary?: string
+  waterSummary?: string
   variants: ProductVariant[]
   /** The variant whose photo represents the product on cards and lists; also the one preselected on its page. */
   cardVariantId?: string | null
   useCaseTags: string[]
   isNewArrival: boolean
+  /** Pinned to the top of the homepage and the shop's "Recommended" order. */
+  isFeatured?: boolean
   isPetSafe: boolean
   isImported: boolean
   /** Mangaves only: stiff, easily-broken leaves, so it ships bare-root instead of potted. See lib/shipping.ts. */
@@ -69,6 +79,8 @@ export interface ProductVariant {
   id: string
   name: string
   price: number
+  /** Original price for this size, shown struck through when higher than `price`. */
+  compareAtPrice?: number
   stockStatus: "in_stock" | "low_stock" | "out_of_stock"
   stockCount: number
   sku: string
@@ -214,7 +226,7 @@ export interface JournalPost {
   publishedAt: string | null
 }
 
-// Muffin Intelligence types
+// Ask Muffin (plant assistant) types
 export interface QuizAnswer {
   questionId: string
   answer: string

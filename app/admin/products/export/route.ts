@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { isAdminRequest } from "@/lib/admin-auth"
 import { matchesProductFilters, parseProductFilters } from "@/lib/admin-product-filters"
+import { readinessIssues, type ReadinessInput } from "@/lib/product-readiness"
 import { neutralizeFormula, toCsv } from "@/lib/csv"
 import { EXPORT_PRODUCT_COLUMNS, productsToRows, type ExportProduct, type ExportVariant } from "@/lib/product-import"
 
@@ -61,7 +62,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Could not read products." }, { status: 500 })
   }
 
-  const selected = products.filter((p) => matchesProductFilters(p, filters))
+  // "Needs attention" is worked out the same way as on the products list.
+  const activeByProduct = groupBy(variants.filter((v) => v.is_active !== false))
+  const withPhoto = new Set(images.map((i) => i.variant_id))
+  const needsAttention = (p: ProductRow) =>
+    readinessIssues({
+      ...(p as unknown as Omit<ReadinessInput, "variants">),
+      variants: (activeByProduct.get((p as unknown as { id: string }).id) ?? []).map((v) => ({ name: v.name, hasPhoto: withPhoto.has(v.id) })),
+    }).length > 0
+  const selected = products.filter((p) => matchesProductFilters({ ...p, needsAttention: filters.filter === "attention" ? needsAttention(p) : undefined }, filters))
   const bySort = (a: { sort_order: number | null }, b: { sort_order: number | null }) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
   const photoByVariant = new Map<string, string>()
   for (const image of [...images].sort(bySort)) if (!photoByVariant.has(image.variant_id)) photoByVariant.set(image.variant_id, image.url)

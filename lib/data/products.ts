@@ -2,6 +2,7 @@
 import { Product } from "@/types"
 import { supabase } from "@/supabase/client"
 import { mapSupabaseProductToProduct } from "./adapters"
+import { chooseCardVariantId } from "@/lib/product-photos"
 import { SupabaseProduct } from "@/supabase/client"
 import { isPlantProduct, NON_PLANT_CATEGORY_NAMES, NON_PLANT_CATEGORY_SLUGS } from "@/lib/product-categories"
 import { MAX_PRICE } from "@/components/shop/product-filters"
@@ -21,7 +22,7 @@ export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
 export const PRODUCT_SELECT = `
   *,
   images:product_images(id, url, alt_text, sort_order, is_primary, variant_id),
-  variants:product_variants(id, sku, name, price, stock_status, stock_count, is_default, is_active)
+  variants:product_variants(id, sku, name, price, compare_at_price, stock_status, stock_count, is_default, is_active)
 `
 
 // ============================================================================
@@ -65,7 +66,8 @@ export interface FilterParams {
   min?: number
   max?: number
   stock?: 'in'
-  sort?: 'new' | 'price-asc' | 'price-desc' | 'name'
+  /** Absent = "Recommended": featured first, then the admin's shop order, then newest. */
+  sort?: 'featured' | 'new' | 'price-asc' | 'price-desc' | 'name'
 }
 
 // PostgREST `not.in` drops NULL rows, so each filter also keeps rows with no category.
@@ -103,10 +105,12 @@ export async function getPaginatedProducts(page: number, pageSize: number = PROD
     query = query.lte("price", filters.max)
   }
   if (filters?.stock === 'in') {
-    query = query.eq("stock_status", "in_stock")
+    // "In stock" includes sizes that are running low: rare plants usually have only a few.
+    query = query.neq("stock_status", "out_of_stock")
   }
 
-  // Apply sorting
+  // Sold-out products always sink to the end, whatever the chosen order.
+  query = query.order("is_sold_out", { ascending: true })
   switch (filters?.sort) {
     case 'price-asc':
       query = query.order("price", { ascending: true })
@@ -118,8 +122,13 @@ export async function getPaginatedProducts(page: number, pageSize: number = PROD
       query = query.order("name", { ascending: true })
       break
     case 'new':
-    default:
       query = query.order("published_at", { ascending: false })
+      break
+    default:
+      query = query
+        .order("is_featured", { ascending: false })
+        .order("sort_position", { ascending: true, nullsFirst: false })
+        .order("published_at", { ascending: false })
   }
 
   // Always order images/variants by sort_order
@@ -167,10 +176,12 @@ export async function getPaginatedProductsByCategory(categorySlug: string, page:
     query = query.lte("price", filters.max)
   }
   if (filters?.stock === 'in') {
-    query = query.eq("stock_status", "in_stock")
+    // "In stock" includes sizes that are running low: rare plants usually have only a few.
+    query = query.neq("stock_status", "out_of_stock")
   }
 
-  // Apply sorting
+  // Sold-out products always sink to the end, whatever the chosen order.
+  query = query.order("is_sold_out", { ascending: true })
   switch (filters?.sort) {
     case 'price-asc':
       query = query.order("price", { ascending: true })
@@ -182,8 +193,13 @@ export async function getPaginatedProductsByCategory(categorySlug: string, page:
       query = query.order("name", { ascending: true })
       break
     case 'new':
-    default:
       query = query.order("published_at", { ascending: false })
+      break
+    default:
+      query = query
+        .order("is_featured", { ascending: false })
+        .order("sort_position", { ascending: true, nullsFirst: false })
+        .order("published_at", { ascending: false })
   }
 
   // Always order images/variants by sort_order
@@ -264,6 +280,10 @@ export async function getProductsByUseCase(useCaseSlug: string): Promise<Product
     .select(PRODUCT_SELECT)
     .contains("use_case_tags", [label])
     .not("published_at", "is", null)
+    .order("is_sold_out", { ascending: true })
+    .order("is_featured", { ascending: false })
+    .order("sort_position", { ascending: true, nullsFirst: false })
+    .order("published_at", { ascending: false })
     .order("sort_order", { foreignTable: "product_images", ascending: true })
     .order("sort_order", { foreignTable: "product_variants", ascending: true })
 
@@ -298,48 +318,55 @@ export async function getPriceBounds(): Promise<{ min: number; max: number }> {
   }
 }
 
-export async function getWeeklySoldCount(): Promise<number> {
-  // ponytail: Returning 0 as required -- no order data exists yet.
-  // Real order counting should NOT be fabricated. Implement when orders table is ready.
-  return 0
-}
 
-export async function getPlantOfTheDay(): Promise<Product> {
+
+/**
+ * What the homepage shows: in-stock products first, featured ones pinned to the front, then the admin's shop order,
+ * then newest. Capped so the homepage stays light however large the catalogue grows.
+ */
+export async function getHomepageProducts(limit = 12): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_SELECT)
-    .eq("is_featured", true)
     .not("published_at", "is", null)
+    .order("is_sold_out", { ascending: true })
+    .order("is_featured", { ascending: false })
+    .order("sort_position", { ascending: true, nullsFirst: false })
+    .order("published_at", { ascending: false })
     .order("sort_order", { foreignTable: "product_images", ascending: true })
     .order("sort_order", { foreignTable: "product_variants", ascending: true })
-    .limit(1)
-    .maybeSingle()
+    .limit(limit)
 
   if (error) {
-    console.error("Error fetching plant of the day:", error)
+    console.error("Error fetching homepage products:", error)
+    return []
   }
+  return (data ?? []).map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct))
+}
 
-  if (data) {
-    return mapSupabaseProductToProduct(data as unknown as SupabaseProduct)
-  }
-
-  // Fallback: get first published product
-  const { data: fallback, error: fallbackError } = await supabase
+/** In-stock supplies (pots, planting media, fertilizer) offered as add-ons on a plant's page. */
+export async function getAddOnProducts(excludeIds: string[], limit = 3): Promise<Product[]> {
+  const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_SELECT)
     .not("published_at", "is", null)
-    .order("created_at", { ascending: true })
+    .in("category_slug", ["pots", "planting-media", "fertilizer"])
+    .neq("stock_status", "out_of_stock")
+    .order("is_featured", { ascending: false })
+    .order("sort_position", { ascending: true, nullsFirst: false })
+    .order("published_at", { ascending: false })
     .order("sort_order", { foreignTable: "product_images", ascending: true })
     .order("sort_order", { foreignTable: "product_variants", ascending: true })
-    .limit(1)
-    .maybeSingle()
+    .limit(limit + excludeIds.length)
 
-  if (fallbackError || !fallback) {
-    console.error("Error fetching fallback plant of the day:", fallbackError)
-    throw new Error("No products available")
+  if (error) {
+    console.error("Error fetching add-on products:", error)
+    return []
   }
-
-  return mapSupabaseProductToProduct(fallback as unknown as SupabaseProduct)
+  return (data ?? [])
+    .map((row) => mapSupabaseProductToProduct(row as unknown as SupabaseProduct))
+    .filter((p) => !excludeIds.includes(p.id) && p.images.length > 0)
+    .slice(0, limit)
 }
 
 // ============================================================================
@@ -497,4 +524,48 @@ export async function searchProductsSuggestions(query: string): Promise<{
     })),
     totalCount: rows[0]?.total_count ?? 0,
   }
+}
+
+/**
+ * Minimal rows for the header search drawer's instant, typo-tolerant matching: loaded once, the first time the
+ * drawer opens (not on every page), and small enough to stay light with hundreds of products.
+ */
+export async function getSearchIndex(): Promise<
+  Array<{ id: string; name: string; slug: string; price: number; category_name: string; primary_image: string | null }>
+> {
+  const { data, error } = await supabase
+    .from("products")
+    .select("id, name, slug, price, category_name, card_variant_id, images:product_images(url, variant_id, sort_order), variants:product_variants(id, price, is_active)")
+    .not("published_at", "is", null)
+    .order("is_sold_out", { ascending: true })
+    .order("name", { ascending: true })
+
+  if (error) {
+    console.error("Error loading the search index:", error)
+    return []
+  }
+  type Row = {
+    id: string
+    name: string
+    slug: string
+    price: number
+    category_name: string | null
+    card_variant_id: string | null
+    images: { url: string; variant_id: string | null; sort_order: number | null }[] | null
+    variants: { id: string; price: number; is_active: boolean | null }[] | null
+  }
+  return ((data ?? []) as unknown as Row[]).map((row) => {
+    const active = (row.variants ?? []).filter((v) => v.is_active !== false)
+    const photoOf = (variantId: string) =>
+      (row.images ?? []).filter((i) => i.variant_id === variantId).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]?.url ?? null
+    const cardId = chooseCardVariantId(active, (id) => photoOf(id) !== null, row.card_variant_id)
+    return {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      price: row.price,
+      category_name: row.category_name ?? "",
+      primary_image: cardId ? photoOf(cardId) : null,
+    }
+  })
 }

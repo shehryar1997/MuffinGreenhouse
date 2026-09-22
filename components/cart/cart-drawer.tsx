@@ -3,7 +3,7 @@
 import { useRef, useEffect } from "react"
 import { Drawer } from "vaul"
 import { X, Minus, Plus, ShoppingBag, ArrowRight } from "lucide-react"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
@@ -99,11 +99,11 @@ export function CartDrawer() {
                 {cart.items.map((item) => (
                   <div key={`${item.product.id}-${item.variant?.id || "x"}`} className="flex gap-4">
                     <div className="relative w-24 h-24 bg-muted shrink-0 rounded-md overflow-hidden">
-                      <Image src={item.variant?.images?.[0]?.url || item.product.images[0]?.url || "/placeholder-plant.png"} alt={item.product.name} fill className="object-cover" />
+                      <Image src={item.variant?.images?.[0]?.url || item.product.images[0]?.url || "/placeholder-plant.png"} alt={item.product.name} fill sizes="96px" className="object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-serif text-base text-foreground">{item.product.name}</h3>
-                      {item.variant && <p className="text-xs text-muted-foreground font-mono">{item.variant.name}</p>}
+                      {item.variant && item.variant.name.toLowerCase() !== "standard" && <p className="text-xs text-muted-foreground font-mono">{item.variant.name}</p>}
                       {shipsBareRoot(item.product) && <p className="text-xs text-forest-600 mt-0.5">Ships bare-root, pot included separately</p>}
                       <p className="font-mono text-sm text-foreground mt-1">{formatPrice(v(item))}</p>
                       <div className="flex items-center gap-3 mt-3">
@@ -121,6 +121,7 @@ export function CartDrawer() {
                             onClick={() => updateQuantity(item.product.id, item.variant?.id, item.quantity + 1)} 
                             className="p-2.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 touch-target-sm"
                             aria-label={`Increase quantity of ${item.product.name}`}
+                            disabled={item.quantity >= (item.variant?.stockCount ?? item.product.stockCount)}
                           >
                             <Plus className="w-3 h-3 text-foreground" aria-hidden="true" />
                           </button>
@@ -158,6 +159,9 @@ export function CartDrawer() {
                 <Button asChild className="w-full h-12 font-mono text-xs uppercase touch-target">
                   <Link href="/checkout" onClick={() => toggleCart(false)}>Checkout</Link>
                 </Button>
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Pay by bank transfer, JazzCash or Easypaisa after you order. We hold your items for 24 hours.
+                </p>
                 <button 
                   onClick={() => toggleCart(false)} 
                   className="w-full mt-3 py-3 font-mono text-xs uppercase text-muted-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-md touch-target"

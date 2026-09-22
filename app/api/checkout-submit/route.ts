@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/supabase/admin-client"
 import { createServerClient } from "@/lib/supabase/server-client"
 import { sendBookingReceivedEmail } from "@/lib/email/send-booking-received"
 import { pakistanCities } from "@/data/pakistan-cities"
-import { calculateDeliveryFee, qualifiesForFreeDelivery, type DeliveryFeeDimensions } from "@/lib/delivery-fee"
+import { calculateDeliveryFee, mergeParcel, qualifiesForFreeDelivery, type DeliveryFeeDimensions } from "@/lib/delivery-fee"
 import type { PaymentSummary } from "@/lib/checkout-summary"
 import { dbSubtotal, resolveCoupon } from "@/lib/coupons"
 
@@ -215,13 +215,16 @@ export async function POST(request: NextRequest) {
     let deliveryFee = 0
     if (body.deliveryType === "delivery") {
       const productIds = [...new Set(body.items.map((item) => item.productId))]
-      const { data: productRows, error: productError } = await supabaseAdmin
-        .from("products")
-        .select("id, box_height_cm, box_width_cm, box_breadth_cm, category_slug, weight_kg")
-        .in("id", productIds)
+      const variantIds = [...new Set(body.items.flatMap((item) => (item.variantId ? [item.variantId] : [])))]
+      const [{ data: productRows, error: productError }, { data: variantRows, error: variantError }] = await Promise.all([
+        supabaseAdmin.from("products").select("id, box_height_cm, box_width_cm, box_breadth_cm, category_slug, weight_kg").in("id", productIds),
+        variantIds.length
+          ? supabaseAdmin.from("product_variants").select("id, weight_kg, box_height_cm, box_width_cm, box_breadth_cm").in("id", variantIds)
+          : Promise.resolve({ data: [] as Array<{ id: string; weight_kg: number | null; box_height_cm: number | null; box_width_cm: number | null; box_breadth_cm: number | null }>, error: null }),
+      ])
 
-      if (productError) {
-        console.error("Failed to load products for delivery fee:", productError)
+      if (productError || variantError) {
+        console.error("Failed to load products for delivery fee:", productError ?? variantError)
         return jsonError("Failed to calculate delivery fee", 500)
       }
 
@@ -237,11 +240,21 @@ export async function POST(request: NextRequest) {
           },
         ])
       )
+      // A size can have its own weight and box (a 12" pot ships heavier than a 4" one).
+      const variantParcel = new Map(
+        (variantRows ?? []).map((v) => [
+          v.id,
+          { weightKg: v.weight_kg, boxHeightCm: v.box_height_cm, boxWidthCm: v.box_width_cm, boxBreadthCm: v.box_breadth_cm },
+        ])
+      )
 
       deliveryFee = calculateDeliveryFee({
         deliveryType: body.deliveryType,
         city: deliveryCity,
-        items: body.items.map((item) => ({ dim: dimensionsById.get(item.productId), quantity: item.quantity })),
+        items: body.items.map((item) => {
+          const productDim = dimensionsById.get(item.productId)
+          return { dim: productDim ? mergeParcel(productDim, item.variantId ? variantParcel.get(item.variantId) : null) : undefined, quantity: item.quantity }
+        }),
       })
 
       // Free delivery: 10,000+ items subtotal with fewer than 4 items (decided from database prices).
@@ -301,7 +314,10 @@ export async function POST(request: NextRequest) {
       let errorMessage = "Failed to create order"
       let statusCode = 500
 
-      if (error.message.includes("insufficient stock") || error.message.includes("Insufficient stock")) {
+      if (error.message.includes("no longer available") || error.message.includes("A size must be chosen")) {
+        errorMessage = "Something in your cart is no longer sold. Your cart has been updated: please review it and try again."
+        statusCode = 409
+      } else if (error.message.includes("insufficient stock") || error.message.includes("Insufficient stock")) {
         errorMessage = "Some items in your cart are no longer available in the requested quantity. Please review your cart."
         statusCode = 409 // Conflict
       } else if (error.message.includes("not found") || error.message.includes("does not exist")) {

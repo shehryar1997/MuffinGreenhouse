@@ -101,7 +101,7 @@ export function Footer({ clearTabBar = false }: { clearTabBar?: boolean }) {
         <NewsletterSignup />
 
         <div className="border-t border-forest-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="font-mono text-xs text-forest-700">© {new Date().getFullYear()} Muffin / greenhouse</p>
+          <p className="font-mono text-xs text-forest-700">© {new Date().getFullYear()} Muffin Plants</p>
           <div className="flex gap-6 max-lg:gap-2">
             <a href="https://www.instagram.com/muffinsgreenhouse/" target="_blank" rel="noopener noreferrer" className={socialClass}>Instagram</a>
             <a href={`https://wa.me/${siteConfig.whatsappNumber.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className={socialClass}>WhatsApp</a>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { pageMetadata } from "@/lib/seo"
 import Link from "next/link"
 import { BookOpen, MessageCircle } from "lucide-react"
 import { getPublishedPosts } from "@/lib/data/journal"
@@ -8,10 +9,10 @@ import { siteConfig } from "@/config/nav.config"
 
 export const revalidate = 60
 
-export const metadata: Metadata = {
-  title: "The Journal: Plant Care Guides & Stories",
-  description: "Plant care guides, propagation notes and honest stories from the Muffin Greenhouse, written for Karachi homes and Pakistani climates.",
-  alternates: { canonical: "/journal" },
+export async function generateMetadata(): Promise<Metadata> {
+  const posts = await getPublishedPosts()
+  // "First stories on their way" is a placeholder: keep it out of search until there is a post.
+  return pageMetadata({ title: "The Journal: Plant Care Guides & Stories", description: "Plant care guides, propagation notes and honest stories from Muffin Plants, written for Karachi homes and Pakistani climates.", path: "/journal", noindex: posts.length === 0 })
 }
 
 export default async function JournalPage() {

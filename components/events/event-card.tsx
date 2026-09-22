@@ -1,5 +1,5 @@
 import Link from "next/link"
-import Image from "next/image"
+import { SmartImage as Image } from "@/components/ui/smart-image"
 import { Clock, Leaf, MapPin, Users } from "lucide-react"
 import type { Event } from "@/types"
 import {

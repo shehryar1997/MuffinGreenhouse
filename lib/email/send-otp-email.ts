@@ -1,5 +1,5 @@
 // ============================================================================
-// MUFFIN NURSERY - EMAIL OTP SENDER
+// MUFFIN PLANTS - EMAIL OTP SENDER
 // ============================================================================
 // Sends OTP codes via email for email address verification.
 //

@@ -17,10 +17,11 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
   // the cheapest with a photo), so every card and page that reads images[0] gets the card photo; each variant
   // carries its own photos for the product page. A legacy product with no variants at all keeps showing its old
   // photos until it is saved once (which gives it a Standard variant).
-  const allImages = (row.images ?? []).map(mapSupabaseImage)
-  const byVariant = groupImagesByVariant(allImages)
   // Retired variants (is_active = false) are never offered for sale.
   const activeVariants = (row.variants ?? []).filter((v) => v.is_active !== false)
+  const variantNames = new Map((row.variants ?? []).map((v) => [v.id, v.name]))
+  const allImages = (row.images ?? []).map((img) => mapSupabaseImage(img, row.name, variantNames))
+  const byVariant = groupImagesByVariant(allImages)
   const cardVariantId = chooseCardVariantId(activeVariants, (id) => (byVariant.get(id)?.length ?? 0) > 0, row.card_variant_id)
   const cardPhotos = cardVariantId ? byVariant.get(cardVariantId) ?? [] : []
   const legacyPhotos =
@@ -35,6 +36,9 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     slug: row.slug,
     category: mapSupabaseCategory(row),
     description: row.description,
+    shortDescription: row.short_description?.trim() || undefined,
+    metaTitle: row.meta_title?.trim() || undefined,
+    metaDescription: row.meta_description?.trim() || undefined,
     price: row.price,
     compareAtPrice: row.compare_at_price ?? undefined,
     currency: row.currency,
@@ -43,10 +47,13 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     images: cardPhotos.length > 0 ? cardPhotos : legacyPhotos,
     cardVariantId,
     careInfo: mapSupabaseCareInfo(row),
-    variants: activeVariants.map((v) => mapSupabaseVariant(v, byVariant.get(v.id) ?? [])),
+    lightSummary: isToolOrEquipment ? undefined : row.light_summary?.trim() || undefined,
+    waterSummary: isToolOrEquipment ? undefined : row.water_summary?.trim() || undefined,
+    variants: activeVariants.map((v) => mapSupabaseVariant(v, byVariant.get(v.id) ?? [], row)),
     useCaseTags: isToolOrEquipment ? [] : row.use_case_tags ?? [],
     // The "New" badge lasts 14 days from publishing, even if the flag hasn't been cleared yet.
     isNewArrival: !!row.is_new_arrival && isWithinNewArrivalWindow(row.published_at, row.created_at),
+    isFeatured: !!row.is_featured,
     isPetSafe: row.is_pet_safe,
     isImported: !!row.is_imported,
     isHardLeaf: !!row.is_hard_leaf,
@@ -76,22 +83,36 @@ function mapSupabaseCategory(row: SupabaseProduct): Category {
   }
 }
 
-function mapSupabaseImage(img: SupabaseProductImage): ProductImage {
+// Alt text describes the plant, not just the size: "Monstera Deliciosa, Medium 8\" pot" rather than "Medium".
+// A custom alt text typed in the admin panel (anything other than the bare variant name) is kept as written.
+export function productImageAlt(altText: string | null | undefined, productName: string, variantName: string | null | undefined): string {
+  const alt = altText?.trim() ?? ""
+  const size = variantName?.trim() ?? ""
+  if (alt && alt !== size && alt.toLowerCase() !== "standard") return alt
+  return size && size.toLowerCase() !== "standard" ? `${productName}, ${size}` : productName
+}
+
+function mapSupabaseImage(img: SupabaseProductImage, productName: string, variantNames: Map<string, string>): ProductImage {
   return {
     id: img.id,
     url: img.url,
-    alt: img.alt_text,
+    alt: productImageAlt(img.alt_text, productName, img.variant_id ? variantNames.get(img.variant_id) : null),
     sortOrder: img.sort_order,
     variantId: img.variant_id ?? null,
     isPrimary: !!img.is_primary,
   }
 }
 
-function mapSupabaseVariant(variant: SupabaseProductVariant, images: ProductImage[]): ProductVariant {
+function mapSupabaseVariant(variant: SupabaseProductVariant, images: ProductImage[], product: SupabaseProduct): ProductVariant {
+  // A size's own compare-at price wins; the product-level one only applies to a single-size product, since one
+  // "was" price can't be true for every size.
+  const compareAt =
+    variant.compare_at_price ?? ((product.variants ?? []).filter((v) => v.is_active !== false).length === 1 ? product.compare_at_price : null)
   return {
     id: variant.id,
     name: variant.name,
     price: variant.price,
+    compareAtPrice: compareAt && compareAt > variant.price ? compareAt : undefined,
     stockStatus: variant.stock_status as 'in_stock' | 'low_stock' | 'out_of_stock',
     stockCount: variant.stock_count,
     sku: variant.sku,

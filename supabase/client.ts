@@ -35,6 +35,10 @@ export interface SupabaseProduct {
   is_imported: boolean
   is_hard_leaf?: boolean
   is_featured: boolean
+  sort_position?: number | null
+  low_stock_threshold?: number | null
+  meta_title?: string | null
+  meta_description?: string | null
   category_id: string
   category_name: string
   category_slug: string
@@ -87,6 +91,7 @@ export interface SupabaseProductVariant {
   stock_status: string
   stock_count: number
   is_default: boolean
+  compare_at_price?: number | null
   // false = retired: removed in the admin panel but kept because past orders reference it
   is_active?: boolean
 }

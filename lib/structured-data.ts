@@ -15,7 +15,7 @@ export function generateOrganizationSchema() {
     "@context": "https://schema.org",
     "@type": ["Store", "LocalBusiness"],
     "@id": `${BASE_URL}/#business`,
-    "name": "Muffin Greenhouse",
+    "name": "Muffin Plants",
     "url": BASE_URL,
     "logo": `${BASE_URL}/logo-nav.png`, // /images/logo.svg never existed (404)
     "image": `${BASE_URL}/opengraph-image.png`,
@@ -58,55 +58,89 @@ export function generateWebSiteSchema() {
     "@type": "WebSite",
     "@id": `${BASE_URL}/#website`,
     "url": BASE_URL,
-    "name": "Muffin Greenhouse",
+    "name": "Muffin Plants",
     "inLanguage": "en-PK",
     "publisher": { "@id": `${BASE_URL}/#business` }
   }
 }
 
 /**
- * Generates Product schema for a single product
+ * Product schema for a product page. One Offer per size (inside an AggregateOffer when prices differ), each with its
+ * own SKU, price and availability, so search results show the real "from" price and stock.
+ *
+ * Not included on purpose: shippingDetails (the fee depends on the city and parcel weight, which schema.org can't
+ * express per city; a single number would be wrong for most customers) and hasMerchantReturnPolicy (the real policy,
+ * a damage claim within 2 hours for a replacement or store credit, has no schema.org equivalent). Search Console
+ * lists both as optional "missing field" notes, which don't stop the product appearing.
  */
 export function generateProductSchema(product: Product, rating?: { average: number; count: number }) {
-  // Google rejects an empty image: omit the field entirely when the product has no photo yet.
-  const mainImage = product.images.length > 0 ? product.images[0].url : undefined
-  
-  // Map stockStatus to schema.org availability
+  const url = `${BASE_URL}/shop/product/${product.slug}`
   const availabilityMap = {
     "in_stock": "https://schema.org/InStock",
     "low_stock": "https://schema.org/LimitedAvailability",
     "out_of_stock": "https://schema.org/OutOfStock"
   } as const
-  
-  const offers = {
+
+  // Every size's own photos, card photo first. Google rejects an empty image, so the field is omitted without one.
+  const images = [...new Set([...product.images, ...product.variants.flatMap((v) => v.images ?? [])].map((img) => img.url))]
+
+  const sizes = product.variants.length > 0
+    ? product.variants
+    : [{ id: product.id, name: product.name, price: product.price, stockStatus: product.stockStatus, sku: product.id }]
+  const offers = sizes.map((v) => ({
     "@type": "Offer",
-    "price": product.price,
+    ...(product.variants.length > 1 ? { "name": `${product.name}, ${v.name}` } : {}),
+    "sku": v.sku,
+    "price": v.price,
     "priceCurrency": "PKR",
-    "availability": availabilityMap[product.stockStatus],
-    "url": `${BASE_URL}/shop/product/${product.slug}`,
-    "itemCondition": "https://schema.org/NewCondition"
-    // ponytail: shippingDetails removed. It declared a 0 PKR shipping rate, i.e. "free delivery" in search
-    // results, but delivery costs Rs 400+ (see lib/delivery-fee.ts). Re-add with real rates if wanted.
-  }
-  
+    "availability": availabilityMap[v.stockStatus],
+    "url": url,
+    "itemCondition": "https://schema.org/NewCondition",
+    "seller": { "@id": `${BASE_URL}/#business` },
+  }))
+  const prices = sizes.map((v) => v.price)
+  const bestAvailability = sizes.some((v) => v.stockStatus !== "out_of_stock")
+    ? (sizes.some((v) => v.stockStatus === "in_stock") ? availabilityMap.in_stock : availabilityMap.low_stock)
+    : availabilityMap.out_of_stock
+
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": product.name,
     ...(product.description ? { "description": product.description } : {}),
-    ...(mainImage ? { "image": product.images.map((img) => img.url) } : {}),
-    "sku": product.variants.length > 0 ? product.variants[0].sku : product.id,
+    ...(images.length > 0 ? { "image": images } : {}),
+    "sku": sizes[0].sku,
     "brand": {
       "@type": "Brand",
-      "name": "Muffin Greenhouse"
+      "name": "Muffin Plants"
     },
-    "offers": offers,
+    "offers": offers.length === 1
+      ? offers[0]
+      : {
+          "@type": "AggregateOffer",
+          "priceCurrency": "PKR",
+          "lowPrice": Math.min(...prices),
+          "highPrice": Math.max(...prices),
+          "offerCount": offers.length,
+          "availability": bestAvailability,
+          "offers": offers,
+        },
     "category": product.category.name,
-    "url": `${BASE_URL}/shop/product/${product.slug}`,
+    "url": url,
     ...(rating && rating.count > 0
       ? { "aggregateRating": { "@type": "AggregateRating", "ratingValue": rating.average.toFixed(1), "reviewCount": rating.count } }
       : {})
   }
+}
+
+/** Breadcrumb for a product page: Home > Shop > Category > Product. */
+export function generateProductBreadcrumb(product: Pick<Product, "name" | "slug" | "category">) {
+  return generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Shop", url: "/shop/all" },
+    ...(product.category.slug ? [{ name: product.category.name, url: `/shop/${product.category.slug}` }] : []),
+    { name: product.name, url: `/shop/product/${product.slug}` },
+  ])
 }
 
 /**
