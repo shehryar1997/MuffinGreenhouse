@@ -652,7 +652,7 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
       <p className="text-sm font-medium text-forest-700 mb-3">Choose your delivery option</p>
       {isKarachi ? (
         <div className="flex flex-col gap-3">
-          <button type="button" onClick={() => onSelect("pickup")} className={`p-4 border-2 rounded-xl text-left transition-all ${deliveryType === "pickup" ? "border-clay-500 bg-clay-50" : "border-forest-200"}`}>
+          <button type="button" onClick={() => onSelect("pickup")} className={`p-4 border-2 rounded-xl text-left transition-all ${deliveryType === "pickup" ? "border-clay-500 bg-clay-50 dark:bg-clay-500/10" : "border-forest-200"}`}>
             <div className="flex items-start gap-3">
               <div className={`p-2 rounded-lg ${deliveryType === "pickup" ? "bg-clay-500 text-white" : "bg-forest-100 text-forest-600"}`}><Package className="w-5 h-5" /></div>
               <div className="flex-1">
@@ -662,7 +662,7 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
               </div>
             </div>
           </button>
-          <button type="button" onClick={() => onSelect("delivery")} className={`p-4 border-2 rounded-xl text-left transition-all ${deliveryType === "delivery" ? "border-clay-500 bg-clay-50" : "border-forest-200"}`}>
+          <button type="button" onClick={() => onSelect("delivery")} className={`p-4 border-2 rounded-xl text-left transition-all ${deliveryType === "delivery" ? "border-clay-500 bg-clay-50 dark:bg-clay-500/10" : "border-forest-200"}`}>
             <div className="flex items-start gap-3">
               <div className={`p-2 rounded-lg ${deliveryType === "delivery" ? "bg-clay-500 text-white" : "bg-forest-100 text-forest-600"}`}><Truck className="w-5 h-5" /></div>
               <div className="flex-1">
@@ -675,7 +675,7 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
         </div>
       ) : city ? (
         <div className="flex flex-col gap-3">
-          <button type="button" onClick={() => onSelect("delivery")} className={`p-4 border-2 rounded-xl text-left transition-all ${deliveryType === "delivery" ? "border-clay-500 bg-clay-50" : "border-forest-200"}`}>
+          <button type="button" onClick={() => onSelect("delivery")} className={`p-4 border-2 rounded-xl text-left transition-all ${deliveryType === "delivery" ? "border-clay-500 bg-clay-50 dark:bg-clay-500/10" : "border-forest-200"}`}>
             <div className="flex items-start gap-3">
               <div className={`p-2 rounded-lg ${deliveryType === "delivery" ? "bg-clay-500 text-white" : "bg-forest-100 text-forest-600"}`}><Truck className="w-5 h-5" /></div>
               <div className="flex-1">

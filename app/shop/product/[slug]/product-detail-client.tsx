@@ -167,7 +167,7 @@ export function ProductDetailClient({ product, reviewsSlot, rating }: ProductDet
                 <div className="flex flex-wrap gap-2">
                   {product.variants.map((v) => (
                     <button key={v.id} type="button" onClick={() => { setSelectedVariant(v); setShownImageId(null) }} aria-pressed={selectedVariant?.id === v.id} disabled={v.stockStatus === "out_of_stock"}
-                      className={`px-4 py-2 border-2 rounded-lg ${selectedVariant?.id === v.id ? "border-clay-500 bg-clay-50" : "border-forest-200 hover:border-forest-300 disabled:opacity-50"}`}>
+                      className={`px-4 py-2 border-2 rounded-lg ${selectedVariant?.id === v.id ? "border-clay-500 bg-clay-50 dark:bg-clay-500/10" : "border-forest-200 hover:border-forest-300 disabled:opacity-50"}`}>
                       <span className="text-sm font-medium">{v.name}</span>
                       <span className="ml-2 text-xs text-forest-500">{formatPrice(v.price)}</span>
                     </button>
