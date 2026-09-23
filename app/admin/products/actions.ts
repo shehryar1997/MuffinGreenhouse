@@ -631,7 +631,7 @@ export async function setVariantPhoto(productId: string, variantId: string, url:
   revalidateStorefront()
 }
 
-export type RestockLine = { variantId: string; stock: number; price: number }
+export type RestockLine = { variantId: string; stock: number; price: number; compareAt: number | null }
 
 /**
  * Quick restock / price change from the products list, without opening the whole form. Each changed size goes
@@ -644,13 +644,13 @@ export async function restockProduct(productId: string, lines: RestockLine[], no
 
   const { data: before, error: readError } = await supabaseAdmin
     .from("products")
-    .select("price, stock_status, variants:product_variants(id, stock_count, price, is_active)")
+    .select("price, stock_status, variants:product_variants(id, stock_count, price, compare_at_price, is_active)")
     .eq("id", productId)
     .maybeSingle()
   if (readError) return { error: readError.message }
   if (!before) return { error: "This product no longer exists. It may have been deleted." }
 
-  const current = new Map(((before.variants ?? []) as { id: string; stock_count: number; price: number; is_active: boolean | null }[]).map((v) => [v.id, v]))
+  const current = new Map(((before.variants ?? []) as { id: string; stock_count: number; price: number; compare_at_price: number | null; is_active: boolean | null }[]).map((v) => [v.id, v]))
   const cleanNote = String(note ?? "").trim().slice(0, 200)
   let changed = 0
   for (const line of lines) {
@@ -658,14 +658,24 @@ export async function restockProduct(productId: string, lines: RestockLine[], no
     if (!existing || existing.is_active === false) return { error: "One of the sizes no longer exists. Reload the page and try again." }
     if (!Number.isInteger(line.stock) || line.stock < 0 || line.stock > 1_000_000) return { error: "Stock must be a whole number, 0 or more." }
     if (!Number.isFinite(line.price) || line.price <= 0 || line.price > 10_000_000) return { error: "Every size needs a price greater than 0." }
-    if (line.stock === existing.stock_count && Number(line.price) === Number(existing.price)) continue
-    const { error } = await supabaseAdmin.rpc("admin_adjust_variant", {
-      p_variant_id: line.variantId,
-      p_stock: line.stock,
-      p_price: Number(line.price) === Number(existing.price) ? null : line.price,
-      p_note: cleanNote || null,
-    })
-    if (error) return { error: `Saving failed: ${error.message}` }
+    const compareAt = line.compareAt === null || line.compareAt === undefined || line.compareAt === 0 ? null : Number(line.compareAt)
+    if (compareAt !== null && (!Number.isFinite(compareAt) || compareAt > 10_000_000)) return { error: "Was price must be a valid number, or left empty." }
+    if (compareAt !== null && compareAt <= Number(line.price)) return { error: "The was price must be higher than the price, or left empty." }
+    const compareChanged = compareAt !== (existing.compare_at_price === null ? null : Number(existing.compare_at_price))
+    if (line.stock === existing.stock_count && Number(line.price) === Number(existing.price) && !compareChanged) continue
+    if (line.stock !== existing.stock_count || Number(line.price) !== Number(existing.price)) {
+      const { error } = await supabaseAdmin.rpc("admin_adjust_variant", {
+        p_variant_id: line.variantId,
+        p_stock: line.stock,
+        p_price: Number(line.price) === Number(existing.price) ? null : line.price,
+        p_note: cleanNote || null,
+      })
+      if (error) return { error: `Saving failed: ${error.message}` }
+    }
+    if (compareChanged) {
+      const { error } = await supabaseAdmin.from("product_variants").update({ compare_at_price: compareAt }).eq("id", line.variantId)
+      if (error) return { error: `Saving the was price failed: ${error.message}` }
+    }
     changed++
   }
   if (changed === 0) return undefined

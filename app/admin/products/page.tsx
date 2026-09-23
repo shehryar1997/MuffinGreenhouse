@@ -54,7 +54,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
     // Every photo belongs to a variant; the list thumbnail is the card variant's photo (worked out below).
     supabaseAdmin.from("product_images").select("product_id, variant_id, url, sort_order").not("variant_id", "is", null).order("sort_order"),
     // Active variants and their own photos, for the per-variant photo overlay on products that have several.
-    supabaseAdmin.from("product_variants").select("id, product_id, name, price, stock_count, is_active").order("sort_order"),
+    supabaseAdmin.from("product_variants").select("id, product_id, name, price, compare_at_price, stock_count, is_active").order("sort_order"),
     // Demand: people waiting for a restock, and wishlists.
     supabaseAdmin.from("stock_notifications").select("product_id").is("notified_at", null).limit(5000),
     supabaseAdmin.from("wishlist_items").select("product_id").limit(10000),
@@ -73,11 +73,11 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
     if (!photoByVariant.has(row.variant_id)) photoByVariant.set(row.variant_id, row.url)
   }
   // Active variants per product, each with its photo, and the product's thumbnail: the photo of its card variant.
-  const variantsByProduct = new Map<string, (VariantPhotoRow & { price: number; stock: number })[]>()
-  for (const row of (variantRows ?? []) as { id: string; product_id: string; name: string; price: number; stock_count: number | null; is_active: boolean | null }[]) {
+  const variantsByProduct = new Map<string, (VariantPhotoRow & { price: number; compareAt: number | null; stock: number })[]>()
+  for (const row of (variantRows ?? []) as { id: string; product_id: string; name: string; price: number; compare_at_price: number | null; stock_count: number | null; is_active: boolean | null }[]) {
     if (row.is_active === false) continue
     const list = variantsByProduct.get(row.product_id) ?? []
-    list.push({ id: row.id, name: row.name, price: Number(row.price), stock: row.stock_count ?? 0, url: photoByVariant.get(row.id) ?? null })
+    list.push({ id: row.id, name: row.name, price: Number(row.price), compareAt: row.compare_at_price === null ? null : Number(row.compare_at_price), stock: row.stock_count ?? 0, url: photoByVariant.get(row.id) ?? null })
     variantsByProduct.set(row.product_id, list)
   }
   const thumbnailFor = (productId: string, cardVariantId: string | null) => {
@@ -325,7 +325,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                             </ButtonLink>
                           )}
                           {variants.length > 0 && (
-                            <RestockButton productId={p.id} productName={p.name} sizes={variants.map((v) => ({ id: v.id, name: v.name, stock: v.stock, price: v.price }))} />
+                            <RestockButton productId={p.id} productName={p.name} sizes={variants.map((v) => ({ id: v.id, name: v.name, stock: v.stock, price: v.price, compareAt: v.compareAt }))} />
                           )}
                           <ButtonLink href={`/admin/products/${p.id}/edit`} size="sm">
                             Edit

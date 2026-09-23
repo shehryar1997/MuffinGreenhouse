@@ -6,9 +6,9 @@ import { Loader2, PackagePlus, X } from "lucide-react"
 import { buttonClass, inputClass } from "../_components/ui"
 import { restockProduct } from "./actions"
 
-export type RestockSize = { id: string; name: string; stock: number; price: number }
+export type RestockSize = { id: string; name: string; stock: number; price: number; compareAt: number | null }
 
-// Change stock and prices of a product's sizes straight from the list: the everyday job after a delivery arrives,
+// Change stock, prices and was prices of a product's sizes straight from the list: the everyday job after a delivery arrives,
 // without opening (and re-saving) the whole product form. Every change lands in the stock history with the note.
 export function RestockButton({ productId, productName, sizes }: { productId: string; productName: string; sizes: RestockSize[] }) {
   const [open, setOpen] = useState(false)
@@ -32,9 +32,12 @@ export function RestockButton({ productId, productName, sizes }: { productId: st
     setError(null)
     if (rows.some((r) => !Number.isInteger(r.stock) || r.stock < 0)) return setError("Stock must be a whole number, 0 or more.")
     if (rows.some((r) => !(r.price > 0))) return setError("Every size needs a price greater than 0.")
+    if (rows.some((r) => r.compareAt !== null && (Number.isNaN(r.compareAt) || r.compareAt < 0))) return setError("Was price must be a number, 0 or more, or left empty.")
+    const badWas = rows.find((r) => r.compareAt !== null && r.compareAt > 0 && r.compareAt <= r.price)
+    if (badWas) return setError(`“${badWas.name}”: the was price must be higher than its price, or left empty.`)
     startSaving(async () => {
       try {
-        const result = await restockProduct(productId, rows.map((r) => ({ variantId: r.id, stock: r.stock, price: r.price })), note)
+        const result = await restockProduct(productId, rows.map((r) => ({ variantId: r.id, stock: r.stock, price: r.price, compareAt: r.compareAt || null })), note)
         if (result?.error) setError(result.error)
         else setOpen(false)
       } catch {
@@ -51,7 +54,7 @@ export function RestockButton({ productId, productName, sizes }: { productId: st
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="admin-scope fixed inset-0 z-50 bg-ink/50" />
-        <Dialog.Content className="admin-scope fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-surface p-6 text-foreground shadow-lg">
+        <Dialog.Content className="admin-scope fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-surface p-6 text-foreground shadow-lg">
           <div className="flex items-start justify-between gap-4">
             <div>
               <Dialog.Title className="text-base font-semibold">Stock and prices</Dialog.Title>
@@ -68,6 +71,7 @@ export function RestockButton({ productId, productName, sizes }: { productId: st
                 <th scope="col" className="pb-2 font-medium">Size</th>
                 <th scope="col" className="w-24 pb-2 font-medium">In stock</th>
                 <th scope="col" className="w-28 pb-2 font-medium">Price (PKR)</th>
+                <th scope="col" className="w-28 pb-2 pl-2 font-medium">Was price</th>
               </tr>
             </thead>
             <tbody>
@@ -95,7 +99,7 @@ export function RestockButton({ productId, productName, sizes }: { productId: st
                         className={inputClass}
                       />
                     </td>
-                    <td className="py-2">
+                    <td className="py-2 pr-2">
                       <input
                         type="number"
                         min={1}
@@ -103,6 +107,18 @@ export function RestockButton({ productId, productName, sizes }: { productId: st
                         aria-label={`${r.name} price`}
                         value={Number.isNaN(r.price) ? "" : r.price}
                         onChange={(e) => update(r.id, { price: e.target.value === "" ? NaN : Number(e.target.value) })}
+                        className={inputClass}
+                      />
+                    </td>
+                    <td className="py-2">
+                      <input
+                        type="number"
+                        min={0}
+                        inputMode="decimal"
+                        aria-label={`${r.name} was price`}
+                        placeholder="None"
+                        value={r.compareAt === null || Number.isNaN(r.compareAt) ? "" : r.compareAt}
+                        onChange={(e) => update(r.id, { compareAt: e.target.value === "" ? null : Number(e.target.value) })}
                         className={inputClass}
                       />
                     </td>

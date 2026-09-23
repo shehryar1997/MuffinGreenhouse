@@ -160,6 +160,9 @@ export function CartDrawer() {
                   <Link href="/checkout" onClick={() => toggleCart(false)}>Checkout</Link>
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Plants are living things: the variety and quality will be the same as shown, but your plant can differ a little from the photo.
+                </p>
+                <p className="mt-2 text-center text-xs text-muted-foreground">
                   Pay by bank transfer, JazzCash or Easypaisa after you order. We hold your items for 24 hours.
                 </p>
                 <button 

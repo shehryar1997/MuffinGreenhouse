@@ -33,11 +33,16 @@ export default function TermsConditionsPage() {
               same box. They are tough, hardy plants and are not stressed by bare-root shipping. Simply pot the plant
               in fresh planting media using the pot provided (or your own) once it arrives.
             </p>
-            <h2 className="font-serif text-xl text-forest-950">5. Reviews</h2>
+            <h2 className="font-serif text-xl text-forest-950">5. Plant Variety &amp; Appearance</h2>
+            <p>
+              Plants are living things. The variety and quality you receive will be the same as shown on the product
+              page, but the exact plant can differ a little from the photo in leaf pattern, size, shape and colour.
+            </p>
+            <h2 className="font-serif text-xl text-forest-950">6. Reviews</h2>
             <p>No fake reviews. All reviews are authentic customer feedback.</p>
-            <h2 className="font-serif text-xl text-forest-950">6. Law</h2>
+            <h2 className="font-serif text-xl text-forest-950">7. Law</h2>
             <p>Governed by Pakistani law. Karachi jurisdiction.</p>
-            <h2 className="font-serif text-xl text-forest-950">7. Contact</h2>
+            <h2 className="font-serif text-xl text-forest-950">8. Contact</h2>
             <p>WhatsApp: +92 309 5360009 | E-mail: support@muffinplants.com | Instagram: @muffinsgreenhouse</p>
           </div>
         </div>
