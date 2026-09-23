@@ -44,6 +44,26 @@ function downloadCsv(filename: string, rows: string[][]) {
   URL.revokeObjectURL(url)
 }
 
+const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+const isXlsxFile = (file: File) => /\.xlsx$/i.test(file.name) || file.type === XLSX_TYPE
+
+// Cell values from a spreadsheet come back as numbers, booleans and Dates, not strings; everything downstream
+// (mapHeaders, rowToRecord, the enum/boolean parsers in lib/product-import) expects plain text, same as a CSV cell.
+function cellToText(v: unknown): string {
+  if (v === null || v === undefined) return ""
+  if (v instanceof Date) return v.toISOString().slice(0, 10)
+  return String(v)
+}
+
+// Parses a .csv or .xlsx file into the same rows-of-strings shape. The xlsx reader is loaded on demand so choosing
+// a CSV file (the common case) never pays for it.
+async function fileToTable(file: File): Promise<string[][]> {
+  if (!isXlsxFile(file)) return parseCsv(await file.text())
+  const { readSheet } = await import("read-excel-file/browser")
+  const rows = await readSheet(file) // first sheet only, same as opening the file and reading the active tab
+  return rows.map((row) => row.map(cellToText))
+}
+
 // Merges a dry-run preview's generated fields into a row's values, but only into cells the sheet left blank: an
 // edit the admin already made (or a value the sheet provided) is never overwritten.
 function mergePreview(values: ImportRecord, preview: ImportPreview): ImportRecord {
@@ -156,7 +176,12 @@ export function ProductCsvImport() {
     setMapping(null)
     if (file.size > MAX_FILE_BYTES) return setFileError("That file is larger than 2 MB. Split it into smaller files.")
 
-    const table = parseCsv(await file.text())
+    let table: string[][]
+    try {
+      table = await fileToTable(file)
+    } catch {
+      return setFileError(isXlsxFile(file) ? "Couldn't read this Excel file. Make sure it's a valid .xlsx file, not corrupted or password-protected." : "Couldn't read this file.")
+    }
     const headerCells = table[0] ?? []
     if (headerCells.every((c) => c.trim() === "")) return setFileError("The file is empty, or its first row isn't a header row.")
 
@@ -232,7 +257,7 @@ export function ProductCsvImport() {
     >
       <Dialog.Trigger className={buttonClass({ variant: "secondary" })}>
         <Upload className="h-4 w-4" aria-hidden />
-        Import CSV
+        Import CSV/Excel
       </Dialog.Trigger>
       <Dialog.Portal>
         {/* admin-scope: portalled to <body>, outside the admin theme, so the dialog brings the tokens with it. */}
@@ -243,7 +268,7 @@ export function ProductCsvImport() {
         >
           <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div>
-              <Dialog.Title className="font-sans text-base font-semibold tracking-normal">Import products from CSV</Dialog.Title>
+              <Dialog.Title className="font-sans text-base font-semibold tracking-normal">Import products from a spreadsheet</Dialog.Title>
               <Dialog.Description className="mt-1 text-[13px] leading-5 text-muted-foreground">
                 One product per row. Each column is matched to a field of the Add product form, and every row is checked with the same rules as the form.
               </Dialog.Description>
@@ -258,9 +283,9 @@ export function ProductCsvImport() {
               <>
                 <div className="rounded-lg border border-dashed border-input bg-muted/40 px-6 py-10 text-center">
                   <FileSpreadsheet className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden />
-                  <p className="mt-3 text-sm font-medium">Choose a .csv file</p>
+                  <p className="mt-3 text-sm font-medium">Choose a .csv or .xlsx file</p>
                   <p className="mx-auto mt-1 max-w-md text-[13px] leading-5 text-muted-foreground">
-                    Exported from Excel or Google Sheets (File → Download → CSV). Up to {MAX_IMPORT_ROWS} products and 2 MB per file. Products are saved as drafts unless the
+                    From Excel, Google Sheets, or a .csv export. Up to {MAX_IMPORT_ROWS} products and 2 MB per file. Products are saved as drafts unless the
                     <span className="font-mono"> published </span> column says yes.
                   </p>
                   <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -276,7 +301,7 @@ export function ProductCsvImport() {
                   <input
                     ref={fileInput}
                     type="file"
-                    accept=".csv,text/csv"
+                    accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     className="sr-only"
                     onChange={(e) => {
                       const file = e.target.files?.[0]
@@ -348,7 +373,8 @@ export function ProductCsvImport() {
                                     onClick={() =>
                                       setExpanded((current) => {
                                         const next = new Set(current)
-                                        next.has(row.line) ? next.delete(row.line) : next.add(row.line)
+                                        if (next.has(row.line)) next.delete(row.line)
+                                        else next.add(row.line)
                                         return next
                                       })
                                     }
