@@ -10,6 +10,7 @@ import { PublishToggle } from "./publish-toggle"
 import { BulkPublishButtons } from "./bulk-publish-buttons"
 import { RestockButton } from "./restock-button"
 import { ProductCsvUpdate } from "./product-csv-update"
+import { ProductCsvImport } from "./product-csv-import"
 import { DuplicateProductButton } from "./duplicate-product-button"
 import { readinessIssues, type ReadinessInput } from "@/lib/product-readiness"
 import { deleteProduct, deleteProducts, setProductPublished, setProductsPublished } from "./actions"
@@ -148,6 +149,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
               </a>
             )}
             {allProducts.length > 0 && <ProductCsvUpdate />}
+            <ProductCsvImport />
             <ButtonLink href="/admin/products/new" variant="primary">
               <Plus className="h-4 w-4" aria-hidden />
               Add product

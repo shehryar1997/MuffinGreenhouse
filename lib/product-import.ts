@@ -25,6 +25,10 @@ const SIMPLE_COLUMNS = [
   "soil", "fertilizer", "toxicity", "pet_safe_note", "meta_title", "meta_description",
 ] as const
 
+// Fields a variant slot has, in column order. sku and compare_at_price are both optional: sku is suggested from the
+// variant name when left blank (see suggestSkuSuffix), compare_at_price simply stays unset.
+const VARIANT_FIELDS = ["name", "sku", "price", "compare_at_price", "stock", "image_url"] as const
+
 /**
  * Every column, in form order, with the given number of variant slots. Photos belong to variants: each variant slot
  * has its own image_url, and image_url_1 is the photo of a product that has no variants (it is sold as a single
@@ -34,7 +38,7 @@ export function columnsFor(variantSlots: number): string[] {
   return [
     ...SIMPLE_COLUMNS,
     "image_url_1",
-    ...Array.from({ length: variantSlots }, (_, i) => ["name", "sku", "price", "stock", "image_url"].map((f) => `variant_${i + 1}_${f}`)).flat(),
+    ...Array.from({ length: variantSlots }, (_, i) => VARIANT_FIELDS.map((f) => `variant_${i + 1}_${f}`)).flat(),
   ]
 }
 
@@ -77,9 +81,16 @@ export function canonicalColumn(raw: string): string | null {
   // columns are still understood, those columns are just ignored.
   const image = key.match(/^(?:image_url|image|photo_url|photo)(?:_(\d+))?$/)
   if (image) return !image[1] || Number(image[1]) === 1 ? "image_url_1" : null
-  const variant = key.match(/^variant_(\d+)_(name|sku|price|stock|stock_count|image_url|image|photo_url|photo)$/)
+  const variant = key.match(/^variant_(\d+)_(name|sku|price|compare_at_price|compare_at|was_price|stock|stock_count|image_url|image|photo_url|photo)$/)
   if (variant) {
-    const field = variant[2] === "stock_count" ? "stock" : /^(image|photo)/.test(variant[2]) ? "image_url" : variant[2]
+    const field =
+      variant[2] === "stock_count"
+        ? "stock"
+        : /^(image|photo)/.test(variant[2])
+          ? "image_url"
+          : /^(compare_at|was_price)$/.test(variant[2])
+            ? "compare_at_price"
+            : variant[2]
     return `variant_${Number(variant[1])}_${field}`
   }
   return null
@@ -151,6 +162,59 @@ function cleanNumber(v: string | undefined): string {
 
 const matchIgnoringCase = (value: string, allowed: string[]) => allowed.find((a) => a.toLowerCase() === value.trim().toLowerCase())
 
+// Sizes get their conventional single/double-letter code; anything else falls back to a consonant-led abbreviation.
+// Both are guesses meant to be reviewed and edited in the import preview, not the last word on a SKU.
+const SIZE_SKU_SUFFIX: Record<string, string> = {
+  xs: "XS", "extra small": "XS", small: "S", s: "S",
+  medium: "M", m: "M", large: "L", l: "L",
+  xl: "XL", "extra large": "XL",
+}
+
+/** Best-guess SKU suffix for a variant name (e.g. "Striata" -> "STR", "Small" -> "S"). Meant to be reviewed, not trusted blindly: plant-trade abbreviations ("Marginata" -> "MR") aren't derivable from the word itself. */
+export function suggestSkuSuffix(name: string): string {
+  const known = SIZE_SKU_SUFFIX[name.trim().toLowerCase()]
+  if (known) return known
+  const letters = name.toUpperCase().replace(/[^A-Z]/g, "")
+  if (!letters) return "VAR"
+  const [first, ...rest] = letters
+  const consonants = rest.filter((c) => !"AEIOU".includes(c))
+  return (first + consonants.join("")).slice(0, 3) || letters.slice(0, 3)
+}
+
+// Cuts to at most `max` characters without splitting a word; falls back to a hard cut if the first word alone
+// would overshoot (so a single very long word never produces an empty string).
+function truncateAtWord(s: string, max: number): string {
+  const t = s.trim().replace(/\s+/g, " ")
+  if (t.length <= max) return t
+  const cut = t.slice(0, max)
+  const lastSpace = cut.lastIndexOf(" ")
+  return (lastSpace > max * 0.4 ? cut.slice(0, lastSpace) : cut).trim()
+}
+
+// products.actions.ts caps meta_title at 70 chars and meta_description at 170; these stay well inside both.
+const META_TITLE_MAX = 70
+const META_DESCRIPTION_MAX = 170
+
+/**
+ * A default SEO title when the sheet leaves one blank. Long botanical/cultivar names (e.g. "Sansevieria sp. Hallii
+ * Dark Pink Bat White Variegated") don't fit a search query, so this truncates to a searchable-length phrase at a
+ * word boundary rather than blindly appending boilerplate to the full name.
+ */
+export function suggestMetaTitle(name: string): string {
+  const n = name.trim()
+  if (!n) return ""
+  const suffix = " Price in Pakistan"
+  if (n.length + suffix.length <= META_TITLE_MAX) return `${n}${suffix}`
+  const truncated = truncateAtWord(n, META_TITLE_MAX - suffix.length)
+  return truncated ? `${truncated}${suffix}` : truncateAtWord(n, META_TITLE_MAX)
+}
+
+/** A default SEO description: the human-written short_description (more naturally searchable than a formal name), or a generic fallback, truncated to fit. */
+export function suggestMetaDescription(name: string, shortDescription: string): string {
+  const base = shortDescription.trim() || `Buy ${name.trim()} online in Pakistan. Nursery-grown, delivered nationwide.`
+  return truncateAtWord(base, META_DESCRIPTION_MAX)
+}
+
 // "Full sun" / "full-sun" / "FULL_SUN" -> "full_sun"; blank -> the form's default.
 const enumValue = (v: string | undefined, fallback: string) => {
   const s = (v ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_")
@@ -158,6 +222,13 @@ const enumValue = (v: string | undefined, fallback: string) => {
 }
 
 export type ImportLookups = { categories: string[]; useCaseTags: string[] }
+
+/** A generated field the import filled in because the sheet left it blank, for the review screen to show and let the admin edit before saving. */
+export type ImportPreview = {
+  metaTitle: string
+  metaDescription: string
+  variants: { slot: number; name: string; sku: string }[]
+}
 
 /**
  * Turns one row into the FormData the product form would submit. Returns an error message for anything that
@@ -167,7 +238,7 @@ export type ImportLookups = { categories: string[]; useCaseTags: string[] }
 export function recordToFormData(
   record: ImportRecord,
   lookups: ImportLookups
-): { formData: FormData; variantSkus: string[] } | { error: string } {
+): { formData: FormData; variantSkus: string[]; preview: ImportPreview } | { error: string } {
   const get = (k: string) => (record[k] ?? "").trim()
 
   let category = get("category_name")
@@ -181,11 +252,15 @@ export function recordToFormData(
   const fd = new FormData()
   fd.set("category_name", category)
   for (const k of [
-    "name", "sku", "description", "short_description", "meta_title", "meta_description",
+    "name", "sku", "description", "short_description",
     "light_summary", "water_summary", "light", "water", "humidity", "temperature", "soil", "fertilizer", "toxicity", "pet_safe_note",
   ]) {
     fd.set(k, get(k))
   }
+  const metaTitle = get("meta_title") || suggestMetaTitle(get("name"))
+  const metaDescription = get("meta_description") || suggestMetaDescription(get("name"), get("short_description"))
+  fd.set("meta_title", metaTitle)
+  fd.set("meta_description", metaDescription)
   fd.set("slug", recordSlug(record))
   for (const k of ["price", "compare_at_price", "stock_count", "low_stock_threshold", "box_height_cm", "box_width_cm", "box_breadth_cm", "weight_kg"]) {
     fd.set(k, cleanNumber(record[k]))
@@ -217,18 +292,29 @@ export function recordToFormData(
       .filter((n) => Number.isInteger(n))
       .sort((a, b) => a - b)
   const variantSkus: string[] = []
+  const variantPreview: ImportPreview["variants"] = []
+  const usedSuffixes = new Set<string>()
   for (const n of slots(/^variant_(\d+)_name$/)) {
     const name = get(`variant_${n}_name`)
     if (!name) continue
     const price = cleanNumber(record[`variant_${n}_price`])
     if (!price) return { error: `Variant ${n} (\u201c${name}\u201d) needs a price.` }
-    const sku = get(`variant_${n}_sku`) || `${get("sku")}-${variantSkus.length + 1}`
+    let sku = get(`variant_${n}_sku`)
+    if (!sku) {
+      let suffix = suggestSkuSuffix(name)
+      let i = 2
+      while (usedSuffixes.has(suffix)) suffix = `${suggestSkuSuffix(name)}${i++}`
+      usedSuffixes.add(suffix)
+      sku = `${get("sku")}-${suffix}`
+    }
     variantSkus.push(sku)
+    variantPreview.push({ slot: n, name, sku })
     fd.append("variant_id", "")
     fd.append("variant_key", String(n))
     fd.append("variant_name", name)
     fd.append("variant_sku", sku)
     fd.append("variant_price", price)
+    fd.append("variant_compare_at", cleanNumber(record[`variant_${n}_compare_at_price`]))
     fd.append("variant_stock", cleanNumber(record[`variant_${n}_stock`]) || "0")
     fd.append("variant_photo", get(`variant_${n}_image_url`))
   }
@@ -239,7 +325,7 @@ export function recordToFormData(
     variantSkus.push(`${get("sku")}-1`)
   }
 
-  return { formData: fd, variantSkus }
+  return { formData: fd, variantSkus, preview: { metaTitle, metaDescription, variants: variantPreview } }
 }
 
 /** The downloadable template: every column, plus two example rows (auto-skipped on import). */
@@ -258,9 +344,11 @@ export function templateRows(): string[][] {
     humidity: "Average to high", temperature: "18-30 C", soil: "Chunky, well-draining aroid mix",
     fertilizer: "Balanced liquid feed monthly in the growing season", toxicity: "Toxic if ingested", pet_safe_note: "Keep away from cats and dogs",
     meta_title: "Monstera Deliciosa Price in Pakistan", meta_description: "Buy Monstera Deliciosa in Pakistan. Nursery-grown, delivered nationwide.",
-    variant_1_name: 'Medium - 6" pot', variant_1_sku: `${EXAMPLE_SKU_PREFIX}AROID-001-MED`, variant_1_price: "3500", variant_1_stock: "15",
+    variant_1_name: 'Medium - 6" pot', variant_1_sku: `${EXAMPLE_SKU_PREFIX}AROID-001-MED`, variant_1_price: "3500", variant_1_compare_at_price: "4200", variant_1_stock: "15",
     variant_1_image_url: "https://images.muffinplants.com/products/example-medium.avif",
-    variant_2_name: 'Large - 8" pot', variant_2_sku: `${EXAMPLE_SKU_PREFIX}AROID-001-LRG`, variant_2_price: "5500", variant_2_stock: "10",
+    // Leaving variant_2_sku blank shows the auto-generated SKU: main SKU + a guessed suffix from the variant name,
+    // editable in the import preview before anything is saved.
+    variant_2_name: 'Large - 8" pot', variant_2_price: "5500", variant_2_stock: "10",
     variant_2_image_url: "https://images.muffinplants.com/products/example-large.avif",
   }
   const pot: ImportRecord = {
@@ -276,7 +364,14 @@ export function templateRows(): string[][] {
 /* ------------------------------------------------------------------ export */
 
 export type ExportProduct = { id: string; published_at: string | null; use_case_tags: string[] | null } & Record<string, unknown>
-export type ExportVariant = { name: string; sku: string; price: number | string; stock_count: number | null; image_url: string | null }
+export type ExportVariant = {
+  name: string
+  sku: string
+  price: number | string
+  compare_at_price: number | string | null
+  stock_count: number | null
+  image_url: string | null
+}
 
 const BOOLEAN_COLUMNS = new Set(["is_new_arrival", "is_pet_safe", "is_imported", "is_featured"])
 const cellText = (v: unknown) => (v === null || v === undefined ? "" : String(v))
@@ -310,11 +405,11 @@ export function productsToRows(products: ExportProduct[], variants: Map<string, 
       if (col === "use_case_tags") return (p.use_case_tags ?? []).join("; ")
       if (col === "image_url_1") return isStandardOnly(all) ? cellText(all[0].image_url) : ""
 
-      const variant = col.match(/^variant_(\d+)_(name|sku|price|stock|image_url)$/)
+      const variant = col.match(/^variant_(\d+)_(name|sku|price|compare_at_price|stock|image_url)$/)
       if (variant) {
         const v = vars[Number(variant[1]) - 1]
         if (!v) return ""
-        return cellText(variant[2] === "stock" ? v.stock_count : v[variant[2] as "name" | "sku" | "price" | "image_url"])
+        return cellText(variant[2] === "stock" ? v.stock_count : v[variant[2] as "name" | "sku" | "price" | "compare_at_price" | "image_url"])
       }
       return cellText(p[col])
     })

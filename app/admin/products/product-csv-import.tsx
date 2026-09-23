@@ -1,8 +1,8 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { Fragment, useRef, useState } from "react"
 import * as Dialog from "@radix-ui/react-dialog"
-import { Download, FileSpreadsheet, Loader2, Upload, X } from "lucide-react"
+import { ChevronDown, ChevronRight, Download, FileSpreadsheet, Loader2, Upload, X } from "lucide-react"
 import { parseCsv, toCsv } from "@/lib/csv"
 import {
   MAX_IMPORT_ROWS,
@@ -13,13 +13,14 @@ import {
   rowToRecord,
   templateRows,
   type HeaderMapping,
+  type ImportPreview,
   type ImportRecord,
 } from "@/lib/product-import"
-import { Alert, Badge, ButtonLink, TableShell, Td, Th, Thead, Tr, buttonClass, type Tone } from "../_components/ui"
+import { Alert, Badge, ButtonLink, TableShell, Td, Th, Thead, Tr, buttonClass, inputClass, type Tone } from "../_components/ui"
 import { importProductRows, type ImportRowResult } from "./actions"
 
 type RowStatus = "checking" | "ready" | "error" | "skipped" | "imported"
-type Row = { line: number; values: ImportRecord; status: RowStatus; message?: string }
+type Row = { line: number; values: ImportRecord; status: RowStatus; message?: string; preview?: ImportPreview; rechecking?: boolean }
 type Stage = "pick" | "checking" | "review" | "importing" | "done"
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024
@@ -43,6 +44,19 @@ function downloadCsv(filename: string, rows: string[][]) {
   URL.revokeObjectURL(url)
 }
 
+// Merges a dry-run preview's generated fields into a row's values, but only into cells the sheet left blank: an
+// edit the admin already made (or a value the sheet provided) is never overwritten.
+function mergePreview(values: ImportRecord, preview: ImportPreview): ImportRecord {
+  const next = { ...values }
+  if (!next.meta_title?.trim()) next.meta_title = preview.metaTitle
+  if (!next.meta_description?.trim()) next.meta_description = preview.metaDescription
+  for (const v of preview.variants) {
+    const col = `variant_${v.slot}_sku`
+    if (!next[col]?.trim()) next[col] = v.sku
+  }
+  return next
+}
+
 export function ProductCsvImport() {
   const [open, setOpen] = useState(false)
   const [stage, setStage] = useState<Stage>("pick")
@@ -51,10 +65,12 @@ export function ProductCsvImport() {
   const [rows, setRows] = useState<Row[]>([])
   const [fileError, setFileError] = useState<string | null>(null)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
+  const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const fileInput = useRef<HTMLInputElement>(null)
 
   const busy = stage === "checking" || stage === "importing"
   const count = (status: RowStatus) => rows.filter((r) => r.status === status).length
+  const rechecking = rows.some((r) => r.rechecking)
 
   function reset() {
     setStage("pick")
@@ -63,6 +79,7 @@ export function ProductCsvImport() {
     setRows([])
     setFileError(null)
     setProgress({ done: 0, total: 0 })
+    setExpanded(new Set())
   }
 
   function applyResults(results: ImportRowResult[], okStatus: RowStatus) {
@@ -71,9 +88,48 @@ export function ProductCsvImport() {
       current.map((row) => {
         const res = byLine.get(row.line)
         if (!res) return row
-        return res.ok ? { ...row, status: okStatus, message: undefined } : { ...row, status: "error", message: res.message }
+        if (!res.ok) return { ...row, status: "error", message: res.message }
+        return {
+          ...row,
+          status: okStatus,
+          message: undefined,
+          preview: res.preview ?? row.preview,
+          values: res.preview ? mergePreview(row.values, res.preview) : row.values,
+        }
       })
     )
+  }
+
+  // Re-validates one row after the admin edits a generated field (a guessed variant SKU, the SEO title/description)
+  // so a clash (duplicate SKU, etc.) introduced by the edit is caught before Import is enabled.
+  async function recheckRow(line: number) {
+    setRows((current) => current.map((r) => (r.line === line ? { ...r, rechecking: true } : r)))
+    const row = rows.find((r) => r.line === line)
+    if (!row) return
+    try {
+      const { results, error } = await importProductRows([{ line, values: row.values }], true)
+      if (error) throw new Error(error)
+      const res = results[0]
+      setRows((current) =>
+        current.map((r) =>
+          r.line !== line
+            ? r
+            : res?.ok
+              ? { ...r, status: "ready", message: undefined, preview: res.preview ?? r.preview, rechecking: false }
+              : { ...r, status: "error", message: res?.message ?? "Couldn't check this row.", rechecking: false }
+        )
+      )
+    } catch (err) {
+      setRows((current) =>
+        current.map((r) =>
+          r.line === line ? { ...r, status: "error", message: err instanceof Error ? err.message : "Couldn't check this row.", rechecking: false } : r
+        )
+      )
+    }
+  }
+
+  function editRow(line: number, column: string, value: string) {
+    setRows((current) => current.map((r) => (r.line === line ? { ...r, values: { ...r.values, [column]: value } } : r)))
   }
 
   // Sends rows to the server a few at a time. A failed call marks just that batch as errored.
@@ -269,6 +325,7 @@ export function ProductCsvImport() {
                   <TableShell className="rounded-none border-0" minWidth="min-w-[40rem]">
                     <Thead>
                       <tr>
+                        <Th />
                         <Th>Row</Th>
                         <Th>Product</Th>
                         <Th>Category</Th>
@@ -279,24 +336,54 @@ export function ProductCsvImport() {
                     <tbody>
                       {rows.map((row) => {
                         const s = STATUS_LABEL[row.status]
+                        const canEdit = row.status !== "skipped" && row.status !== "checking"
+                        const isOpen = expanded.has(row.line)
                         return (
-                          <Tr key={row.line} className="align-top">
-                            <Td className="tabular-nums text-muted-foreground">{row.line}</Td>
-                            <Td>
-                              <p className="font-medium">{row.values.name || <span className="text-muted-foreground">(no name)</span>}</p>
-                              <p className="font-mono text-xs text-muted-foreground">{row.values.sku}</p>
-                              {row.message && <p className={row.status === "error" ? "mt-1 text-xs text-red-700" : "mt-1 text-xs text-muted-foreground"}>{row.message}</p>}
-                            </Td>
-                            <Td>{row.values.category_name}</Td>
-                            <Td align="right" className="tabular-nums">{row.values.price}</Td>
-                            <Td>
-                              {row.status === "checking" ? (
-                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Checking" />
-                              ) : (
-                                <Badge tone={s.tone}>{s.label}</Badge>
-                              )}
-                            </Td>
-                          </Tr>
+                          <Fragment key={row.line}>
+                            <Tr className="align-top">
+                              <Td className="w-8 pr-0">
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpanded((current) => {
+                                        const next = new Set(current)
+                                        next.has(row.line) ? next.delete(row.line) : next.add(row.line)
+                                        return next
+                                      })
+                                    }
+                                    aria-label={isOpen ? "Hide generated fields" : "Edit generated fields"}
+                                    aria-expanded={isOpen}
+                                    className="rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                  >
+                                    {isOpen ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronRight className="h-4 w-4" aria-hidden />}
+                                  </button>
+                                )}
+                              </Td>
+                              <Td className="tabular-nums text-muted-foreground">{row.line}</Td>
+                              <Td>
+                                <p className="font-medium">{row.values.name || <span className="text-muted-foreground">(no name)</span>}</p>
+                                <p className="font-mono text-xs text-muted-foreground">{row.values.sku}</p>
+                                {row.message && <p className={row.status === "error" ? "mt-1 text-xs text-red-700" : "mt-1 text-xs text-muted-foreground"}>{row.message}</p>}
+                              </Td>
+                              <Td>{row.values.category_name}</Td>
+                              <Td align="right" className="tabular-nums">{row.values.price}</Td>
+                              <Td>
+                                {row.status === "checking" || row.rechecking ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Checking" />
+                                ) : (
+                                  <Badge tone={s.tone}>{s.label}</Badge>
+                                )}
+                              </Td>
+                            </Tr>
+                            {isOpen && canEdit && (
+                              <tr className="border-b border-border bg-muted/30">
+                                <td colSpan={6} className="px-4 py-3">
+                                  <RowEditPanel row={row} onEdit={(column, value) => editRow(row.line, column, value)} onBlur={() => void recheckRow(row.line)} />
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
                         )
                       })}
                     </tbody>
@@ -315,7 +402,7 @@ export function ProductCsvImport() {
                 <button type="button" onClick={reset} className={buttonClass({ variant: "ghost" })}>
                   Choose another file
                 </button>
-                <button type="button" onClick={() => void startImport()} disabled={ready === 0} className={buttonClass({ variant: "primary" })}>
+                <button type="button" onClick={() => void startImport()} disabled={ready === 0 || rechecking} className={buttonClass({ variant: "primary" })}>
                   Import {ready} product{ready === 1 ? "" : "s"}
                 </button>
               </>
@@ -346,6 +433,59 @@ export function ProductCsvImport() {
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  )
+}
+
+// Fields the import filled in on its own when the sheet left them blank: a guessed variant SKU, and a truncated
+// SEO title/description. Shown for review so nothing untrustworthy gets saved silently; editing re-checks the row
+// (via the parent's onBlur) since an edit can introduce a clash the first check didn't see.
+function RowEditPanel({ row, onEdit, onBlur }: { row: Row; onEdit: (column: string, value: string) => void; onBlur: () => void }) {
+  const variantSlots = Object.keys(row.values)
+    .map((k) => Number(k.match(/^variant_(\d+)_name$/)?.[1]))
+    .filter((n) => Number.isInteger(n) && row.values[`variant_${n}_name`]?.trim())
+    .sort((a, b) => a - b)
+
+  const field = (label: string, column: string, maxLength: number) => (
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
+      <input
+        type="text"
+        value={row.values[column] ?? ""}
+        maxLength={maxLength}
+        onChange={(e) => onEdit(column, e.target.value)}
+        onBlur={onBlur}
+        className={inputClass}
+      />
+    </label>
+  )
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">Generated automatically because the sheet left these blank. Edit anything before importing.</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {field("SEO title", "meta_title", 70)}
+        {field("SEO description", "meta_description", 170)}
+      </div>
+      {variantSlots.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">Variant SKUs</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {variantSlots.map((n) => (
+              <label key={n} className="block">
+                <span className="mb-1 block text-xs text-muted-foreground">{row.values[`variant_${n}_name`]}</span>
+                <input
+                  type="text"
+                  value={row.values[`variant_${n}_sku`] ?? ""}
+                  onChange={(e) => onEdit(`variant_${n}_sku`, e.target.value)}
+                  onBlur={onBlur}
+                  className={`${inputClass} font-mono`}
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

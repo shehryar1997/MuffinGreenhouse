@@ -7,7 +7,7 @@ import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { isMangaveCategory } from "@/lib/shipping"
 import { isAllowedImageUrl } from "@/lib/image-hosts"
 import { BAD_BULK_REQUEST, BAD_BULK_UPDATE_REQUEST, cleanBulkIds, type BulkDeleteResult, type BulkUpdateResult } from "@/lib/admin-bulk"
-import { recordToFormData, type ImportRecord } from "@/lib/product-import"
+import { recordToFormData, type ImportPreview, type ImportRecord } from "@/lib/product-import"
 import { redirect } from "next/navigation"
 import { revalidatePath, revalidateTag } from "next/cache"
 import { PRODUCTS_CACHE_TAG } from "@/lib/cache-tags"
@@ -364,7 +364,10 @@ export async function createProduct(formData: FormData): Promise<ProductActionRe
 }
 
 export type ImportRowInput = { line: number; values: ImportRecord }
-export type ImportRowResult = { line: number; ok: boolean; message?: string }
+// `preview` is only present on a successful dry run: fields the import generated because the sheet left them
+// blank (a guessed variant SKU, a truncated SEO title/description), so the review screen can show and let the
+// admin edit them before anything is saved.
+export type ImportRowResult = { line: number; ok: boolean; message?: string; preview?: ImportPreview }
 
 const MAX_ROWS_PER_CALL = 25
 
@@ -380,7 +383,7 @@ export async function importProductRows(rows: ImportRowInput[], dryRun: boolean)
   const results = new Map<number, ImportRowResult>()
   const fail = (line: number, message: string) => results.set(line, { line, ok: false, message })
 
-  const checked: { line: number; formData: FormData; sku: string; slug: string; variantSkus: string[] }[] = []
+  const checked: { line: number; formData: FormData; sku: string; slug: string; variantSkus: string[]; preview: ImportPreview }[] = []
   for (const { line, values } of rows) {
     const built = recordToFormData(values, lookups)
     if ("error" in built) {
@@ -392,7 +395,14 @@ export async function importProductRows(rows: ImportRowInput[], dryRun: boolean)
       fail(line, parsed.error)
       continue
     }
-    checked.push({ line, formData: built.formData, sku: parsed.fields.sku as string, slug: parsed.fields.slug as string, variantSkus: built.variantSkus })
+    checked.push({
+      line,
+      formData: built.formData,
+      sku: parsed.fields.sku as string,
+      slug: parsed.fields.slug as string,
+      variantSkus: built.variantSkus,
+      preview: built.preview,
+    })
   }
 
   // SKUs and slugs are UNIQUE: report a clash by name up front instead of as a database error.
@@ -420,7 +430,7 @@ export async function importProductRows(rows: ImportRowInput[], dryRun: boolean)
         continue
       }
       if (dryRun) {
-        results.set(c.line, { line: c.line, ok: true })
+        results.set(c.line, { line: c.line, ok: true, preview: c.preview })
         continue
       }
       try {

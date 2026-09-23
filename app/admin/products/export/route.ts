@@ -55,7 +55,11 @@ export async function GET(request: Request) {
         supabaseAdmin.from("product_images").select("variant_id, url, sort_order").not("variant_id", "is", null).order("id").range(from, to) as unknown as Page<ImageRow>
       ),
       fetchAll<VariantRow>((from, to) =>
-        supabaseAdmin.from("product_variants").select("id, product_id, name, sku, price, stock_count, sort_order, is_active").order("id").range(from, to) as unknown as Page<VariantRow>
+        supabaseAdmin
+          .from("product_variants")
+          .select("id, product_id, name, sku, price, compare_at_price, stock_count, sort_order, is_active")
+          .order("id")
+          .range(from, to) as unknown as Page<VariantRow>
       ),
     ])
   } catch (err) {
@@ -79,7 +83,14 @@ export async function GET(request: Request) {
   for (const [productId, list] of groupBy(variants.filter((v) => v.is_active !== false))) {
     variantsByProduct.set(
       productId,
-      [...list].sort(bySort).map((v) => ({ name: v.name, sku: v.sku, price: v.price, stock_count: v.stock_count, image_url: photoByVariant.get(v.id) ?? null }))
+      [...list].sort(bySort).map((v) => ({
+        name: v.name,
+        sku: v.sku,
+        price: v.price,
+        compare_at_price: v.compare_at_price,
+        stock_count: v.stock_count,
+        image_url: photoByVariant.get(v.id) ?? null,
+      }))
     )
   }
 
