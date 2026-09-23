@@ -23,15 +23,11 @@ export interface Product {
   metaTitle?: string
   metaDescription?: string
   price: number
-  compareAtPrice?: number
   currency: string
   stockStatus: "in_stock" | "low_stock" | "out_of_stock"
   stockCount: number
   images: ProductImage[]
   careInfo: CareInfo
-  /** Short care lines for cards, e.g. "Bright, indirect" / "Water weekly". */
-  lightSummary?: string
-  waterSummary?: string
   variants: ProductVariant[]
   /** The variant whose photo represents the product on cards and lists; also the one preselected on its page. */
   cardVariantId?: string | null

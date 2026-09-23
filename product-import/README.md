@@ -32,14 +32,11 @@ Both are built from the product name (and category) at import time:
 | `name` | 3–120 characters, must contain letters. |
 | `category` | Exactly one of: Agaves, Aroids, Cacti & Succulents, Fertilizer, Hoyas, Mangaves, Orchids, Other Equipment, Planting Media, Pots, Sansevierias |
 | `description` | 10–5000 characters. |
-| `price` | PKR, greater than 0. |
 
 ## Optional
 | Column | Rule / default |
 |---|---|
 | `short_description` | Up to 300 characters. |
-| `compare_at_price` | Original price; must be higher than `price`, else leave blank. |
-| `stock_count` | Whole number. Blank = 0. |
 | `low_stock_threshold` | Whole number. Blank = 10. |
 | `weight_kg` | **Required (> 0) for Fertilizer, Other Equipment, Planting Media, Pots**: delivery is 120 PKR per kg. Optional for plants. |
 | `box_height_cm`, `box_width_cm`, `box_breadth_cm` | Shipping box size, plants only. |
@@ -57,13 +54,12 @@ Both are built from the product name (and category) at import time:
 | `size` | small, medium (default), large |
 | `is_pet_safe`, `is_imported` | yes / no |
 | `use_case_tags` | Separate several with `\|`. Allowed: Air-Purifying, Balcony & Rooftop, Beginner-Proof, Low-Light Survivors, Pet-Safe, Statement Plants |
-| `light_summary`, `water_summary` | Short one-liners shown on the product page. |
 | `light`, `water`, `humidity`, `temperature`, `soil`, `fertilizer`, `toxicity`, `pet_safe_note` | Longer care text. |
 
-## Variants (optional: sizes / pot types)
-Up to 3 per product: `variant_N_name`, `variant_N_sku`, `variant_N_price`, `variant_N_stock`, `variant_N_image_url` (N = 1, 2, 3).
+## Variants (needed to publish)
+Up to 3 per product: `variant_N_name`, `variant_N_sku`, `variant_N_price`, `variant_N_compare_at_price`, `variant_N_stock`, `variant_N_image_url` (N = 1, 2, 3). Price, was price, stock and photo are set per variant.
 - A variant needs at least a name and a price. The first one is the default.
 - `variant_N_sku` blank = `<product sku>-N`. Leave it blank unless you need a specific one; variant SKUs must be unique.
-- `variant_N_image_url` is that variant's photo (optional here; it must be an uploaded photo from your image host). It can also be added later from the admin.
-- With variants, the product's own `price` and `stock_count` are ignored: the shop shows "Starting from" the lowest variant price, and stock is the total of the variants.
-- Leave all the variant columns blank for a product with no variants. It is then sold as a single "Standard" variant using `price` and `stock_count`, and `image_url_1` is its photo.
+- `variant_N_image_url` is that variant's photo (needed to publish; it must be an uploaded photo from your image host). It can also be added later from the admin.
+- The shop shows "Starting from" the lowest variant price, and stock is the total of the variants. A product that comes in one size gets a single variant (for example "Standard").
+- A row with no variants imports as a draft. `published = yes` is rejected until at least one variant, with a photo, is added.

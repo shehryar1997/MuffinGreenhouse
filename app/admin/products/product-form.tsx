@@ -27,9 +27,6 @@ type ExistingProduct = {
   description: string
   short_description: string | null
   category_name: string
-  price: number
-  compare_at_price: number | null
-  stock_count: number
   low_stock_threshold: number
   difficulty: string
   light_requirement: string
@@ -50,8 +47,6 @@ type ExistingProduct = {
   soil: string | null
   fertilizer: string | null
   toxicity: string | null
-  light_summary: string | null
-  water_summary: string | null
   pet_safe_note: string | null
   box_height_cm: number | null
   box_width_cm: number | null
@@ -111,9 +106,6 @@ const PREFILL_VALUE_FIELDS = [
   "category_name",
   "description",
   "short_description",
-  "price",
-  "compare_at_price",
-  "stock_count",
   "low_stock_threshold",
   "difficulty",
   "light_requirement",
@@ -128,8 +120,6 @@ const PREFILL_VALUE_FIELDS = [
   "soil",
   "fertilizer",
   "toxicity",
-  "light_summary",
-  "water_summary",
   "pet_safe_note",
   "box_height_cm",
   "box_width_cm",
@@ -150,8 +140,8 @@ export function ProductForm({
   product?: ExistingProduct
   action: (formData: FormData) => Promise<ProductActionResult>
 }) {
-  // The first photo of each existing variant. A product with no variants yet is sold as one "Standard" variant
-  // built from its own price and stock (created when it is saved); its photo is `standard`.
+  // The first photo of each existing variant. A product can be saved as a draft with no variants, but needs at least
+  // one (with a photo) to be published.
   const [variants, setVariants] = useState<VariantRow[]>(() => {
     const photoByVariant = new Map<string, string>()
     for (const image of product?.images ?? []) {
@@ -159,12 +149,6 @@ export function ProductForm({
     }
     return (product?.variants ?? []).map((v) => newVariantRow(v, (v.id && photoByVariant.get(v.id)) || ""))
   })
-  const [standard, setStandard] = useState<PhotoState>(() => ({
-    // A legacy product (no variants, photos from before) keeps its first photo as the Standard variant's.
-    photo_url: product?.variants?.length ? "" : (product?.images?.[0]?.url ?? ""),
-    uploading: false,
-    error: null,
-  }))
   // Which variant's photo the shop card shows. null = automatic (the cheapest variant that has a photo).
   const [cardKey, setCardKey] = useState<number | null>(() => variants.find((v) => v.id && v.id === product?.card_variant_id)?.key ?? null)
   const [wantsPublish, setWantsPublish] = useState(!!product?.published_at)
@@ -278,7 +262,7 @@ export function ProductForm({
 
   const namedVariants = variants.filter((v) => v.name.trim())
   const hasVariants = namedVariants.length > 0
-  const uploadingCount = variants.filter((v) => v.uploading).length + (standard.uploading ? 1 : 0)
+  const uploadingCount = variants.filter((v) => v.uploading).length
 
   // The card shows the ticked variant, or (nothing ticked) the cheapest one that has a photo.
   const cheapestWithPhotoKey = [...namedVariants]
@@ -287,9 +271,7 @@ export function ProductForm({
   const effectiveCardKey = namedVariants.some((v) => v.key === cardKey) ? cardKey : (cheapestWithPhotoKey ?? namedVariants[0]?.key ?? null)
 
   // Why Published can't be ticked yet (the server enforces the same rule).
-  const publishProblem = publishBlocker(
-    hasVariants ? namedVariants.map((v) => ({ name: v.name, hasPhoto: !!v.photo_url })) : [{ name: "Standard", hasPhoto: !!standard.photo_url }]
-  )
+  const publishProblem = publishBlocker(namedVariants.map((v) => ({ name: v.name, hasPhoto: !!v.photo_url })))
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -313,10 +295,10 @@ export function ProductForm({
     setVariants((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   }
 
-  // Uploads one photo (downscaled, converted to AVIF, stored in R2) into a variant row or the Standard slot. On
-  // failure the row keeps its previous photo and shows the error, so nothing is lost silently.
-  async function uploadPhoto(target: number | "standard", file: File) {
-    const patch = (p: Partial<PhotoState>) => (target === "standard" ? setStandard((s) => ({ ...s, ...p })) : updateVariant(target, p))
+  // Uploads one photo (downscaled, converted to AVIF, stored in R2) into a variant row. On failure the row keeps
+  // its previous photo and shows the error, so nothing is lost silently.
+  async function uploadPhoto(key: number, file: File) {
+    const patch = (p: Partial<PhotoState>) => updateVariant(key, p)
     patch({ uploading: true, error: null })
     try {
       patch({ photo_url: await uploadAdminImage(file, "products"), uploading: false })
@@ -396,7 +378,7 @@ export function ProductForm({
                       <span className="font-mono text-[13px] font-medium">{c.sku}</span>
                       <span className="text-muted-foreground">
                         {" "}
-                        · {c.category_name ?? "no category"} · size {c.size ?? "?"} · PKR {c.price} · stock {c.stock_count ?? 0}
+                        · {c.category_name ?? "no category"} · size {c.size ?? "?"}
                       </span>
                     </button>
                   </li>
@@ -449,29 +431,10 @@ export function ProductForm({
         </FormSection>
 
         <FormSection
-          title="Pricing & stock"
-          description={
-            hasVariants
-              ? "Price and stock come from the variants below: the shop shows “Starting from” the lowest price, and stock is their total. Stock status (In stock / Low stock / Out of stock) is worked out automatically."
-              : "Stock status (In stock / Low stock / Out of stock) is worked out automatically. Without variants, this product is sold as a single “Standard” option with this price and stock."
-          }
+          title="Stock & shipping"
+          description="Price, was price and stock are set per variant in the Variants section below: the shop shows “Starting from” the lowest price, and stock is the total. Stock status (In stock / Low stock / Out of stock) is worked out automatically."
         >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {!hasVariants && (
-              <Field label="Price (PKR)" required>
-                <input type="number" name="price" defaultValue={product?.price} required className={inputClass} />
-              </Field>
-            )}
-            {!hasVariants && (
-              <Field label="Was price" hint="Shown struck through when higher than the price.">
-                <input type="number" name="compare_at_price" defaultValue={product?.compare_at_price ?? ""} className={inputClass} />
-              </Field>
-            )}
-            {!hasVariants && (
-              <Field label="Stock count" required>
-                <input type="number" name="stock_count" defaultValue={product?.stock_count ?? 0} required className={inputClass} />
-              </Field>
-            )}
             <Field label="Low-stock level" required hint="“Only N left” shows at or below this.">
               <input
                 type="number"
@@ -602,14 +565,6 @@ export function ProductForm({
         </FormSection>
 
         <FormSection title="Care info" description="Shown on the product page." className={isPlantCategory ? undefined : "hidden"}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Light summary (short)">
-              <input name="light_summary" defaultValue={product?.light_summary ?? ""} className={inputClass} />
-            </Field>
-            <Field label="Water summary (short)">
-              <input name="water_summary" defaultValue={product?.water_summary ?? ""} className={inputClass} />
-            </Field>
-          </div>
           <Field label="Light (detail)">
             <textarea name="light" defaultValue={product?.light ?? ""} rows={2} className={textareaClass} />
           </Field>
@@ -657,22 +612,9 @@ export function ProductForm({
           description="Every product needs at least one variant, and every variant needs its own photo, showing the exact plant or item you will ship (not a reference image). The variant ticked under Card is the photo shown on the shop grid, with the lowest variant price. Photos are converted to AVIF and stored in Cloudflare R2; replaced ones are deleted when you save."
         >
           {variants.length === 0 ? (
-            <div className="flex items-center gap-3 rounded-md border border-border p-3">
-              <input type="hidden" name="standard_photo" value={standard.photo_url} />
-              <VariantPhoto
-                url={standard.photo_url}
-                uploading={standard.uploading}
-                error={standard.error}
-                onPick={(file) => void uploadPhoto("standard", file)}
-                onClear={() => setStandard((s) => ({ ...s, photo_url: "", error: null }))}
-              />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">Photo</p>
-                <p className="text-xs text-muted-foreground">
-                  No variants: this product is sold as one option using the price and stock above. Add variants below for different sizes or pot types.
-                </p>
-              </div>
-            </div>
+            <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
+              No variants yet. You can save this as a draft, but it can only be published once it has at least one variant with a price, stock and photo. Use a single variant (for example “Standard”) for a product that comes in one size.
+            </p>
           ) : (
             <div className="space-y-3">
               <div className={`hidden gap-2 px-0.5 text-xs font-medium text-muted-foreground sm:grid ${VARIANT_COLUMNS}`} aria-hidden>
@@ -761,11 +703,7 @@ export function ProductForm({
           )}
           <button
             type="button"
-            onClick={() => {
-              // Adding the first variant carries over the photo already chosen for the single "Standard" option.
-              setVariants([...variants, newVariantRow(undefined, variants.length === 0 ? standard.photo_url : "")])
-              if (variants.length === 0) setStandard({ photo_url: "", uploading: false, error: null })
-            }}
+            onClick={() => setVariants([...variants, newVariantRow()])}
             className={buttonClass({ variant: "secondary", size: "sm" })}
           >
             <Plus className="h-4 w-4" aria-hidden />

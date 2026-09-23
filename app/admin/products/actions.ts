@@ -25,9 +25,6 @@ const PREFILL_COLUMNS = [
   "category_name",
   "description",
   "short_description",
-  "price",
-  "compare_at_price",
-  "stock_count",
   "low_stock_threshold",
   "difficulty",
   "light_requirement",
@@ -46,8 +43,6 @@ const PREFILL_COLUMNS = [
   "soil",
   "fertilizer",
   "toxicity",
-  "light_summary",
-  "water_summary",
   "pet_safe_note",
   "box_height_cm",
   "box_width_cm",
@@ -63,9 +58,6 @@ export type PrefillProduct = {
   category_name: string | null
   description: string
   short_description: string | null
-  price: number
-  compare_at_price: number | null
-  stock_count: number | null
   low_stock_threshold: number | null
   difficulty: string | null
   light_requirement: string
@@ -84,8 +76,6 @@ export type PrefillProduct = {
   soil: string | null
   fertilizer: string | null
   toxicity: string | null
-  light_summary: string | null
-  water_summary: string | null
   pet_safe_note: string | null
   box_height_cm: number | null
   box_width_cm: number | null
@@ -184,15 +174,14 @@ function parseProductFields(
   // No hard length cap: the form shows amber/red past the recommended length (search engines will just truncate
   // it), but that's a nudge, not something that should block saving or publishing.
 
-  // With variants, the product's own price and stock are derived from them (the lowest variant price and the total
-  // stock; the database keeps the stock total in step as orders come in). With none, a single "Standard" variant
-  // is created from the product's own price and stock.
+  // The product's own price and stock are derived from its variants (the lowest variant price and the total stock;
+  // the database keeps the stock total in step as orders come in). A draft may have no variants yet: it saves with
+  // price 0 and stock 0 and can't be published until a variant is added.
   const variantInputs = readVariantInputs(formData)
   const hasVariants = variantInputs.length > 0
-  const standardPhoto = text("standard_photo")
 
-  let price: number
-  let stockCount: number
+  let price = 0
+  let stockCount = 0
   if (hasVariants) {
     if (variantInputs.some((v) => !Number.isFinite(v.price) || v.price <= 0 || v.price > 10_000_000)) {
       return { error: "Every variant needs a price greater than 0." }
@@ -209,11 +198,6 @@ function parseProductFields(
     }
     price = Math.min(...variantInputs.map((v) => v.price))
     stockCount = variantInputs.reduce((sum, v) => sum + v.stock, 0)
-  } else {
-    price = Number(formData.get("price"))
-    if (!Number.isFinite(price) || price <= 0 || price > 10_000_000) return { error: "Price must be a number greater than 0." }
-    stockCount = Number(formData.get("stock_count") || 0)
-    if (!Number.isInteger(stockCount) || stockCount < 0 || stockCount > 1_000_000) return { error: "Stock must be a whole number, 0 or more." }
   }
   const lowStock = Number(formData.get("low_stock_threshold") ?? 3)
   if (!Number.isInteger(lowStock) || lowStock < 0 || lowStock > 100_000) return { error: "Low-stock alert level must be a whole number, 0 or more." }
@@ -230,7 +214,7 @@ function parseProductFields(
   }
 
   // next/image only loads from allow-listed hosts; an image on any other host would blank the product page.
-  for (const url of [...variantInputs.map((v) => v.photo), standardPhoto]) {
+  for (const url of variantInputs.map((v) => v.photo)) {
     if (url && !isAllowedImageUrl(url)) {
       return { error: "One of the photos isn't from an allowed image host. Remove it and upload the photo with the upload button instead." }
     }
@@ -239,14 +223,10 @@ function parseProductFields(
   // A product can only go live with at least one variant and a photo on every variant, so no page can show
   // another size's picture. Checked against the form's own rows: they are what will be saved.
   if (formData.get("published") === "on") {
-    const blocker = publishBlocker(
-      hasVariants ? variantInputs.map((v) => ({ name: v.name, hasPhoto: !!v.photo })) : [{ name: "Standard", hasPhoto: !!standardPhoto }]
-    )
+    const blocker = publishBlocker(variantInputs.map((v) => ({ name: v.name, hasPhoto: !!v.photo })))
     if (blocker) return { error: `Can't publish yet. ${blocker} Or untick Published to save it as a draft.` }
   }
 
-  // With several sizes the "was" price is set per size; a product-level one would only be true for one of them.
-  const compareAt = hasVariants ? null : optionalNumber(formData, "compare_at_price")
   const sortPosition = optionalNumber(formData, "sort_position")
   if (sortPosition === "invalid" || (typeof sortPosition === "number" && (!Number.isInteger(sortPosition) || sortPosition < 0 || sortPosition > 100_000))) {
     return { error: "Shop order must be a whole number (0 or more), or left empty." }
@@ -255,14 +235,9 @@ function parseProductFields(
   const boxHeight = optionalNumber(formData, "box_height_cm")
   const boxWidth = optionalNumber(formData, "box_width_cm")
   const boxBreadth = optionalNumber(formData, "box_breadth_cm")
-  if ([compareAt, weight, boxHeight, boxWidth, boxBreadth].includes("invalid")) {
-    return { error: "Compare-at price, weight and box dimensions must be valid numbers." }
+  if ([weight, boxHeight, boxWidth, boxBreadth].includes("invalid")) {
+    return { error: "Weight and box dimensions must be valid numbers." }
   }
-
-  if (typeof compareAt === "number" && compareAt <= price) {
-    return { error: "Compare-at (original) price must be higher than the selling price, or left empty." }
-  }
-  if (typeof compareAt === "number" && compareAt > 10_000_000) return { error: "Compare-at price is too large." }
 
   // Delivery for Tools & Equipment is charged per kg (120 PKR/kg), so a product without a
   // weight would ship for free -- refuse to save one.
@@ -284,7 +259,6 @@ function parseProductFields(
       // trg_sync_product_category trigger -- we only ever send the name here.
       category_name: categoryName,
       price,
-      compare_at_price: compareAt,
       currency: "PKR",
       stock_count: stockCount,
       low_stock_threshold: lowStock,
@@ -312,8 +286,6 @@ function parseProductFields(
       soil: careText("soil"),
       fertilizer: careText("fertilizer"),
       toxicity: careText("toxicity"),
-      light_summary: careText("light_summary"),
-      water_summary: careText("water_summary"),
       pet_safe_note: careText("pet_safe_note"),
       // trg_validate_product_tags rejects any value not already in
       // use_case_tags -- the form only offers valid checkboxes,

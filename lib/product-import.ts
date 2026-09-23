@@ -13,15 +13,15 @@ export const MAX_IMPORT_ROWS = 500
 export const IMPORT_VARIANT_SLOTS = 3
 
 // Columns every file must contain. Slug is not listed: it is generated from the name when left blank.
-export const REQUIRED_COLUMNS = ["name", "sku", "category_name", "description", "price"] as const
+export const REQUIRED_COLUMNS = ["name", "sku", "category_name", "description"] as const
 
 const SIMPLE_COLUMNS = [
   "name", "sku", "slug", "category_name", "short_description", "description",
-  "price", "compare_at_price", "stock_count", "low_stock_threshold",
+  "low_stock_threshold",
   "box_height_cm", "box_width_cm", "box_breadth_cm", "weight_kg",
   "difficulty", "light_requirement", "water_requirement", "size",
   "is_new_arrival", "is_pet_safe", "is_imported", "is_featured", "published",
-  "use_case_tags", "light_summary", "water_summary", "light", "water", "humidity", "temperature",
+  "use_case_tags", "light", "water", "humidity", "temperature",
   "soil", "fertilizer", "toxicity", "pet_safe_note", "meta_title", "meta_description",
 ] as const
 
@@ -30,14 +30,12 @@ const SIMPLE_COLUMNS = [
 const VARIANT_FIELDS = ["name", "sku", "price", "compare_at_price", "stock", "image_url"] as const
 
 /**
- * Every column, in form order, with the given number of variant slots. Photos belong to variants: each variant slot
- * has its own image_url, and image_url_1 is the photo of a product that has no variants (it is sold as a single
- * "Standard" variant).
+ * Every column, in form order, with the given number of variant slots. Price, was price, stock and the photo all
+ * belong to variants: each variant slot has its own. A row with no variants imports as a draft.
  */
 export function columnsFor(variantSlots: number): string[] {
   return [
     ...SIMPLE_COLUMNS,
-    "image_url_1",
     ...Array.from({ length: variantSlots }, (_, i) => VARIANT_FIELDS.map((f) => `variant_${i + 1}_${f}`)).flat(),
   ]
 }
@@ -50,9 +48,6 @@ const simple = new Set<string>(SIMPLE_COLUMNS)
 const ALIASES: Record<string, string> = {
   product_name: "name", product: "name", title: "name",
   category: "category_name",
-  price_pkr: "price", selling_price: "price",
-  compare_at: "compare_at_price", compare_at_price_pkr: "compare_at_price", original_price: "compare_at_price",
-  stock: "stock_count", quantity: "stock_count", qty: "stock_count",
   low_stock: "low_stock_threshold", low_stock_alert: "low_stock_threshold",
   weight: "weight_kg",
   box_height: "box_height_cm", box_width: "box_width_cm", box_breadth: "box_breadth_cm",
@@ -77,10 +72,7 @@ export function canonicalColumn(raw: string): string | null {
   if (!key) return null
   if (simple.has(key)) return key
   if (ALIASES[key]) return ALIASES[key]
-  // Only one product-level photo exists now (the Standard variant's); older sheets with image_url_2.. or alt-text
-  // columns are still understood, those columns are just ignored.
-  const image = key.match(/^(?:image_url|image|photo_url|photo)(?:_(\d+))?$/)
-  if (image) return !image[1] || Number(image[1]) === 1 ? "image_url_1" : null
+  // Photos belong to variants; older sheets' product-level image columns are ignored.
   const variant = key.match(/^variant_(\d+)_(name|sku|price|compare_at_price|compare_at|was_price|stock|stock_count|image_url|image|photo_url|photo)$/)
   if (variant) {
     const field =
@@ -279,7 +271,7 @@ export function recordToFormData(
   fd.set("category_name", category)
   for (const k of [
     "name", "sku", "description", "short_description",
-    "light_summary", "water_summary", "light", "water", "humidity", "temperature", "soil", "fertilizer", "toxicity", "pet_safe_note",
+    "light", "water", "humidity", "temperature", "soil", "fertilizer", "toxicity", "pet_safe_note",
   ]) {
     fd.set(k, get(k))
   }
@@ -288,7 +280,7 @@ export function recordToFormData(
   fd.set("meta_title", metaTitle)
   fd.set("meta_description", metaDescription)
   fd.set("slug", recordSlug(record))
-  for (const k of ["price", "compare_at_price", "stock_count", "low_stock_threshold", "box_height_cm", "box_width_cm", "box_breadth_cm", "weight_kg"]) {
+  for (const k of ["low_stock_threshold", "box_height_cm", "box_width_cm", "box_breadth_cm", "weight_kg"]) {
     fd.set(k, cleanNumber(record[k]))
   }
 
@@ -347,12 +339,6 @@ export function recordToFormData(
     fd.append("variant_photo", get(`variant_${n}_image_url`))
   }
 
-  // No variants: the product becomes a single "Standard" variant (made when it is saved) and image_url_1 is its photo.
-  if (variantSkus.length === 0) {
-    fd.set("standard_photo", get("image_url_1"))
-    variantSkus.push(`${get("sku")}-1`)
-  }
-
   return { formData: fd, variantSkus, preview: { metaTitle, metaDescription, variants: variantPreview } }
 }
 
@@ -362,12 +348,11 @@ export function templateRows(): string[][] {
     name: "Monstera Deliciosa", sku: `${EXAMPLE_SKU_PREFIX}AROID-001`, slug: "monstera-deliciosa", category_name: "Aroids",
     short_description: "Iconic split-leaf climber, easy to grow.",
     description: "A classic statement plant with large, fenestrated leaves. Thrives in bright indirect light.",
-    price: "3500", compare_at_price: "4200", stock_count: "25", low_stock_threshold: "10",
+    low_stock_threshold: "10",
     box_height_cm: "40", box_width_cm: "25", box_breadth_cm: "25", weight_kg: "1.2",
     difficulty: "beginner", light_requirement: "bright", water_requirement: "medium", size: "medium",
     is_new_arrival: "yes", is_pet_safe: "no", is_imported: "no", is_featured: "no", published: "no",
     use_case_tags: "Air-Purifying; Statement Plants",
-    light_summary: "Bright indirect light", water_summary: "When the top 2 in of soil is dry",
     light: "Bright, indirect light. Avoid harsh afternoon sun.", water: "Every 7-10 days; let the top layer dry out.",
     humidity: "Average to high", temperature: "18-30 C", soil: "Chunky, well-draining aroid mix",
     fertilizer: "Balanced liquid feed monthly in the growing season", toxicity: "Toxic if ingested", pet_safe_note: "Keep away from cats and dogs",
@@ -383,8 +368,9 @@ export function templateRows(): string[][] {
     name: "Terracotta Pot 6 inch", sku: `${EXAMPLE_SKU_PREFIX}POT-001`, slug: "terracotta-pot-6-inch", category_name: "Pots",
     short_description: "Classic unglazed terracotta pot.",
     description: "Breathable unglazed terracotta pot with a drainage hole, ideal for most houseplants.",
-    price: "450", stock_count: "60", low_stock_threshold: "10", weight_kg: "0.8", published: "no",
-    image_url_1: "https://images.muffinplants.com/products/example-pot.avif",
+    low_stock_threshold: "10", weight_kg: "0.8", published: "no",
+    variant_1_name: "Standard", variant_1_price: "450", variant_1_stock: "60",
+    variant_1_image_url: "https://images.muffinplants.com/products/example-pot.avif",
   }
   return [TEMPLATE_COLUMNS, ...[plant, pot].map((r) => TEMPLATE_COLUMNS.map((c) => r[c] ?? ""))]
 }
@@ -411,27 +397,19 @@ export const EXPORT_PRODUCT_COLUMNS = ["id", "published_at", ...SIMPLE_COLUMNS.f
 /**
  * Turns products into rows in the same layout as the import template, so an exported file opens in a spreadsheet
  * and maps back onto the form's fields with nothing ignored. The number of variant columns grows to fit the
- * product that has the most. `variants` must already be sorted and active-only, each with its photo. A product
- * whose only variant is the automatic "Standard" one is exported the way it was imported: no variant columns, its
- * photo in image_url_1.
+ * product that has the most. `variants` must already be sorted and active-only, each with its photo.
  */
 export function productsToRows(products: ExportProduct[], variants: Map<string, ExportVariant[]>): string[][] {
-  const isStandardOnly = (list: ExportVariant[]) => list.length === 1 && list[0].name.trim().toLowerCase() === "standard"
-  const namedVariants = (id: string) => {
-    const list = variants.get(id) ?? []
-    return isStandardOnly(list) ? [] : list
-  }
+  const namedVariants = (id: string) => variants.get(id) ?? []
   const variantSlots = Math.max(IMPORT_VARIANT_SLOTS, ...products.map((p) => namedVariants(p.id).length))
   const columns = columnsFor(variantSlots)
 
   const rows = products.map((p) => {
-    const all = variants.get(p.id) ?? []
     const vars = namedVariants(p.id)
     return columns.map((col) => {
       if (col === "published") return yesNo(p.published_at)
       if (BOOLEAN_COLUMNS.has(col)) return yesNo(p[col])
       if (col === "use_case_tags") return (p.use_case_tags ?? []).join("; ")
-      if (col === "image_url_1") return isStandardOnly(all) ? cellText(all[0].image_url) : ""
 
       const variant = col.match(/^variant_(\d+)_(name|sku|price|compare_at_price|stock|image_url)$/)
       if (variant) {

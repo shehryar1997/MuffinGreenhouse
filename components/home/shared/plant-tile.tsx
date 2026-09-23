@@ -7,8 +7,7 @@ import { formatPrice } from "@/lib/utils"
 import { displayPrice, startingFromPrice } from "@/lib/product-photos"
 import type { Product } from "@/types"
 
-const LIGHT: Record<string, string> = { low: "Low light", medium: "Medium light", bright: "Bright light", full_sun: "Full sun" }
-const WATER: Record<string, string> = { low: "Water rarely", medium: "Water weekly", high: "Water often" }
+import { LIGHT_LABEL as LIGHT, WATER_LABEL as WATER } from "@/lib/care-labels"
 
 /** One product on the homepage: its photo (or an illustration until there is one), name, price and a few care facts. */
 export function PlantTile({ product, ratio = "aspect-[4/5]", priority = false }: { product: Product; ratio?: string; priority?: boolean }) {
@@ -54,10 +53,10 @@ export function PlantTile({ product, ratio = "aspect-[4/5]", priority = false }:
         {isPlant && (
           <p className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <Sun className="h-3.5 w-3.5" aria-hidden="true" /> {product.lightSummary || LIGHT[product.lightRequirement] || "Light varies"}
+              <Sun className="h-3.5 w-3.5" aria-hidden="true" /> {LIGHT[product.lightRequirement] || "Light varies"}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Droplets className="h-3.5 w-3.5" aria-hidden="true" /> {product.waterSummary || WATER[product.waterRequirement] || "Water varies"}
+              <Droplets className="h-3.5 w-3.5" aria-hidden="true" /> {WATER[product.waterRequirement] || "Water varies"}
             </span>
             {product.isPetSafe && (
               <span className="inline-flex items-center gap-1.5 text-sprout-700">

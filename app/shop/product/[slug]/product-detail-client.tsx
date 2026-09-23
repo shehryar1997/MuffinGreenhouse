@@ -132,7 +132,7 @@ export function ProductDetailClient({ product, addOns = [], reviewsSlot, rating 
   const isOutOfStock = stockStatus === "out_of_stock"
   const allSoldOut = product.variants.length > 0 ? product.variants.every((v) => v.stockStatus === "out_of_stock") : isOutOfStock
   const currentPrice = selectedVariant?.price ?? product.price
-  const currentCompareAt = selectedVariant ? selectedVariant.compareAtPrice : product.compareAtPrice
+  const currentCompareAt = selectedVariant?.compareAtPrice
   const currentStockCount = selectedVariant?.stockCount ?? product.stockCount
 
   // Derived (not synced via an effect): a quantity chosen for a higher-stock

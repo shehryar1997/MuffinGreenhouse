@@ -15,7 +15,7 @@ export { shopByNeedIcons, useCases, categoryMeta } from "@/data/mock-products"
 // ============================================================================
 // NOTE: care info, category, and tags now live directly as flat columns on
 // `products` (light, water, humidity, temperature, soil, fertilizer, toxicity,
-// light_summary, water_summary, pet_safe_note, category_name, category_slug,
+// pet_safe_note, category_name, category_slug,
 // use_case_tags) -- no more joins needed for those. Only images
 // and variants remain separate linked tables, same as in Airtable.
 

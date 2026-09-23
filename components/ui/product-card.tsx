@@ -8,6 +8,7 @@ import { ShoppingBag, Heart, Eye } from "lucide-react"
 import { Product } from "@/types"
 import { formatPrice } from "@/lib/utils"
 import { isPlantProduct } from "@/lib/product-categories"
+import { LIGHT_LABEL, WATER_LABEL } from "@/lib/care-labels"
 import { displayPrice, startingFromPrice } from "@/lib/product-photos"
 import { cn } from "@/lib/utils"
 import { Badge } from "./badge"
@@ -79,8 +80,10 @@ export function ProductCard({ product, index = 0, className, sizes = "(max-width
 
   // One size: a struck-through "was" price when it has one.
   const onlySize = product.variants.length === 1 ? product.variants[0] : null
-  const wasPrice = onlySize?.compareAtPrice ?? (product.variants.length === 0 ? product.compareAtPrice : undefined)
-  const careLine = [product.lightSummary, product.waterSummary].filter(Boolean).join(" · ")
+  const wasPrice = onlySize?.compareAtPrice
+  const careLine = isPlantProduct(product)
+    ? [LIGHT_LABEL[product.lightRequirement], WATER_LABEL[product.waterRequirement]].filter(Boolean).join(" · ")
+    : ""
 
   // The card link and its buttons are siblings, not nested: a button inside a link is invalid markup that screen
   // readers announce as one confusing control.

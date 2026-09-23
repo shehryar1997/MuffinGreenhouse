@@ -22,7 +22,6 @@ export interface SupabaseProduct {
   description: string
   short_description: string | null
   price: number
-  compare_at_price: number | null
   currency: string
   stock_status: 'in_stock' | 'low_stock' | 'out_of_stock'
   stock_count: number
@@ -59,8 +58,6 @@ export interface SupabaseProduct {
   soil: string | null
   fertilizer: string | null
   toxicity: string | null
-  light_summary: string | null
-  water_summary: string | null
   pet_safe_note: string | null
 
   // Tags -- flat text[], was previously joined junction tables

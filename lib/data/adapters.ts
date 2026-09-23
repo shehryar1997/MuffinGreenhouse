@@ -16,7 +16,7 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
   // Every photo belongs to a variant. `images` holds the photos of the card variant (the one the admin ticked, else
   // the cheapest with a photo), so every card and page that reads images[0] gets the card photo; each variant
   // carries its own photos for the product page. A legacy product with no variants at all keeps showing its old
-  // photos until it is saved once (which gives it a Standard variant).
+  // photos (it can't be published without a variant).
   // Retired variants (is_active = false) are never offered for sale.
   const activeVariants = (row.variants ?? []).filter((v) => v.is_active !== false)
   const variantNames = new Map((row.variants ?? []).map((v) => [v.id, v.name]))
@@ -40,16 +40,13 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     metaTitle: row.meta_title?.trim() || undefined,
     metaDescription: row.meta_description?.trim() || undefined,
     price: row.price,
-    compareAtPrice: row.compare_at_price ?? undefined,
     currency: row.currency,
     stockStatus: row.stock_status,
     stockCount: row.stock_count,
     images: cardPhotos.length > 0 ? cardPhotos : legacyPhotos,
     cardVariantId,
     careInfo: mapSupabaseCareInfo(row),
-    lightSummary: isToolOrEquipment ? undefined : row.light_summary?.trim() || undefined,
-    waterSummary: isToolOrEquipment ? undefined : row.water_summary?.trim() || undefined,
-    variants: activeVariants.map((v) => mapSupabaseVariant(v, byVariant.get(v.id) ?? [], row)),
+    variants: activeVariants.map((v) => mapSupabaseVariant(v, byVariant.get(v.id) ?? [])),
     useCaseTags: isToolOrEquipment ? [] : row.use_case_tags ?? [],
     // The "New" badge lasts 14 days from publishing, even if the flag hasn't been cleared yet.
     isNewArrival: !!row.is_new_arrival && isWithinNewArrivalWindow(row.published_at, row.created_at),
@@ -103,11 +100,8 @@ function mapSupabaseImage(img: SupabaseProductImage, productName: string, varian
   }
 }
 
-function mapSupabaseVariant(variant: SupabaseProductVariant, images: ProductImage[], product: SupabaseProduct): ProductVariant {
-  // A size's own compare-at price wins; the product-level one only applies to a single-size product, since one
-  // "was" price can't be true for every size.
-  const compareAt =
-    variant.compare_at_price ?? ((product.variants ?? []).filter((v) => v.is_active !== false).length === 1 ? product.compare_at_price : null)
+function mapSupabaseVariant(variant: SupabaseProductVariant, images: ProductImage[]): ProductVariant {
+  const compareAt = variant.compare_at_price
   return {
     id: variant.id,
     name: variant.name,

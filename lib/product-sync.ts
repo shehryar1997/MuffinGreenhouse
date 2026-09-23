@@ -94,7 +94,7 @@ export async function syncVariantsAndPhotos(
   const photoError = await syncPhotos(productId, variants.photoByVariantId)
   if (photoError) return photoError
 
-  // The variant whose photo the shop card shows. Standard-only products have no choice to make (null = automatic).
+  // The variant whose photo the shop card shows (null = automatic: the cheapest variant with a photo).
   const cardKey = String(formData.get("card_variant") ?? "").trim()
   const cardVariantId = cardKey ? (variants.idByKey.get(cardKey) ?? null) : null
   if (cardVariantId !== currentCardVariantId) {
@@ -122,29 +122,8 @@ export async function syncVariants(productId: string, formData: FormData, fields
   if (readError) return { error: `Could not read the existing variants: ${readError.message}` }
   const existingIds = new Set((existing ?? []).map((v) => v.id as string))
 
-  // No variants entered: the product is sold as one "Standard" variant built from the product's own price and stock.
-  let inputs = named
-  if (named.length === 0) {
-    const standard = (existing ?? []).find((v) => String(v.name).trim().toLowerCase() === "standard")
-    inputs = [
-      {
-        id: (standard?.id as string | undefined) ?? "",
-        key: "standard",
-        name: "Standard",
-        sku: `${String(fields.sku)}-1`,
-        price: Number(fields.price),
-        stock: Number(fields.stock_count),
-        photo: String(formData.get("standard_photo") ?? "").trim(),
-        compareAt: (fields.compare_at_price as number | null) ?? null,
-        weightKg: null,
-        boxHeightCm: null,
-        boxWidthCm: null,
-        boxBreadthCm: null,
-      },
-    ]
-  }
-
-  const rows = inputs.map((r, i) => ({
+  // No variants entered: a draft with none (publishing needs at least one), so every stored variant is removed.
+  const rows = named.map((r, i) => ({
     id: r.id,
     key: r.key,
     photo: r.photo,
