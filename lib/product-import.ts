@@ -208,7 +208,8 @@ function truncateAtWord(s: string, max: number): string {
   return (lastSpace > max * 0.4 ? cut.slice(0, lastSpace) : cut).trim()
 }
 
-// products.actions.ts caps meta_title at 70 chars and meta_description at 170; these stay well inside both.
+// Nothing enforces these as hard limits (the form shows amber/red past them, but never blocks saving); they just
+// keep an auto-generated title/description at the length search engines actually display before truncating.
 const META_TITLE_MAX = 70
 const META_DESCRIPTION_MAX = 170
 

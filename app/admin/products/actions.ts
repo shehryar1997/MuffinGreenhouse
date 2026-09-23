@@ -181,9 +181,8 @@ function parseProductFields(
   }
   if (text("description").length < 10) return { error: "Description is too short. Write at least a sentence for customers." }
   if (text("description").length > 5000) return { error: "Description is too long (5,000 characters max)." }
-  if (text("short_description").length > 300) return { error: "The one-line summary is too long (300 characters max)." }
-  if (text("meta_title").length > 70) return { error: "SEO title is too long (70 characters max)." }
-  if (text("meta_description").length > 170) return { error: "SEO description is too long (170 characters max)." }
+  // No hard length cap: the form shows amber/red past the recommended length (search engines will just truncate
+  // it), but that's a nudge, not something that should block saving or publishing.
 
   // With variants, the product's own price and stock are derived from them (the lowest variant price and the total
   // stock; the database keeps the stock total in step as orders come in). With none, a single "Standard" variant

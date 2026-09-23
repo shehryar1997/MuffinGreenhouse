@@ -471,13 +471,12 @@ function RowEditPanel({ row, onEdit, onBlur }: { row: Row; onEdit: (column: stri
     .filter((n) => Number.isInteger(n) && row.values[`variant_${n}_name`]?.trim())
     .sort((a, b) => a - b)
 
-  const field = (label: string, column: string, maxLength: number) => (
+  const field = (label: string, column: string) => (
     <label className="block">
       <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
       <input
         type="text"
         value={row.values[column] ?? ""}
-        maxLength={maxLength}
         onChange={(e) => onEdit(column, e.target.value)}
         onBlur={onBlur}
         className={inputClass}
@@ -489,8 +488,8 @@ function RowEditPanel({ row, onEdit, onBlur }: { row: Row; onEdit: (column: stri
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">Generated automatically because the sheet left these blank. Edit anything before importing.</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        {field("SEO title", "meta_title", 70)}
-        {field("SEO description", "meta_description", 170)}
+        {field("SEO title", "meta_title")}
+        {field("SEO description", "meta_description")}
       </div>
       {variantSlots.length > 0 && (
         <div className="space-y-2">

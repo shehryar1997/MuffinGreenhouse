@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { SmartImage as Image } from "@/components/ui/smart-image"
 import { useRouter } from "next/navigation"
-import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer, PawPrint, PackageOpen, Truck, Wallet, ShieldCheck, MessageCircle } from "lucide-react"
+import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer, PawPrint, PackageOpen, Truck, Wallet, ShieldCheck, MessageCircle, Sprout, FlaskConical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn, formatPrice } from "@/lib/utils"
@@ -332,14 +332,30 @@ export function ProductDetailClient({ product, addOns = [], reviewsSlot, rating 
               )}
 
               {(product.careInfo.soil || product.careInfo.fertilizer) && (
-                <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {product.careInfo.soil && (
-                    <div><dt className="text-xs uppercase tracking-wide text-forest-500">Soil</dt><dd className="text-forest-900">{product.careInfo.soil}</dd></div>
+                    <div className={cn("flex items-start gap-3 p-4 rounded-xl border h-full", CARE_TONES.stone.card)}>
+                      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5", CARE_TONES.stone.chip)}>
+                        <Sprout className={cn("w-5 h-5", CARE_TONES.stone.icon)} aria-hidden="true" />
+                      </div>
+                      <div>
+                        <p className={cn("text-xs font-medium uppercase tracking-wide mb-1", CARE_TONES.stone.label)}>Soil</p>
+                        <p className={cn("text-sm font-semibold leading-relaxed", CARE_TONES.stone.text)}>{product.careInfo.soil}</p>
+                      </div>
+                    </div>
                   )}
                   {product.careInfo.fertilizer && (
-                    <div><dt className="text-xs uppercase tracking-wide text-forest-500">Fertilizer</dt><dd className="text-forest-900">{product.careInfo.fertilizer}</dd></div>
+                    <div className={cn("flex items-start gap-3 p-4 rounded-xl border h-full", CARE_TONES.emerald.card)}>
+                      <div className={cn("w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5", CARE_TONES.emerald.chip)}>
+                        <FlaskConical className={cn("w-5 h-5", CARE_TONES.emerald.icon)} aria-hidden="true" />
+                      </div>
+                      <div>
+                        <p className={cn("text-xs font-medium uppercase tracking-wide mb-1", CARE_TONES.emerald.label)}>Fertilizer</p>
+                        <p className={cn("text-sm font-semibold leading-relaxed", CARE_TONES.emerald.text)}>{product.careInfo.fertilizer}</p>
+                      </div>
+                    </div>
                   )}
-                </dl>
+                </div>
               )}
             </section>
             )}
@@ -400,6 +416,20 @@ const CARE_TONES: Record<string, { card: string; chip: string; icon: string; lab
     icon: "text-orange-600 dark:text-orange-300",
     label: "text-orange-700/80 dark:text-orange-300/80",
     text: "text-orange-900 dark:text-orange-100",
+  },
+  stone: {
+    card: "bg-stone-50 border-stone-200 dark:bg-stone-500/10 dark:border-stone-500/20",
+    chip: "bg-stone-200 dark:bg-stone-500/20",
+    icon: "text-stone-600 dark:text-stone-300",
+    label: "text-stone-700/80 dark:text-stone-300/80",
+    text: "text-stone-900 dark:text-stone-100",
+  },
+  emerald: {
+    card: "bg-emerald-50 border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-500/20",
+    chip: "bg-emerald-100 dark:bg-emerald-500/20",
+    icon: "text-emerald-600 dark:text-emerald-300",
+    label: "text-emerald-700/80 dark:text-emerald-300/80",
+    text: "text-emerald-900 dark:text-emerald-100",
   },
 }
 

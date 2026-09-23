@@ -428,7 +428,6 @@ export function ProductForm({
             <input
               name="short_description"
               defaultValue={product?.short_description ?? ""}
-              maxLength={300}
               onChange={(e) => setSeo((s) => ({ ...s, summary: e.target.value }))}
               placeholder="e.g. A fast-growing climber with deeply split leaves, easy in bright shade."
               className={inputClass}
@@ -641,10 +640,10 @@ export function ProductForm({
 
         <FormSection title="Search listing" description="How the product appears on Google and when its link is shared. Leave empty to use the name and summary.">
           <Field label="SEO title" hint={<CharCount value={seo.title} ideal={60} max={70}>e.g. “Monstera Deliciosa Price in Pakistan”.</CharCount>}>
-            <input name="meta_title" maxLength={70} defaultValue={product?.meta_title ?? ""} onChange={(e) => setSeo((s) => ({ ...s, title: e.target.value }))} className={inputClass} />
+            <input name="meta_title" defaultValue={product?.meta_title ?? ""} onChange={(e) => setSeo((s) => ({ ...s, title: e.target.value }))} className={inputClass} />
           </Field>
           <Field label="SEO description" hint={<CharCount value={seo.description} ideal={155} max={170}>Plant, size, a price hint and delivery.</CharCount>}>
-            <textarea name="meta_description" maxLength={170} rows={2} defaultValue={product?.meta_description ?? ""} onChange={(e) => setSeo((s) => ({ ...s, description: e.target.value }))} className={textareaClass} />
+            <textarea name="meta_description" rows={2} defaultValue={product?.meta_description ?? ""} onChange={(e) => setSeo((s) => ({ ...s, description: e.target.value }))} className={textareaClass} />
           </Field>
           <SearchPreview
             title={seo.title || (seo.name ? `${seo.name} Price in Pakistan` : "")}
