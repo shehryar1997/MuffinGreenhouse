@@ -57,7 +57,6 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     difficulty: row.difficulty,
     lightRequirement: row.light_requirement,
     waterRequirement: row.water_requirement,
-    size: row.size,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? row.created_at,
     // Shipping box dimensions

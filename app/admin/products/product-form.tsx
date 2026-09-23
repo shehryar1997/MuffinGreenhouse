@@ -31,7 +31,6 @@ type ExistingProduct = {
   difficulty: string
   light_requirement: string
   water_requirement: string
-  size: string
   is_new_arrival: boolean
   is_pet_safe: boolean
   is_imported: boolean
@@ -110,7 +109,6 @@ const PREFILL_VALUE_FIELDS = [
   "difficulty",
   "light_requirement",
   "water_requirement",
-  "size",
   "meta_title",
   "meta_description",
   "light",
@@ -157,7 +155,7 @@ export function ProductForm({
   // Search listing, previewed live as Google would show it.
   const [seo, setSeo] = useState({ name: product?.name ?? "", title: product?.meta_title ?? "", description: product?.meta_description ?? "", summary: product?.short_description ?? "", slug: product?.slug ?? "" })
   // Tools & Equipment (Fertilizer, Other Equipment, Pots, Planting Media) have no plant care
-  // info, size, box dimensions or tags -- and are delivered at 120 PKR per kg, so weight is mandatory.
+  // info, box dimensions or tags -- and are delivered at 120 PKR per kg, so weight is mandatory.
   const isPlantCategory = !isNonPlantCategoryName(categoryName)
   const weightRequired = !isPlantCategory
 
@@ -378,7 +376,7 @@ export function ProductForm({
                       <span className="font-mono text-[13px] font-medium">{c.sku}</span>
                       <span className="text-muted-foreground">
                         {" "}
-                        · {c.category_name ?? "no category"} · size {c.size ?? "?"}
+                        · {c.category_name ?? "no category"}
                       </span>
                     </button>
                   </li>
@@ -508,13 +506,6 @@ export function ProductForm({
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
-              </select>
-            </Field>
-            <Field label="Size">
-              <select name="size" defaultValue={product?.size ?? "medium"} className={inputClass}>
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
               </select>
             </Field>
           </div>

@@ -51,7 +51,6 @@ Both are built from the product name (and category) at import time:
 | `difficulty` | beginner (default), intermediate, expert |
 | `light_requirement` | low, medium (default), bright, full_sun |
 | `water_requirement` | low, medium (default), high |
-| `size` | small, medium (default), large |
 | `is_pet_safe`, `is_imported` | yes / no |
 | `use_case_tags` | Separate several with `\|`. Allowed: Air-Purifying, Balcony & Rooftop, Beginner-Proof, Low-Light Survivors, Pet-Safe, Statement Plants |
 | `light`, `water`, `humidity`, `temperature`, `soil`, `fertilizer`, `toxicity`, `pet_safe_note` | Longer care text. |

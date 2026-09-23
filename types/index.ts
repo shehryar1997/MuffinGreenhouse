@@ -42,7 +42,6 @@ export interface Product {
   difficulty: "beginner" | "intermediate" | "expert"
   lightRequirement: "low" | "medium" | "bright" | "full_sun"
   waterRequirement: "low" | "medium" | "high"
-  size: "small" | "medium" | "large"
   createdAt: string
   updatedAt: string
   // Shipping box dimensions for volumetric weight calculation (in centimeters)

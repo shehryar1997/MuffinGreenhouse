@@ -37,7 +37,6 @@ function product(id: string, variants: ProductVariant[], patch: Partial<Product>
     difficulty: "beginner",
     lightRequirement: "bright",
     waterRequirement: "medium",
-    size: "medium",
     createdAt: "2026-09-01",
     updatedAt: "2026-09-01",
     ...patch,

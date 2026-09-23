@@ -19,7 +19,7 @@ const SIMPLE_COLUMNS = [
   "name", "sku", "slug", "category_name", "short_description", "description",
   "low_stock_threshold",
   "box_height_cm", "box_width_cm", "box_breadth_cm", "weight_kg",
-  "difficulty", "light_requirement", "water_requirement", "size",
+  "difficulty", "light_requirement", "water_requirement",
   "is_new_arrival", "is_pet_safe", "is_imported", "is_featured", "published",
   "use_case_tags", "light", "water", "humidity", "temperature",
   "soil", "fertilizer", "toxicity", "pet_safe_note", "meta_title", "meta_description",
@@ -288,7 +288,6 @@ export function recordToFormData(
   fd.set("difficulty", enumValue(record.difficulty, ["beginner", "intermediate", "expert"], "beginner"))
   fd.set("light_requirement", enumValue(record.light_requirement, ["low", "medium", "bright", "full_sun"], "medium"))
   fd.set("water_requirement", enumValue(record.water_requirement, ["low", "medium", "high"], "medium"))
-  fd.set("size", enumValue(record.size, ["small", "medium", "large"], "medium"))
 
   for (const k of ["is_new_arrival", "is_pet_safe", "is_imported", "is_featured", "published"]) {
     if (truthy(record[k])) fd.set(k, "on")
@@ -350,7 +349,7 @@ export function templateRows(): string[][] {
     description: "A classic statement plant with large, fenestrated leaves. Thrives in bright indirect light.",
     low_stock_threshold: "10",
     box_height_cm: "40", box_width_cm: "25", box_breadth_cm: "25", weight_kg: "1.2",
-    difficulty: "beginner", light_requirement: "bright", water_requirement: "medium", size: "medium",
+    difficulty: "beginner", light_requirement: "bright", water_requirement: "medium",
     is_new_arrival: "yes", is_pet_safe: "no", is_imported: "no", is_featured: "no", published: "no",
     use_case_tags: "Air-Purifying; Statement Plants",
     light: "Bright, indirect light. Avoid harsh afternoon sun.", water: "Every 7-10 days; let the top layer dry out.",

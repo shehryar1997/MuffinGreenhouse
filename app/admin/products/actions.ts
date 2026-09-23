@@ -29,7 +29,6 @@ const PREFILL_COLUMNS = [
   "difficulty",
   "light_requirement",
   "water_requirement",
-  "size",
   "is_new_arrival",
   "is_pet_safe",
   "is_imported",
@@ -62,7 +61,6 @@ export type PrefillProduct = {
   difficulty: string | null
   light_requirement: string
   water_requirement: string | null
-  size: string | null
   is_new_arrival: boolean | null
   is_pet_safe: boolean | null
   is_imported: boolean | null
@@ -208,8 +206,7 @@ function parseProductFields(
     const enumError =
       oneOf("difficulty", ["beginner", "intermediate", "expert"], "Difficulty") ??
       oneOf("light_requirement", ["low", "medium", "bright", "full_sun"], "Light requirement") ??
-      oneOf("water_requirement", ["low", "medium", "high"], "Water requirement") ??
-      (text("size") ? oneOf("size", ["small", "medium", "large"], "Size") : null)
+      oneOf("water_requirement", ["low", "medium", "high"], "Water requirement")
     if (enumError) return { error: enumError }
   }
 
@@ -265,7 +262,6 @@ function parseProductFields(
       difficulty: isPlant ? text("difficulty") : null,
       light_requirement: isPlant ? text("light_requirement") : NON_PLANT_LIGHT_PLACEHOLDER,
       water_requirement: isPlant ? text("water_requirement") : null,
-      size: isPlant ? text("size") || null : null,
       is_new_arrival: formData.get("is_new_arrival") === "on",
       is_pet_safe: isPlant && formData.get("is_pet_safe") === "on",
       is_imported: isPlant && formData.get("is_imported") === "on",

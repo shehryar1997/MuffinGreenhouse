@@ -28,7 +28,6 @@ export interface SupabaseProduct {
   difficulty: 'beginner' | 'intermediate' | 'expert'
   light_requirement: 'low' | 'medium' | 'bright' | 'full_sun'
   water_requirement: 'low' | 'medium' | 'high'
-  size: 'small' | 'medium' | 'large'
   is_new_arrival: boolean
   is_pet_safe: boolean
   is_imported: boolean
