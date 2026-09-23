@@ -160,7 +160,24 @@ function cleanNumber(v: string | undefined): string {
   return /^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s) ? s.replace(/,/g, "") : s
 }
 
-const matchIgnoringCase = (value: string, allowed: string[]) => allowed.find((a) => a.toLowerCase() === value.trim().toLowerCase())
+// Case/punctuation-insensitive, e.g. "air-purifying" == "Air Purifying". Also folds a simple trailing plural
+// per word, so "Statement Plant" matches "Statement Plants".
+const normalizeLoose = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+const foldPlural = (s: string) => s.replace(/s\b/g, "")
+
+/**
+ * Matches a sheet value against a fixed list of allowed values (a category name, a use-case tag), tolerating the
+ * small mistakes a hand-typed sheet tends to have: wrong case, stray punctuation, and singular/plural ("Statement
+ * Plant" vs "Statement Plants"). Falls back to undefined (a real error) rather than guessing when nothing is close.
+ */
+const matchIgnoringCase = (value: string, allowed: string[]): string | undefined => {
+  const v = value.trim()
+  if (!v) return undefined
+  const exact = allowed.find((a) => a.toLowerCase() === v.toLowerCase())
+  if (exact) return exact
+  const folded = foldPlural(normalizeLoose(v))
+  return allowed.find((a) => foldPlural(normalizeLoose(a)) === folded)
+}
 
 // Sizes get their conventional single/double-letter code; anything else falls back to a consonant-led abbreviation.
 // Both are guesses meant to be reviewed and edited in the import preview, not the last word on a SKU.
@@ -215,10 +232,18 @@ export function suggestMetaDescription(name: string, shortDescription: string): 
   return truncateAtWord(base, META_DESCRIPTION_MAX)
 }
 
-// "Full sun" / "full-sun" / "FULL_SUN" -> "full_sun"; blank -> the form's default.
-const enumValue = (v: string | undefined, fallback: string) => {
-  const s = (v ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_")
-  return s || fallback
+// "Full sun" / "full-sun" / "FULL_SUN" -> "full_sun"; blank -> the form's default. If that doesn't land on one of
+// the allowed values, tries a looser word-overlap match ("bright light" -> "bright", "full sun exposure" ->
+// "full_sun") before giving up and returning the normalized-but-invalid text, so the form's own validation reports
+// a clear error rather than this silently guessing wrong.
+const enumValue = (v: string | undefined, allowed: string[], fallback: string) => {
+  const raw = (v ?? "").trim()
+  if (!raw) return fallback
+  const normalized = raw.toLowerCase().replace(/[\s-]+/g, "_")
+  if (allowed.includes(normalized)) return normalized
+  const words = new Set(raw.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean))
+  const loose = allowed.find((a) => a.split("_").every((part) => words.has(part)))
+  return loose ?? normalized
 }
 
 export type ImportLookups = { categories: string[]; useCaseTags: string[] }
@@ -267,17 +292,19 @@ export function recordToFormData(
   }
 
   // Plant-only selects fall back to the form's defaults when left blank.
-  fd.set("difficulty", enumValue(record.difficulty, "beginner"))
-  fd.set("light_requirement", enumValue(record.light_requirement, "medium"))
-  fd.set("water_requirement", enumValue(record.water_requirement, "medium"))
-  fd.set("size", enumValue(record.size, "medium"))
+  fd.set("difficulty", enumValue(record.difficulty, ["beginner", "intermediate", "expert"], "beginner"))
+  fd.set("light_requirement", enumValue(record.light_requirement, ["low", "medium", "bright", "full_sun"], "medium"))
+  fd.set("water_requirement", enumValue(record.water_requirement, ["low", "medium", "high"], "medium"))
+  fd.set("size", enumValue(record.size, ["small", "medium", "large"], "medium"))
 
   for (const k of ["is_new_arrival", "is_pet_safe", "is_imported", "is_featured", "published"]) {
     if (truthy(record[k])) fd.set(k, "on")
   }
 
   if (isPlant) {
-    for (const raw of get("use_case_tags").split(/[;|]/).map((t) => t.trim()).filter(Boolean)) {
+    // Semicolon or pipe is the documented delimiter, but a comma is the easy mistake to make (spreadsheet cells
+    // often read like prose), so it's accepted too.
+    for (const raw of get("use_case_tags").split(/[;,|]/).map((t) => t.trim()).filter(Boolean)) {
       const tag = matchIgnoringCase(raw, lookups.useCaseTags)
       if (!tag) return { error: `Unknown use case tag “${raw}”. Use: ${lookups.useCaseTags.join("; ")}.` }
       fd.append("use_case_tags", tag)
