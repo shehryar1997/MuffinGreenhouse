@@ -192,6 +192,17 @@ export function generateShopAllBreadcrumb(pageNumber?: number) {
   return generateBreadcrumbSchema(paths)
 }
 
+/** Breadcrumb for the Discount Sale page. */
+export function generateDiscountSaleBreadcrumb(pageNumber?: number) {
+  const paths = [
+    { name: "Home", url: "/" },
+    { name: "Shop All", url: "/shop/all" },
+    { name: "Discount Sale", url: "/shop/discount-sale" },
+  ]
+  if (pageNumber && pageNumber > 1) paths.push({ name: `Page ${pageNumber}`, url: `/shop/discount-sale?page=${pageNumber}` })
+  return generateBreadcrumbSchema(paths)
+}
+
 /**
  * Serialises JSON-LD for use inside a <script> tag. Escapes "<" so that text
  * from the database (product names/descriptions) can never contain a literal

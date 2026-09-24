@@ -66,6 +66,8 @@ export interface FilterParams {
   min?: number
   max?: number
   stock?: 'in'
+  /** Only plants with a size on sale (a "was" price above its price): the Discount Sale page. */
+  sale?: boolean
   /** Absent = "Recommended": featured first, then the admin's shop order, then newest. */
   sort?: 'featured' | 'new' | 'price-asc' | 'price-desc' | 'name'
 }
@@ -80,12 +82,15 @@ export async function getPaginatedProducts(page: number, pageSize: number = PROD
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
+  // A sale listing joins a second, filtered copy of the variants (inner: a product needs at least one match) just to
+  // pick the products; the normal `variants` embed still returns every size, so the card shows the full range.
   let query = supabase
     .from("products")
-    .select(PRODUCT_SELECT, { count: "exact" })
+    .select(filters?.sale ? `${PRODUCT_SELECT}, sale:product_variants!inner(id)` : PRODUCT_SELECT, { count: "exact" })
     .not("published_at", "is", null)
     .or(NOT_NON_PLANT_SLUG)
     .or(NOT_NON_PLANT_NAME)
+  if (filters?.sale) query = query.eq("sale.is_active", true).gt("sale.compare_at_price", 0)
 
   // Apply filters
   if (filters?.light) {

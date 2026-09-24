@@ -6,7 +6,7 @@ import { ProductCard } from "@/components/ui/product-card"
 import { ProductFilters, FilterSidebar, MAX_PRICE } from "@/components/shop/product-filters"
 import { Pagination } from "@/components/shop/pagination"
 import type { Product } from "@/types"
-import { generateShopAllBreadcrumb, serializeJsonLd } from "@/lib/structured-data"
+import { generateDiscountSaleBreadcrumb, generateShopAllBreadcrumb, serializeJsonLd } from "@/lib/structured-data"
 import type { FilterParams } from "@/lib/data/products"
 
 interface ShopAllClientProps {
@@ -16,10 +16,14 @@ interface ShopAllClientProps {
   totalCount: number
   filters: FilterParams
   priceBounds: { min: number; max: number }
+  /** The Discount Sale page reuses this grid with its own heading, breadcrumb and empty message. */
+  mode?: "all" | "sale"
 }
 
-export function ShopAllClient({ products, currentPage, totalPages, totalCount, filters: initialFilters, priceBounds }: ShopAllClientProps) {
-  const breadcrumbSchema = generateShopAllBreadcrumb(currentPage > 1 ? currentPage : undefined)
+export function ShopAllClient({ products, currentPage, totalPages, totalCount, filters: initialFilters, priceBounds, mode = "all" }: ShopAllClientProps) {
+  const isSale = mode === "sale"
+  const page = currentPage > 1 ? currentPage : undefined
+  const breadcrumbSchema = isSale ? generateDiscountSaleBreadcrumb(page) : generateShopAllBreadcrumb(page)
   
   return (
     <ProductFilters products={products} initialFilters={initialFilters} priceBounds={priceBounds}>
@@ -30,8 +34,10 @@ export function ShopAllClient({ products, currentPage, totalPages, totalCount, f
             <div className="bg-cream-100 min-h-screen pb-8 pt-28 lg:pt-36">
               <div className="container mx-auto px-4">
                 <div className="mb-8">
-                  <h1 className="font-serif text-4xl lg:text-5xl text-forest-900 leading-tight">All plants</h1>
-                  <p className="mt-2 text-lg text-forest-600">Shop the next addition for your collection.</p>
+                  <h1 className="font-serif text-4xl lg:text-5xl text-forest-900 leading-tight">{isSale ? "Discount Sale" : "All plants"}</h1>
+                  <p className="mt-2 text-lg text-forest-600">
+                    {isSale ? "Plants at a reduced price. Once the sale price is gone, so is the deal." : "Shop the next addition for your collection."}
+                  </p>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8">
@@ -73,11 +79,19 @@ export function ShopAllClient({ products, currentPage, totalPages, totalCount, f
                     </div>
                     {products.length === 0 && totalCount === 0 && !hasActiveFilters ? (
                       // An empty shop is not a filter problem: say so instead of offering "clear filters".
-                      <div className="text-center py-20 bg-surface rounded-lg border border-forest-200">
-                        <p className="text-forest-800 text-lg mb-2">New plants are on their way.</p>
-                        <p className="text-forest-600 mb-4">We are getting the greenhouse ready. Ask us on WhatsApp what is coming next.</p>
-                        <Link href="/contact" className="text-clay-600 underline font-medium">Get in touch</Link>
-                      </div>
+                      isSale ? (
+                        <div className="text-center py-20 bg-surface rounded-lg border border-forest-200">
+                          <p className="text-forest-800 text-lg mb-2">No plants are on sale right now.</p>
+                          <p className="text-forest-600 mb-4">Check back soon, or browse everything in the shop.</p>
+                          <Link href="/shop/all" className="text-clay-600 underline font-medium">Shop all plants</Link>
+                        </div>
+                      ) : (
+                        <div className="text-center py-20 bg-surface rounded-lg border border-forest-200">
+                          <p className="text-forest-800 text-lg mb-2">New plants are on their way.</p>
+                          <p className="text-forest-600 mb-4">We are getting the greenhouse ready. Ask us on WhatsApp what is coming next.</p>
+                          <Link href="/contact" className="text-clay-600 underline font-medium">Get in touch</Link>
+                        </div>
+                      )
                     ) : products.length === 0 ? (
                       <div className="text-center py-20 bg-surface rounded-lg border border-forest-200">
                         <p className="text-forest-600 text-lg mb-2">No plants match your filters.</p>

@@ -1,8 +1,9 @@
 import type { Metadata } from "next"
 import { pageMetadata } from "@/lib/seo"
 import { redirect } from "next/navigation"
-import { PRODUCTS_PER_PAGE, type FilterParams } from "@/lib/data/products"
+import { PRODUCTS_PER_PAGE } from "@/lib/data/products"
 import { getPaginatedProducts, getPriceBounds } from "@/lib/data/catalog"
+import { parseShopFilters, type ShopSearchParams } from "@/lib/shop-search-params"
 import { ShopAllClient } from "./shop-all-client"
 
 export const revalidate = 300
@@ -22,47 +23,13 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 }
 
 interface ShopAllPageProps {
-  searchParams: Promise<{ 
-    page?: string
-    light?: 'low' | 'medium' | 'bright' | 'full_sun'
-    water?: 'low' | 'medium' | 'high'
-    pets?: 'yes' | 'no'
-    min?: string
-    max?: string
-    stock?: 'in'
-    sort?: 'featured' | 'new' | 'price-asc' | 'price-desc' | 'name'
-  }>
+  searchParams: Promise<ShopSearchParams>
 }
 
 export default async function ShopAllPage({ searchParams }: ShopAllPageProps) {
   const params = await searchParams
   const requestedPage = Math.max(1, parseInt(params.page ?? "1", 10) || 1)
-  
-  // Build filter params from search params
-  const filters: FilterParams = {}
-  if (params.light && ['low', 'medium', 'bright', 'full_sun'].includes(params.light)) {
-    filters.light = params.light
-  }
-  if (params.water && ['low', 'medium', 'high'].includes(params.water)) {
-    filters.water = params.water
-  }
-  if (params.pets && ['yes', 'no'].includes(params.pets)) {
-    filters.pets = params.pets
-  }
-  if (params.min) {
-    const min = parseInt(params.min, 10)
-    if (!isNaN(min) && min >= 0) filters.min = min
-  }
-  if (params.max) {
-    const max = parseInt(params.max, 10)
-    if (!isNaN(max) && max >= 0) filters.max = max
-  }
-  if (params.stock === 'in') {
-    filters.stock = 'in'
-  }
-  if (params.sort && ['featured', 'new', 'price-asc', 'price-desc', 'name'].includes(params.sort)) {
-    filters.sort = params.sort
-  }
+  const filters = parseShopFilters(params)
 
   const { products, totalCount } = await getPaginatedProducts(requestedPage, PRODUCTS_PER_PAGE, filters)
   const totalPages = Math.max(1, Math.ceil(totalCount / PRODUCTS_PER_PAGE))

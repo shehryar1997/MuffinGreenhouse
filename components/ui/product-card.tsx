@@ -111,6 +111,7 @@ export function ProductCard({ product, index = 0, className, sizes = "(max-width
           {/* Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-2">
             {product.isNewArrival && <Badge variant="secondary">New</Badge>}
+            {product.variants.some((v) => v.compareAtPrice) && <Badge variant="default">Sale</Badge>}
             {stockBadge}
             {isPlantProduct(product) && product.isPetSafe && (
               <Badge variant="outline" className="bg-background/80">Pet Safe</Badge>

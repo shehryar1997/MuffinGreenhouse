@@ -51,6 +51,7 @@ export const shopMegaMenuSections: MegaMenuSection[] = [
       { id: "shop-hoyas", label: "Hoyas", href: "/shop/hoyas", featured: true },
       { id: "shop-orchids", label: "Orchids", href: "/shop/orchids" },
       { id: "shop-cacti-succulents", label: "Cacti & Succulents", href: "/shop/cacti-succulents" },
+      { id: "shop-discount-sale", label: "Discount Sale", href: "/shop/discount-sale" },
     ],
   },
   {
@@ -115,6 +116,7 @@ export const footerNav = {
     { id: "footer-hoyas", label: "Hoyas", href: "/shop/hoyas" },
     { id: "footer-orchids", label: "Orchids", href: "/shop/orchids" },
     { id: "footer-cacti-succulents", label: "Cacti & Succulents", href: "/shop/cacti-succulents" },
+    { id: "footer-discount-sale", label: "Discount Sale", href: "/shop/discount-sale" },
     { id: "footer-planting-media", label: "Planting Media", href: "/shop/planting-media" },
     { id: "footer-fertilizer", label: "Fertilizer", href: "/shop/fertilizer" },
     { id: "footer-pots", label: "Pots", href: "/shop/pots" },
