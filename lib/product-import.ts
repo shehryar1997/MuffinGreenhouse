@@ -219,10 +219,20 @@ export function suggestMetaTitle(name: string): string {
   return truncated ? `${truncated}${suffix}` : truncateAtWord(n, META_TITLE_MAX)
 }
 
-/** A default SEO description: the human-written short_description (more naturally searchable than a formal name), or a generic fallback, truncated to fit. */
+// A short_description under this many characters is too thin to stand alone as a search snippet.
+const META_DESCRIPTION_MIN = 60
+
+/**
+ * A default SEO description: the human-written short_description (more naturally searchable than a formal name),
+ * followed by the generic buy line when it is too short to stand alone, or the buy line alone when there is none.
+ * Truncated to fit.
+ */
 export function suggestMetaDescription(name: string, shortDescription: string): string {
-  const base = shortDescription.trim() || `Buy ${name.trim()} online in Pakistan. Nursery-grown, delivered nationwide.`
-  return truncateAtWord(base, META_DESCRIPTION_MAX)
+  const buyLine = `Buy ${name.trim()} online in Pakistan. Nursery-grown, delivered nationwide.`.replace(/\s+/g, " ")
+  const short = shortDescription.trim()
+  if (!short) return truncateAtWord(buyLine, META_DESCRIPTION_MAX)
+  if (short.length >= META_DESCRIPTION_MIN) return truncateAtWord(short, META_DESCRIPTION_MAX)
+  return truncateAtWord(`${/[.!?]$/.test(short) ? short : `${short}.`} ${buyLine}`, META_DESCRIPTION_MAX)
 }
 
 // "Full sun" / "full-sun" / "FULL_SUN" -> "full_sun"; blank -> the form's default. If that doesn't land on one of
