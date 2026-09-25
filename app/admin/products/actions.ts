@@ -13,6 +13,7 @@ import { revalidatePath, revalidateTag } from "next/cache"
 import { PRODUCTS_CACHE_TAG } from "@/lib/cache-tags"
 import { afterProductSaved } from "@/lib/stock-alerts"
 import { publishBlocker } from "@/lib/product-photos"
+import { parseFulfillmentCell, parseLeadTimeCell } from "@/lib/fulfillment"
 import { friendlyDbError, readVariantInputs, syncVariantsAndPhotos } from "@/lib/product-sync"
 
 // Fields copied when prefilling a new product from an existing one. Deliberately
@@ -245,6 +246,14 @@ function parseProductFields(
   }
   if (typeof weight === "number" && weight < 0) return { error: "Weight can't be negative." }
 
+  const fulfillmentType = text("fulfillment_type") === "overseas" ? "overseas" : "in_stock"
+  const leadTimeDays = optionalNumber(formData, "lead_time_days")
+  if (fulfillmentType === "overseas" && leadTimeDays !== null) {
+    if (leadTimeDays === "invalid" || !Number.isInteger(leadTimeDays) || leadTimeDays < 1 || leadTimeDays > 90) {
+      return { error: "Delivery time for overseas products must be a whole number of days between 1 and 90, or left empty for the 14-day default." }
+    }
+  }
+
   return {
     fields: {
       sku: text("sku"),
@@ -269,6 +278,13 @@ function parseProductFields(
       // Mangaves can't leave a stray true behind. See lib/shipping.ts.
       is_hard_leaf: isMangaveCategory(categoryName) && formData.get("is_hard_leaf") === "on",
       is_featured: formData.get("is_featured") === "on",
+      // Overseas (Temu) products: ordered from the supplier after payment, ~14 days. See lib/fulfillment.ts.
+      // Only written when the submission carries a fulfilment value: the product form always does, an import
+      // sheet only when its cell says something. So an import with no setting creates an in-stock product (the
+      // column default) and never resets an existing product.
+      ...(formData.has("fulfillment_type")
+        ? { fulfillment_type: fulfillmentType, lead_time_days: fulfillmentType === "overseas" ? leadTimeDays : null }
+        : {}),
       sort_position: sortPosition,
       // Keep the original publish date when a published product is simply re-saved --
       // it's what the "New" badge's 14-day window counts from.
@@ -631,7 +647,7 @@ export async function setVariantPhoto(productId: string, variantId: string, url:
   revalidateStorefront()
 }
 
-export type RestockLine = { variantId: string; stock: number; price: number; compareAt: number | null }
+export type RestockLine = { variantId: string; name: string; stock: number; price: number; compareAt: number | null }
 
 /**
  * Quick restock / price change from the products list, without opening the whole form. Each changed size goes
@@ -644,25 +660,31 @@ export async function restockProduct(productId: string, lines: RestockLine[], no
 
   const { data: before, error: readError } = await supabaseAdmin
     .from("products")
-    .select("price, stock_status, variants:product_variants(id, stock_count, price, compare_at_price, is_active)")
+    .select("price, stock_status, variants:product_variants(id, name, stock_count, price, compare_at_price, is_active)")
     .eq("id", productId)
     .maybeSingle()
   if (readError) return { error: readError.message }
   if (!before) return { error: "This product no longer exists. It may have been deleted." }
 
-  const current = new Map(((before.variants ?? []) as { id: string; stock_count: number; price: number; compare_at_price: number | null; is_active: boolean | null }[]).map((v) => [v.id, v]))
+  const current = new Map(((before.variants ?? []) as { id: string; name: string; stock_count: number; price: number; compare_at_price: number | null; is_active: boolean | null }[]).map((v) => [v.id, v]))
   const cleanNote = String(note ?? "").trim().slice(0, 200)
   let changed = 0
+  // Names must be filled in and unique within the product (the size picker and the photo captions rely on them).
+  const names = lines.map((l) => String(l.name ?? "").trim())
+  if (names.some((n) => !n || n.length > 80)) return { error: "Every size/variant needs a name of 80 characters or fewer." }
+  if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) return { error: "Two variants have the same name. Give each its own." }
   for (const line of lines) {
     const existing = current.get(line.variantId)
     if (!existing || existing.is_active === false) return { error: "One of the sizes no longer exists. Reload the page and try again." }
     if (!Number.isInteger(line.stock) || line.stock < 0 || line.stock > 1_000_000) return { error: "Stock must be a whole number, 0 or more." }
-    if (!Number.isFinite(line.price) || line.price <= 0 || line.price > 10_000_000) return { error: "Every size needs a price greater than 0." }
+    if (!Number.isFinite(line.price) || line.price <= 0 || line.price > 10_000_000) return { error: "Every size/variant needs a price greater than 0." }
     const compareAt = line.compareAt === null || line.compareAt === undefined || line.compareAt === 0 ? null : Number(line.compareAt)
     if (compareAt !== null && (!Number.isFinite(compareAt) || compareAt > 10_000_000)) return { error: "Was price must be a valid number, or left empty." }
     if (compareAt !== null && compareAt <= Number(line.price)) return { error: "The was price must be higher than the price, or left empty." }
+    const name = String(line.name).trim()
+    const nameChanged = name !== existing.name
     const compareChanged = compareAt !== (existing.compare_at_price === null ? null : Number(existing.compare_at_price))
-    if (line.stock === existing.stock_count && Number(line.price) === Number(existing.price) && !compareChanged) continue
+    if (line.stock === existing.stock_count && Number(line.price) === Number(existing.price) && !compareChanged && !nameChanged) continue
     if (line.stock !== existing.stock_count || Number(line.price) !== Number(existing.price)) {
       const { error } = await supabaseAdmin.rpc("admin_adjust_variant", {
         p_variant_id: line.variantId,
@@ -675,6 +697,12 @@ export async function restockProduct(productId: string, lines: RestockLine[], no
     if (compareChanged) {
       const { error } = await supabaseAdmin.from("product_variants").update({ compare_at_price: compareAt }).eq("id", line.variantId)
       if (error) return { error: `Saving the was price failed: ${error.message}` }
+    }
+    if (nameChanged) {
+      const { error } = await supabaseAdmin.from("product_variants").update({ name }).eq("id", line.variantId)
+      if (error) return { error: `Renaming “${existing.name}” failed: ${error.message}` }
+      // A photo's alt text defaults to its variant's name; keep those in step so the old name doesn't linger as "custom" alt text.
+      await supabaseAdmin.from("product_images").update({ alt_text: name }).eq("variant_id", line.variantId).eq("alt_text", existing.name)
     }
     changed++
   }
@@ -775,7 +803,7 @@ export async function updateProductsFromRows(rows: ImportRowInput[], dryRun: boo
   const { data: products, error } = skus.length
     ? await supabaseAdmin
         .from("products")
-        .select("id, sku, name, price, stock_status, published_at, variants:product_variants(id, sku, name, price, stock_count, is_active)")
+        .select("id, sku, name, price, stock_status, published_at, fulfillment_type, lead_time_days, variants:product_variants(id, sku, name, price, stock_count, is_active)")
         .in("sku", skus)
     : { data: [], error: null }
   if (error) return { results: [], error: error.message }
@@ -835,6 +863,18 @@ export async function updateProductsFromRows(rows: ImportRowInput[], dryRun: boo
     if (publishRaw && publish === null) problem ??= `Published must be yes or no (got “${values.published}”).`
     const publishChange = publish !== null && publish !== !!product.published_at ? publish : null
 
+    // Fulfilment: only a cell that says overseas / in stock changes anything. A blank or unrecognised cell (or no
+    // column at all) leaves the product as it is, so a sheet exported before overseas existed can't reset it.
+    const wantedFulfillment = parseFulfillmentCell(values.fulfillment_type)
+    const wantedLead = wantedFulfillment === "overseas" ? parseLeadTimeCell(values.lead_time_days) : null
+    const currentFulfillment = product.fulfillment_type === "overseas" ? "overseas" : "in_stock"
+    const fulfillmentChange =
+      wantedFulfillment === null
+        ? null
+        : wantedFulfillment !== currentFulfillment || (wantedFulfillment === "overseas" && wantedLead !== (product.lead_time_days ?? null))
+          ? { fulfillment_type: wantedFulfillment, lead_time_days: wantedLead }
+          : null
+
     if (problem) {
       results.push({ line, ok: false, message: problem })
       continue
@@ -847,6 +887,9 @@ export async function updateProductsFromRows(rows: ImportRowInput[], dryRun: boo
         return `${active.length > 1 ? `${variant.name}: ` : ""}${bits.join(", ")}`
       }),
       ...(publishChange === null ? [] : [publishChange ? "publish" : "unpublish"]),
+      ...(fulfillmentChange === null
+        ? []
+        : [fulfillmentChange.fulfillment_type === "overseas" ? "mark as ships from overseas" : "mark as in stock"]),
     ]
     if (changes.length === 0) {
       results.push({ line, ok: true, message: "No changes.", changes: [] })
@@ -873,6 +916,10 @@ export async function updateProductsFromRows(rows: ImportRowInput[], dryRun: boo
     if (!failed && publishChange !== null) {
       const published = await applyProductPublished(product.id as string, publishChange)
       if (published) failed = published.error
+    }
+    if (!failed && fulfillmentChange !== null) {
+      const { error: fulfillmentError } = await supabaseAdmin.from("products").update(fulfillmentChange).eq("id", product.id as string)
+      if (fulfillmentError) failed = fulfillmentError.message
     }
     if (failed) {
       results.push({ line, ok: false, message: `Saving failed: ${failed}` })

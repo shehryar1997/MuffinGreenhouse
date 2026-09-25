@@ -10,6 +10,7 @@ import { pakistanCities } from "@/data/pakistan-cities"
 import { calculateDeliveryFee, mergeParcel, qualifiesForFreeDelivery, type DeliveryFeeDimensions } from "@/lib/delivery-fee"
 import type { PaymentSummary } from "@/lib/checkout-summary"
 import { dbSubtotal, resolveCoupon } from "@/lib/coupons"
+import { formatEta } from "@/lib/fulfillment"
 
 /**
  * CHECKOUT SUBMIT ENDPOINT
@@ -362,6 +363,15 @@ export async function POST(request: NextRequest) {
       console.error("Failed to fetch order items:", orderItemsError)
     }
 
+    // Orders with an overseas item carry a provisional delivery estimate set by create_order. A failure here only
+    // drops the estimate from the e-mail and payment page; it never fails the order.
+    const { data: orderTiming } = await supabaseAdmin
+      .from("orders")
+      .select("ships_overseas, estimated_delivery_date")
+      .eq("id", orderId)
+      .maybeSingle()
+    const overseasEstimate = orderTiming?.ships_overseas && orderTiming.estimated_delivery_date ? formatEta(orderTiming.estimated_delivery_date) : undefined
+
     const summaryItems = (orderItems ?? []).map((item) => ({
       productId: item.product_id,
       productName: item.product_name,
@@ -387,6 +397,7 @@ export async function POST(request: NextRequest) {
           total,
           deliveryType: body.deliveryType,
           paymentDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          overseasEstimate,
         })
       } catch (emailError) {
         console.error("Failed to send booking email:", emailError)
@@ -408,6 +419,7 @@ export async function POST(request: NextRequest) {
       deliveryFee,
       subtotal,
       discount,
+      overseasEstimate,
     }
 
     return NextResponse.json(

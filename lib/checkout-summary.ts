@@ -16,4 +16,6 @@ export interface PaymentSummary {
   subtotal: number
   /** Coupon discount taken off the subtotal (0 or absent when none). */
   discount?: number
+  /** Provisional delivery date (e.g. "Thu, 8 Oct") when the order has an overseas item; firmed up once paid. */
+  overseasEstimate?: string
 }

@@ -17,6 +17,8 @@ interface BookingReceivedData {
   items: Array<{ productName: string; quantity: number; price: number }>
   deliveryType: 'delivery' | 'pickup'
   paymentDeadline: Date
+  /** Set for orders with an overseas item, e.g. "Thu, 8 Oct": a provisional estimate, firmed up once paid. */
+  overseasEstimate?: string
 }
 
 export async function sendBookingReceivedEmail(data: BookingReceivedData): Promise<void> {
@@ -40,13 +42,17 @@ export async function sendBookingReceivedEmail(data: BookingReceivedData): Promi
         (isDelivery ? 'Delivery: ' + formatEmailPrice(data.deliveryFee) : 'Pickup: Free') + '\n'
       : ''
 
+  const overseasText = data.overseasEstimate
+    ? `Delivery time: your order includes an item that ships from overseas. We order it once your payment is confirmed and your whole order ships together, so delivery takes about 14 days from then (estimated ${data.overseasEstimate} if you pay today). We will e-mail you the confirmed date once we receive your payment.\n\n`
+    : ''
+
   const textBody = `${greeting}
 
 Thank you for your order at Muffin Plants! Your order has been booked and your items are on hold for you for the next 24 hours.
 
 Order number: ${data.orderNumber}
 
----
+${overseasText}---
 ORDER DETAILS
 ---
 ${itemsList}
@@ -91,6 +97,9 @@ ${emailSignOff()}`
     previewText: `Your order #${data.orderNumber} is on hold for 24 hours. Please send payment by ${deadlineStr} to confirm.`,
     sections: [
       { content: "Your order has been booked and your items are on hold for the next <strong>24 hours</strong>. Please complete your payment to confirm your booking." },
+      ...(data.overseasEstimate
+        ? [{ title: 'Delivery time', content: `Your order includes an item that ships from overseas. We order it once your payment is confirmed and your whole order ships together, so delivery takes about <strong>14 days</strong> from then (estimated <strong>${data.overseasEstimate}</strong> if you pay today). We will e-mail you the confirmed date once we receive your payment.` }]
+        : []),
       { title: 'Order Summary', content: orderSummaryHtml },
       { title: 'How to Confirm Your Booking', content: `<p style="margin:0 0 12px;">Send your payment by <strong>${deadlineStr}</strong> to any one of these accounts:</p><pre style="background:#f6fdf8;padding:16px;border-radius:8px;font-size:14px;line-height:1.6;margin:0;white-space:pre-wrap;font-family:inherit;">${paymentAccountsAsText()}</pre><p style="margin:12px 0 0;">Then share your payment receipt with us on WhatsApp at <a href="https://wa.me/${WHATSAPP_NUMBER.replace(/\D/g, '')}" style="color:#166534;text-decoration:underline;">${WHATSAPP_NUMBER}</a>, quoting order number <strong>${data.orderNumber}</strong>.</p>` },
       { content: "If we don't receive payment within 24 hours, your items will be released and the order will be cancelled automatically. You are always welcome to book again, subject to availability." },

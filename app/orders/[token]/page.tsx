@@ -4,6 +4,7 @@ import { Clock, Truck, Package, CheckCircle, AlertCircle, MessageCircle } from "
 import { supabaseAdmin } from "@/supabase/admin-client"
 import { ReviewForm } from "./review-form"
 import { formatPrice } from "@/lib/utils"
+import { formatEta } from "@/lib/fulfillment"
 import { Button } from "@/components/ui/button"
 import { siteConfig } from "@/config/nav.config"
 import { PAYMENT_ACCOUNTS } from "@/config/payment-accounts"
@@ -34,6 +35,8 @@ interface OrderWithDetails {
   cancelled_at: string | null
   tracking_number: string | null
   courier: string | null
+  ships_overseas: boolean
+  estimated_delivery_date: string | null
   address: {
     label: string
     street: string
@@ -48,6 +51,7 @@ interface OrderWithDetails {
     quantity: number
     unit_price: number
     total_price: number
+    fulfillment_type: string
   }>
 }
 
@@ -156,9 +160,9 @@ export default async function OrderStatusPage({ params }: OrderStatusPageProps) 
     .select(
       `id, order_number, public_token, status, payment_status, payment_method, delivery_type,
        subtotal, delivery_fee, discount_amount, total, customer_notes, created_at, confirmed_at, shipped_at,
-       delivered_at, cancelled_at, tracking_number, courier,
+       delivered_at, cancelled_at, tracking_number, courier, ships_overseas, estimated_delivery_date,
        address:addresses(label, street, city, province),
-       order_items(id, product_id, product_name, variant_name, quantity, unit_price, total_price)`
+       order_items(id, product_id, product_name, variant_name, quantity, unit_price, total_price, fulfillment_type)`
     )
     .eq("public_token", token)
     .maybeSingle()
@@ -222,6 +226,17 @@ export default async function OrderStatusPage({ params }: OrderStatusPageProps) 
         </section>
       )}
 
+      {!isCancelled && !isDelivered && order.ships_overseas && order.estimated_delivery_date && (
+        <section className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+          <p className="font-medium">Estimated delivery: {formatEta(order.estimated_delivery_date)}</p>
+          <p className="mt-1">
+            {isPaid
+              ? "Your order includes an item that ships from overseas. We have ordered it, and your whole order ships together as soon as it reaches us."
+              : "Your order includes an item that ships from overseas. We order it once your payment is confirmed, and this date is confirmed then (about 14 days after payment)."}
+          </p>
+        </section>
+      )}
+
       {!isCancelled && (
         <section className="rounded-lg border p-5">
           <h2 className="mb-4 font-semibold">Progress</h2>
@@ -281,6 +296,7 @@ export default async function OrderStatusPage({ params }: OrderStatusPageProps) 
                 <div>
                   <p className="font-medium">{item.product_name}</p>
                   {item.variant_name && <p className="text-muted-foreground">{item.variant_name}</p>}
+                  {item.fulfillment_type === "overseas" && <p className="text-sky-700">Ships from overseas</p>}
                   <p className="text-muted-foreground">
                     {item.quantity} × {formatPrice(item.unit_price)}
                   </p>

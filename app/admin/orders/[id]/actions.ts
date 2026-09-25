@@ -11,6 +11,7 @@ import { grantReferralRewards } from "@/lib/referrals"
 import { sendOrderShippedEmail } from "@/lib/email/send-order-shipped"
 import { sendOrderCancelledEmail } from "@/lib/email/send-order-cancelled"
 import { isPlaceholderEmail } from "@/lib/manual-order"
+import { OVERSEAS_LEAD_DAYS, addDays, formatEta, toDateColumn } from "@/lib/fulfillment"
 import { BAD_BULK_REQUEST, cleanBulkIds, type BulkDeleteResult } from "@/lib/admin-bulk"
 
 const DEFAULT_COURIER = "Leopards Courier"
@@ -54,7 +55,7 @@ export async function markPaid(orderId: string) {
 
   const { data: current, error: readError } = await supabaseAdmin
     .from("orders")
-    .select("status, payment_status")
+    .select("status, payment_status, ships_overseas")
     .eq("id", orderId)
     .maybeSingle()
   if (readError) throw new Error(readError.message)
@@ -71,11 +72,32 @@ export async function markPaid(orderId: string) {
   // Payment is what moves an order from "pending" to "confirmed". An order that is already confirmed,
   // processing, shipped or delivered keeps its status: marking it paid must never send it backwards.
   const confirming = current.status === "pending"
+
+  // Overseas orders are ordered from the supplier now that they are paid, so the delivery estimate restarts from
+  // today (create_order only set a provisional one). The slowest overseas line sets the date for the whole order.
+  let estimatedDelivery: string | null = null
+  if (current.ships_overseas) {
+    const { data: lines } = await supabaseAdmin
+      .from("order_items")
+      .select("product_id, fulfillment_type")
+      .eq("order_id", orderId)
+    const overseasIds = (lines ?? []).filter((l) => l.fulfillment_type === "overseas" && l.product_id).map((l) => l.product_id as string)
+    const { data: products } = overseasIds.length
+      ? await supabaseAdmin.from("products").select("id, lead_time_days").in("id", overseasIds)
+      : { data: [] as { id: string; lead_time_days: number | null }[] }
+    const leadDays = overseasIds.reduce(
+      (max, id) => Math.max(max, products?.find((p) => p.id === id)?.lead_time_days ?? OVERSEAS_LEAD_DAYS),
+      0
+    )
+    estimatedDelivery = toDateColumn(addDays(new Date(), leadDays))
+  }
+
   const { data: updated, error } = await supabaseAdmin
     .from("orders")
     .update({
       payment_status: "paid",
       ...(confirming ? { status: "confirmed", confirmed_at: new Date().toISOString() } : {}),
+      ...(estimatedDelivery ? { estimated_delivery_date: estimatedDelivery } : {}),
     })
     .eq("id", orderId)
     .eq("status", current.status) // lost a race with a cancel/ship? then update nothing
@@ -110,6 +132,7 @@ export async function markPaid(orderId: string) {
             price: item.unit_price,
           })),
           deliveryType: order.delivery_type,
+          estimatedDelivery: estimatedDelivery ? formatEta(estimatedDelivery) : undefined,
         })
       }
     } catch (emailError) {

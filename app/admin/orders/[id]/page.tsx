@@ -14,6 +14,7 @@ import { whatsAppLink } from "@/lib/whatsapp-link"
 import { paymentAccountsAsText } from "@/config/payment-accounts"
 import { cn } from "@/lib/utils"
 import { isManualOrder, realEmail } from "@/lib/manual-order"
+import { formatEta } from "@/lib/fulfillment"
 
 // Force fresh data on every load — same reasoning as the orders list page.
 export const dynamic = "force-dynamic"
@@ -30,10 +31,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     .select(
       `id, order_number, status, payment_status, payment_method, delivery_type, subtotal,
        delivery_fee, discount_amount, coupon_code, total, customer_notes, internal_notes, created_at,
-       tracking_number, courier, receipt_url,
+       tracking_number, courier, receipt_url, ships_overseas, estimated_delivery_date,
        customer:customers(id, name, email, phone),
        address:addresses(label, street, city, province, phone),
-       order_items:order_items(id, product_name, variant_name, quantity, unit_price, total_price)`
+       order_items:order_items(id, product_name, variant_name, quantity, unit_price, total_price, fulfillment_type)`
     )
     .eq("id", id)
     .maybeSingle()
@@ -53,7 +54,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
   const customer = order.customer as unknown as { id: string; name: string | null; email: string; phone: string | null } | null
   const address = order.address as unknown as { label: string; street: string; city: string; province: string; phone: string | null } | null
-  const items = (order.order_items as unknown as Array<{ id: string; product_name: string; variant_name: string | null; quantity: number; unit_price: number; total_price: number }>) || []
+  const items = (order.order_items as unknown as Array<{ id: string; product_name: string; variant_name: string | null; quantity: number; unit_price: number; total_price: number; fulfillment_type: string }>) || []
 
   const markPaidForOrder = markPaid.bind(null, order.id)
   const markDeliveredForOrder = markDelivered.bind(null, order.id)
@@ -116,6 +117,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="space-y-6">
+          {order.ships_overseas && !cancelled && order.status !== "delivered" && (
+            <Alert tone="info" title={`Overseas order${order.estimated_delivery_date ? ` · estimated delivery ${formatEta(order.estimated_delivery_date)}` : ""}`}>
+              {order.payment_status === "paid"
+                ? "Order the items marked “Overseas” from Temu now. The whole order ships together once they arrive. The customer was given this date."
+                : "Don't order from Temu until payment is confirmed. The date is provisional and restarts from the day you mark the order as paid."}
+            </Alert>
+          )}
+
           <Panel title="Fulfilment">
             {cancelled ? (
               <Alert tone="danger" title="This order was cancelled." />
@@ -203,6 +212,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     <td className="px-5 py-3">
                       <p className="font-medium">{item.product_name}</p>
                       {item.variant_name && <p className="text-[13px] text-muted-foreground">{item.variant_name}</p>}
+                      {item.fulfillment_type === "overseas" && <p className="text-[13px] font-medium text-sky-700">Overseas (order from Temu)</p>}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums">{item.quantity}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{rs(item.unit_price)}</td>

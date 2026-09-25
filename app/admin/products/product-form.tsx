@@ -35,6 +35,8 @@ type ExistingProduct = {
   is_pet_safe: boolean
   is_imported: boolean
   is_hard_leaf: boolean
+  fulfillment_type?: "in_stock" | "overseas"
+  lead_time_days?: number | null
   is_featured: boolean
   published_at: string | null
   meta_title: string | null
@@ -544,6 +546,20 @@ export function ProductForm({
           <Field label="Shop order" hint="Optional. Lower numbers come first in the Recommended order (after featured products). Leave empty for newest first." className="sm:max-w-xs">
             <input type="number" name="sort_position" min={0} max={100000} defaultValue={product?.sort_position ?? ""} className={inputClass} />
           </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Fulfilment"
+              hint="Overseas = you order it from the supplier (e.g. Temu) after the customer pays. The shop then shows an estimated delivery date instead of “ships in 1-2 business days”."
+            >
+              <select name="fulfillment_type" defaultValue={product?.fulfillment_type ?? "in_stock"} className={inputClass}>
+                <option value="in_stock">In stock (ships in 1-2 business days)</option>
+                <option value="overseas">Ships from overseas</option>
+              </select>
+            </Field>
+            <Field label="Overseas delivery time (days)" hint="Only used for overseas products: days from payment to delivery. Leave empty for the 14-day default.">
+              <input type="number" name="lead_time_days" min={1} max={90} defaultValue={product?.lead_time_days ?? ""} className={inputClass} />
+            </Field>
+          </div>
           {wantsPublish && publishProblem && (
             <p role="status" className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               Can&apos;t publish yet: {publishProblem} Untick Published to save it as a draft.

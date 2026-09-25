@@ -39,6 +39,10 @@ export interface Product {
   isImported: boolean
   /** Mangaves only: stiff, easily-broken leaves, so it ships bare-root instead of potted. See lib/shipping.ts. */
   isHardLeaf: boolean
+  /** 'overseas' = sourced from a supplier (e.g. Temu) only after payment; ~14 days instead of 1-2 business days. See lib/fulfillment.ts. */
+  fulfillmentType?: "in_stock" | "overseas"
+  /** Days from payment to delivery for an overseas product; unset means the 14-day default. */
+  leadTimeDays?: number
   difficulty: "beginner" | "intermediate" | "expert"
   lightRequirement: "low" | "medium" | "bright" | "full_sun"
   waterRequirement: "low" | "medium" | "high"

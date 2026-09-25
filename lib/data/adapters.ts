@@ -54,6 +54,8 @@ export function mapSupabaseProductToProduct(row: SupabaseProduct): Product {
     isPetSafe: row.is_pet_safe,
     isImported: !!row.is_imported,
     isHardLeaf: !!row.is_hard_leaf,
+    fulfillmentType: row.fulfillment_type === "overseas" ? "overseas" : "in_stock",
+    leadTimeDays: row.lead_time_days ?? undefined,
     difficulty: row.difficulty,
     lightRequirement: row.light_requirement,
     waterRequirement: row.water_requirement,

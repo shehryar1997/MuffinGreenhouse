@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
 import { shipsBareRoot } from "@/lib/shipping"
+import { isOverseas, leadTimeDays } from "@/lib/fulfillment"
 import { Button } from "@/components/ui/button"
 import type { CartItem } from "@/types"
 import { FreeDeliveryBar } from "./free-delivery-bar"
@@ -105,6 +106,7 @@ export function CartDrawer() {
                       <h3 className="font-serif text-base text-foreground">{item.product.name}</h3>
                       {item.variant && item.variant.name.toLowerCase() !== "standard" && <p className="text-xs text-muted-foreground font-mono">{item.variant.name}</p>}
                       {shipsBareRoot(item.product) && <p className="text-xs text-forest-600 mt-0.5">Ships bare-root, pot included separately</p>}
+                      {isOverseas(item.product) && <p className="text-xs text-amber-700 mt-0.5">Ships from overseas, about {leadTimeDays(item.product)} days</p>}
                       <p className="font-mono text-sm text-foreground mt-1">{formatPrice(v(item))}</p>
                       <div className="flex items-center gap-3 mt-3">
                         <div className="flex items-center border border-border rounded-md overflow-hidden">

@@ -286,7 +286,8 @@ export function ProductCsvImport() {
                   <p className="mt-3 text-sm font-medium">Choose a .csv or .xlsx file</p>
                   <p className="mx-auto mt-1 max-w-md text-[13px] leading-5 text-muted-foreground">
                     From Excel, Google Sheets, or a .csv export. Up to {MAX_IMPORT_ROWS} products and 2 MB per file. Products are saved as drafts unless the
-                    <span className="font-mono"> published </span> column says yes.
+                    <span className="font-mono"> published </span> column says yes. The optional
+                    <span className="font-mono"> fulfillment_type </span> column marks Temu items: write &ldquo;Ships from overseas&rdquo;. Blank or missing means in stock.
                   </p>
                   <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                     <button type="button" onClick={() => fileInput.current?.click()} className={buttonClass({ variant: "primary" })}>

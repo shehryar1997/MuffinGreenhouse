@@ -10,6 +10,8 @@ interface OrderConfirmedData {
   total: number
   items: Array<{ productName: string; quantity: number; price: number }>
   deliveryType: 'delivery' | 'pickup'
+  /** Set for orders containing an overseas item, e.g. "Thu, 8 Oct": replaces the standard 1-2 business days. */
+  estimatedDelivery?: string
 }
 
 export async function sendOrderConfirmedEmail(data: OrderConfirmedData): Promise<void> {
@@ -23,7 +25,9 @@ export async function sendOrderConfirmedEmail(data: OrderConfirmedData): Promise
 
 Great news! We have received your payment.
 
-Your order #${data.orderNumber} is now confirmed and will ship in 1-2 business days.
+${data.estimatedDelivery
+  ? `Your order #${data.orderNumber} is now confirmed. It includes an item that ships from overseas, so your whole order ships together and we estimate it will reach you by ${data.estimatedDelivery}.`
+  : `Your order #${data.orderNumber} is now confirmed and will ship in 1-2 business days.`}
 
 ---
 INVOICE
@@ -54,7 +58,11 @@ ${emailSignOff()}`
     heading: `Payment received — Order #${data.orderNumber} confirmed!`,
     previewText: `Great news! Your payment has been received and your order #${data.orderNumber} is confirmed.`,
     sections: [
-      { content: "<strong>Great news!</strong> We have received your payment. Your order is now confirmed and will ship within <strong>1-2 business days</strong>." },
+      {
+        content: data.estimatedDelivery
+          ? `<strong>Great news!</strong> We have received your payment and your order is now confirmed. It includes an item that ships from overseas, so your whole order ships together. Estimated delivery: <strong>${data.estimatedDelivery}</strong>.`
+          : "<strong>Great news!</strong> We have received your payment. Your order is now confirmed and will ship within <strong>1-2 business days</strong>.",
+      },
       { title: 'Order Summary', content: orderSummaryHtml },
       { content: "We will send you a tracking update with your courier details once your order ships." },
     ],

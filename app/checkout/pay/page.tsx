@@ -154,6 +154,12 @@ function CheckoutPayContent() {
             </div>
           </div>
         </div>
+        {paymentDetails.overseasEstimate && (
+          <div className='bg-surface rounded-xl border border-forest-200 p-6 mb-6'>
+            <h3 className='font-medium text-forest-900 mb-1'>Ships from overseas</h3>
+            <p className='text-sm text-forest-600'>Your order includes an item we order from our overseas supplier once your payment is confirmed. Your whole order ships together, about 14 days after payment: estimated delivery by <span className='font-medium text-forest-900'>{paymentDetails.overseasEstimate}</span> if you pay today.</p>
+          </div>
+        )}
         <div className='bg-surface rounded-xl border border-forest-200 overflow-hidden mb-6'>
           <div className='px-6 py-4 border-b border-forest-200 bg-forest-50'>
             <h2 className='font-medium text-forest-900'>Payment Options</h2>

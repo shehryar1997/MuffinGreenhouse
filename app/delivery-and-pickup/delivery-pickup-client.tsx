@@ -71,6 +71,7 @@ export function DeliveryPickupClient() {
               <li>Plants travel first-class in custom packaging with humidity packs</li>
               <li>2-3 day delivery to your doorstep</li>
               <li>Rates calculated at checkout based on your location</li>
+              <li>Some tools and supplies ship from overseas: these take about 14 days after payment, and checkout shows the estimated date. If your order includes one, the whole order ships together</li>
             </ul>
           </div>
 

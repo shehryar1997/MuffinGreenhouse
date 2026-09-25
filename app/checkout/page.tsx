@@ -8,6 +8,7 @@ import { CitySelect } from "@/components/ui/city-select"
 import { useCart } from "@/components/providers/cart-provider"
 import { formatPrice } from "@/lib/utils"
 import { shipsBareRoot } from "@/lib/shipping"
+import { STANDARD_DISPATCH_TEXT, addDays, formatEta, orderLeadTimeDays, overseasItems } from "@/lib/fulfillment"
 import { toast } from "sonner"
 import { redirect, useRouter } from "next/navigation"
 import { trackBeginCheckout } from "@/lib/analytics"
@@ -109,6 +110,13 @@ export default function CheckoutPage() {
   )
   const discount = appliedCoupon?.discount ?? 0
   const itemUnits = cart.items.reduce((n, item) => n + item.quantity, 0)
+  // Overseas items ship from the supplier after payment; the whole order goes out together. This is an estimate
+  // from today: the firm date is set once the payment is confirmed.
+  const overseasInfo = useMemo(() => {
+    const lines = overseasItems(cart.items)
+    if (lines.length === 0) return null
+    return { names: lines.map((i) => i.product.name), eta: formatEta(addDays(new Date(), orderLeadTimeDays(cart.items))) }
+  }, [cart.items])
   // Free delivery: 10,000+ with fewer than 4 items (the server re-checks this from database prices).
   const freeDelivery = deliveryType === "delivery" && qualifiesForFreeDelivery(subtotal, itemUnits)
   const effectiveDeliveryFee = freeDelivery ? 0 : deliveryFee
@@ -604,7 +612,7 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Delivery Options */}
-                    <DeliveryOptionsSection city={formData.city} deliveryType={deliveryType} onSelect={setDeliveryType} karachiFee={karachiFee} />
+                    <DeliveryOptionsSection city={formData.city} deliveryType={deliveryType} onSelect={setDeliveryType} karachiFee={karachiFee} overseas={overseasInfo} />
                   </div>
 
                   {/* Proceed Button */}
@@ -665,11 +673,18 @@ export default function CheckoutPage() {
 }
 
 // Delivery Options Section Component
-function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { city: string; deliveryType: "delivery" | "pickup"; onSelect: (type: "delivery" | "pickup") => void; karachiFee: number }) {
+function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee, overseas }: { city: string; deliveryType: "delivery" | "pickup"; onSelect: (type: "delivery" | "pickup") => void; karachiFee: number; overseas: { names: string[]; eta: string } | null }) {
   const isKarachi = city === "Karachi"
+  const timing = overseas ? `Estimated delivery by ${overseas.eta}` : `Order will be shipped out in ${STANDARD_DISPATCH_TEXT}`
   return (
     <div className="pt-4 border-t border-forest-100">
       <p className="text-sm font-medium text-forest-700 mb-3">Choose your delivery option</p>
+      {overseas && (
+        <div role="note" className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <span className="font-medium">Your order includes an item that ships from overseas: </span>
+          {overseas.names.join(", ")}. We order it once your payment is confirmed. Your whole order ships together, with an estimated delivery by <span className="font-medium">{overseas.eta}</span> (about 14 days).
+        </div>
+      )}
       {isKarachi ? (
         <div className="flex flex-col gap-3">
           <button type="button" onClick={() => onSelect("pickup")} className={`p-4 border-2 rounded-xl text-left transition-all ${deliveryType === "pickup" ? "border-clay-500 bg-clay-50 dark:bg-clay-500/10" : "border-forest-200"}`}>
@@ -677,7 +692,7 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
               <div className={`p-2 rounded-lg ${deliveryType === "pickup" ? "bg-clay-500 text-white" : "bg-forest-100 text-forest-600"}`}><Package className="w-5 h-5" /></div>
               <div className="flex-1">
                 <div className="font-medium">Self Pickup</div>
-                <div className="text-sm text-forest-500">No delivery charges apply. Pick-up at A-104, Block-C, Gulshan-e-Jamal, Karachi.</div>
+                <div className="text-sm text-forest-500">No delivery charges apply. Pick-up at A-104, Block-C, Gulshan-e-Jamal, Karachi.{overseas ? ` Ready for pickup from about ${overseas.eta}.` : ""}</div>
                 <div className="text-sm font-mono mt-1 text-sprout-500">Free</div>
               </div>
             </div>
@@ -688,6 +703,7 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
               <div className="flex-1">
                 <div className="font-medium">Home Delivery</div>
                 <div className="text-sm text-forest-500">{`${formatPrice(KARACHI_DELIVERY_FEE)} for up to ${KARACHI_LARGE_ORDER_ITEM_THRESHOLD} items, ${formatPrice(KARACHI_LARGE_ORDER_DELIVERY_FEE)} for ${KARACHI_LARGE_ORDER_ITEM_THRESHOLD + 1} or more`}</div>
+                {overseas && <div className="text-sm text-forest-500">{timing}</div>}
                 <div className="text-sm font-mono mt-1">{formatPrice(karachiFee)}</div>
               </div>
             </div>
@@ -700,7 +716,7 @@ function DeliveryOptionsSection({ city, deliveryType, onSelect, karachiFee }: { 
               <div className={`p-2 rounded-lg ${deliveryType === "delivery" ? "bg-clay-500 text-white" : "bg-forest-100 text-forest-600"}`}><Truck className="w-5 h-5" /></div>
               <div className="flex-1">
                 <div className="font-medium">Home Delivery</div>
-                <div className="text-sm text-forest-500">Order will be shipped out in 1-2 business days</div>
+                <div className="text-sm text-forest-500">{timing}</div>
                 <div className="text-sm font-mono mt-1 text-sprout-500">Calculated based on volumetric weight</div>
               </div>
             </div>

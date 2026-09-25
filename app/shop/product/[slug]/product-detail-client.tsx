@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { SmartImage as Image } from "@/components/ui/smart-image"
 import { useRouter } from "next/navigation"
-import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer, PawPrint, PackageOpen, Truck, Wallet, ShieldCheck, MessageCircle, Sprout, FlaskConical } from "lucide-react"
+import { Heart, Share2, Sun, Droplets, CloudRain, Thermometer, PawPrint, PackageOpen, Truck, Plane, Wallet, ShieldCheck, MessageCircle, Sprout, FlaskConical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn, formatPrice } from "@/lib/utils"
@@ -15,6 +15,7 @@ import type { Product, ProductVariant } from "@/types"
 import { generateProductBreadcrumb, generateProductSchema, serializeJsonLd } from "@/lib/structured-data"
 import { isPlantProduct } from "@/lib/product-categories"
 import { shipsBareRoot } from "@/lib/shipping"
+import { isOverseas, leadTimeDays } from "@/lib/fulfillment"
 import { pickGallery, startingFromPrice, displayPrice } from "@/lib/product-photos"
 import { NotifyMeForm } from "@/components/shop/notify-me-form"
 import { Recommendations } from "@/components/shop/recommendations"
@@ -188,6 +189,7 @@ export function ProductDetailClient({ product, addOns = [], reviewsSlot, rating 
                 {isPlant && product.isPetSafe && <Badge variant="outline">Pet Safe</Badge>}
                 {isPlant && product.isImported && <Badge variant="outline">Imported</Badge>}
                 {bareRoot && <Badge variant="outline">Ships bare-root</Badge>}
+                {isOverseas(product) && <Badge variant="outline">Ships from overseas</Badge>}
               </div>
             </div>
             <div className="flex gap-2 max-lg:overflow-x-auto max-lg:pb-1">
@@ -274,7 +276,7 @@ export function ProductDetailClient({ product, addOns = [], reviewsSlot, rating 
               <p className="mb-6 text-sm text-forest-700">This size is sold out. Pick one of the other sizes above, or message us on WhatsApp to ask when it&apos;s back.</p>
             )}
 
-            <PurchaseInfo isPlant={isPlant} />
+            <PurchaseInfo isPlant={isPlant} overseasDays={isOverseas(product) ? leadTimeDays(product) : null} />
 
             {addOns.length > 0 && <CompleteTheSetup addOns={addOns} />}
 
@@ -434,11 +436,20 @@ const CARE_TONES: Record<string, { card: string; chip: string; icon: string; lab
 }
 
 /** Delivery, payment and guarantee facts next to the buy button: the questions shoppers ask before ordering. */
-function PurchaseInfo({ isPlant }: { isPlant: boolean }) {
+function PurchaseInfo({ isPlant, overseasDays }: { isPlant: boolean; overseasDays: number | null }) {
   const wallets = Object.values(PAYMENT_ACCOUNTS).map((a) => a.title.replace(/ Bank Transfer$/, " bank transfer"))
   const payWith = wallets.length > 1 ? `${wallets.slice(0, -1).join(", ")} or ${wallets[wallets.length - 1]}` : wallets[0]
   return (
     <ul className="space-y-3 rounded-xl border border-forest-200 bg-surface p-4 text-sm text-forest-700" aria-label="Delivery, payment and guarantee">
+      {overseasDays !== null && (
+        <li className="flex gap-3">
+          <Plane className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" aria-hidden="true" />
+          <span>
+            <strong className="font-medium">Ships from overseas.</strong> We order it for you once your payment is confirmed, so it reaches you in about {overseasDays} days
+            (not 1-2 business days). If your order has other items too, everything ships together. You&apos;ll see the exact estimated date at checkout.
+          </span>
+        </li>
+      )}
       <li className="flex gap-3">
         <Truck className="mt-0.5 h-4 w-4 shrink-0 text-forest-600" aria-hidden="true" />
         <span>

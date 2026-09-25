@@ -5,6 +5,7 @@
 
 import { isNonPlantCategoryName } from "@/lib/product-categories"
 import { restoreFormula } from "@/lib/csv"
+import { parseFulfillmentCell, parseLeadTimeCell } from "@/lib/fulfillment"
 
 /** A CSV row keyed by canonical column name (see `canonicalColumn`). */
 export type ImportRecord = Record<string, string>
@@ -21,6 +22,8 @@ const SIMPLE_COLUMNS = [
   "box_height_cm", "box_width_cm", "box_breadth_cm", "weight_kg",
   "difficulty", "light_requirement", "water_requirement",
   "is_new_arrival", "is_pet_safe", "is_imported", "is_featured", "published",
+  // Optional: blank or missing = in stock. Only "Ships from overseas" changes anything. See lib/fulfillment.ts.
+  "fulfillment_type", "lead_time_days",
   "use_case_tags", "light", "water", "humidity", "temperature",
   "soil", "fertilizer", "toxicity", "pet_safe_note", "meta_title", "meta_description",
 ] as const
@@ -55,6 +58,8 @@ const ALIASES: Record<string, string> = {
   publish: "published", is_published: "published",
   tags: "use_case_tags", use_case: "use_case_tags",
   seo_title: "meta_title", seo_description: "meta_description",
+  fulfillment: "fulfillment_type", fulfilment: "fulfillment_type", fulfilment_type: "fulfillment_type", shipping: "fulfillment_type", ships_from: "fulfillment_type",
+  lead_time: "lead_time_days", overseas_days: "lead_time_days", delivery_days: "lead_time_days",
   short_desc: "short_description", full_description: "description",
 }
 
@@ -303,6 +308,15 @@ export function recordToFormData(
     if (truthy(record[k])) fd.set(k, "on")
   }
 
+  // Fulfilment is optional and never an error: a missing column, a blank or an unrecognised cell sets nothing, so
+  // the product is created in stock (the database default). Only a cell that says overseas changes anything.
+  const fulfillment = parseFulfillmentCell(record.fulfillment_type)
+  if (fulfillment) {
+    fd.set("fulfillment_type", fulfillment)
+    const leadDays = parseLeadTimeCell(record.lead_time_days)
+    if (fulfillment === "overseas" && leadDays) fd.set("lead_time_days", String(leadDays))
+  }
+
   if (isPlant) {
     // Semicolon or pipe is the documented delimiter, but a comma is the easy mistake to make (spreadsheet cells
     // often read like prose), so it's accepted too.
@@ -378,6 +392,8 @@ export function templateRows(): string[][] {
     short_description: "Classic unglazed terracotta pot.",
     description: "Breathable unglazed terracotta pot with a drainage hole, ideal for most houseplants.",
     low_stock_threshold: "10", weight_kg: "0.8", published: "no",
+    // Optional column: leave it blank (or delete it) for in-stock products. Only "Ships from overseas" changes anything.
+    fulfillment_type: "Ships from overseas", lead_time_days: "14",
     variant_1_name: "Standard", variant_1_price: "450", variant_1_stock: "60",
     variant_1_image_url: "https://images.muffinplants.com/products/example-pot.avif",
   }

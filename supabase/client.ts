@@ -32,6 +32,8 @@ export interface SupabaseProduct {
   is_pet_safe: boolean
   is_imported: boolean
   is_hard_leaf?: boolean
+  fulfillment_type?: 'in_stock' | 'overseas'
+  lead_time_days?: number | null
   is_featured: boolean
   sort_position?: number | null
   low_stock_threshold?: number | null
