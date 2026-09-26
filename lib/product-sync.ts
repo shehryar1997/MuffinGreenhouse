@@ -20,7 +20,8 @@ export type VariantInput = {
   sku: string
   price: number
   stock: number
-  photo: string
+  /** The variant's photos in display order; the first is its thumbnail. Empty = none. */
+  photos: string[]
   compareAt: number | null
   weightKg: number | null
   boxHeightCm: number | null
@@ -32,6 +33,23 @@ export type VariantInput = {
 const optional = (raw: string | undefined) => (raw === undefined || raw.trim() === "" ? null : Number(raw))
 // "Medium - 8\" pot" -> "MEDIUM-8-POT": readable SKUs for sizes typed without one.
 const skuPart = (name: string) => name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 16)
+
+// One variant's photos as submitted: a JSON array of URLs from the form, or a single plain URL (CSV import).
+export function parsePhotoList(raw: string | undefined): string[] {
+  const value = (raw ?? "").trim()
+  if (!value) return []
+  let list: unknown = [value]
+  if (value.startsWith("[")) {
+    try {
+      list = JSON.parse(value)
+    } catch {
+      list = []
+    }
+  }
+  if (!Array.isArray(list)) return []
+  const urls = list.filter((u): u is string => typeof u === "string").map((u) => u.trim()).filter(Boolean)
+  return [...new Set(urls)]
+}
 
 export function readVariantInputs(formData: FormData): VariantInput[] {
   const ids = formData.getAll("variant_id") as string[]
@@ -62,7 +80,7 @@ export function readVariantInputs(formData: FormData): VariantInput[] {
         sku,
         price: Number(prices[i] || 0),
         stock: Number(stocks[i] || 0),
-        photo: (photos[i] ?? "").trim(),
+        photos: parsePhotoList(photos[i]),
         compareAt: optional(compareAts[i]),
         weightKg: optional(weights[i]),
         boxHeightCm: optional(boxH[i]),
@@ -79,7 +97,7 @@ function stockStatusFor(stock: number, threshold: number): StockStatus {
   return stock <= threshold ? "low_stock" : "in_stock"
 }
 
-// Variants, and the one photo each has, are SYNCED against what's already stored: existing rows are updated in
+// Variants, and the photos each has, are SYNCED against what's already stored: existing rows are updated in
 // place, only genuinely new ones are inserted, only removed ones are deleted, instead of wiping and recreating every
 // row on each save. That keeps row ids stable (carts, orders and wishlists point at variant ids) and avoids
 // needless writes. Returns an error message, or null on success.
@@ -107,8 +125,8 @@ export async function syncVariantsAndPhotos(
 export type SyncedVariants = {
   /** The form's key for each variant row -> its database id (also for variants created by this save). */
   idByKey: Map<string, string>
-  /** Database id -> the photo that variant should have (empty string = none), in variant order. */
-  photoByVariantId: Map<string, { photo: string; name: string }>
+  /** Database id -> the photos that variant should have (empty = none), in variant order. */
+  photoByVariantId: Map<string, { photos: string[]; name: string }>
 }
 
 export async function syncVariants(productId: string, formData: FormData, fields: Record<string, unknown>): Promise<{ error: string } | SyncedVariants> {
@@ -126,7 +144,7 @@ export async function syncVariants(productId: string, formData: FormData, fields
   const rows = named.map((r, i) => ({
     id: r.id,
     key: r.key,
-    photo: r.photo,
+    photos: r.photos,
     values: {
       name: r.name,
       sku: r.sku,
@@ -155,8 +173,8 @@ export async function syncVariants(productId: string, formData: FormData, fields
 
   const keptIds = new Set<string>()
   const idByKey = new Map<string, string>()
-  const photoByVariantId = new Map<string, { photo: string; name: string }>()
-  for (const { id, key, photo, values } of rows) {
+  const photoByVariantId = new Map<string, { photos: string[]; name: string }>()
+  for (const { id, key, photos, values } of rows) {
     let variantId = id
     if (id && existingIds.has(id)) {
       keptIds.add(id)
@@ -168,7 +186,7 @@ export async function syncVariants(productId: string, formData: FormData, fields
       variantId = created.id as string
     }
     if (key) idByKey.set(key, variantId)
-    photoByVariantId.set(variantId, { photo, name: values.name })
+    photoByVariantId.set(variantId, { photos, name: values.name })
   }
 
   // Variants removed in the form. A variant that appears in past orders can't be deleted
@@ -191,16 +209,18 @@ export async function syncVariants(productId: string, formData: FormData, fields
   return { idByKey, photoByVariantId }
 }
 
-// Gives every variant exactly the photo the form submitted (none = no photo), and removes every photo that belongs
-// to no variant: there are no general photos. Replaced and removed photos are deleted from Cloudflare R2 too,
+// Gives every variant exactly the photos the form submitted, in that order (none = no photos), and removes every
+// photo that belongs to no variant: there are no general photos. Photos are matched by URL, so an unchanged photo keeps
+// its row and only new ones are inserted. Only a variant's first photo is is_primary (the SQL search and order
+// functions pick "primary first" to get a variant's thumbnail). Removed photos are deleted from Cloudflare R2 too,
 // unless another row still uses the same file.
-export async function syncPhotos(productId: string, wanted: Map<string, { photo: string; name: string }>): Promise<string | null> {
+export async function syncPhotos(productId: string, wanted: Map<string, { photos: string[]; name: string }>): Promise<string | null> {
   const { data, error: readError } = await supabaseAdmin
     .from("product_images")
-    .select("id, url, sort_order, variant_id")
+    .select("id, url, sort_order, variant_id, is_primary, alt_text")
     .eq("product_id", productId)
   if (readError) return `Could not read the existing photos: ${readError.message}`
-  const rows = (data ?? []) as { id: string; url: string; sort_order: number | null; variant_id: string | null }[]
+  const rows = (data ?? []) as { id: string; url: string; sort_order: number | null; variant_id: string | null; is_primary: boolean | null; alt_text: string | null }[]
 
   const removeIds: string[] = []
   const oldUrls: string[] = []
@@ -210,37 +230,45 @@ export async function syncPhotos(productId: string, wanted: Map<string, { photo:
     oldUrls.push(row.url)
   }
 
+  // sort_order runs across the whole product (variant by variant), so it is unique per photo.
   let order = 0
-  for (const [variantId, { photo, name }] of wanted) {
-    const sortOrder = order++
-    const own = rows.filter((r) => r.variant_id === variantId).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    if (!photo) {
-      own.forEach(drop)
-      continue
+  for (const [variantId, { photos, name }] of wanted) {
+    const own = rows.filter((r) => r.variant_id === variantId)
+    const wantedUrls = new Set(photos)
+    own.filter((r) => !wantedUrls.has(r.url)).forEach(drop)
+    // Two rows of one variant with the same file: keep the first, drop the rest.
+    const kept = new Map<string, (typeof rows)[number]>()
+    for (const r of own.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))) {
+      if (!wantedUrls.has(r.url)) continue
+      if (kept.has(r.url)) removeIds.push(r.id)
+      else kept.set(r.url, r)
     }
-    const [keep, ...extras] = own
-    extras.forEach(drop)
-    if (keep) {
-      if (keep.url !== photo) oldUrls.push(keep.url)
-      if (keep.url !== photo || keep.sort_order !== sortOrder) {
-        const { error } = await supabaseAdmin.from("product_images").update({ url: photo, sort_order: sortOrder, is_primary: true, alt_text: name }).eq("id", keep.id)
-        if (error) return `Saving photos failed: ${error.message}`
+
+    for (const [index, url] of photos.entries()) {
+      const sortOrder = order++
+      const isPrimary = index === 0
+      const keep = kept.get(url)
+      if (keep) {
+        if (keep.sort_order !== sortOrder || !!keep.is_primary !== isPrimary || keep.alt_text !== name) {
+          const { error } = await supabaseAdmin.from("product_images").update({ sort_order: sortOrder, is_primary: isPrimary, alt_text: name }).eq("id", keep.id)
+          if (error) return `Saving photos failed: ${error.message}`
+        }
+        continue
       }
-      continue
+      // A photo from before variants owned photos (no variant) that is the same file: give it to this variant.
+      const legacy = rows.find((r) => r.variant_id === null && r.url === url && !adopted.has(r.id))
+      const { error } = legacy
+        ? await supabaseAdmin.from("product_images").update({ variant_id: variantId, sort_order: sortOrder, is_primary: isPrimary, alt_text: name }).eq("id", legacy.id)
+        : await supabaseAdmin.from("product_images").insert({ product_id: productId, variant_id: variantId, url, alt_text: name, sort_order: sortOrder, is_primary: isPrimary })
+      if (error) return `Saving photos failed: ${error.message}`
+      if (legacy) adopted.add(legacy.id)
     }
-    // A photo from before variants owned photos (no variant) that is the same file: give it to this variant.
-    const legacy = rows.find((r) => r.variant_id === null && r.url === photo && !adopted.has(r.id))
-    const { error } = legacy
-      ? await supabaseAdmin.from("product_images").update({ variant_id: variantId, sort_order: sortOrder, is_primary: true, alt_text: name }).eq("id", legacy.id)
-      : await supabaseAdmin.from("product_images").insert({ product_id: productId, variant_id: variantId, url: photo, alt_text: name, sort_order: sortOrder, is_primary: true })
-    if (error) return `Saving photos failed: ${error.message}`
-    if (legacy) adopted.add(legacy.id)
   }
 
   // Photos with no variant: legacy general photos, or ones left behind by a deleted variant.
   rows.filter((r) => r.variant_id === null && !adopted.has(r.id)).forEach(drop)
 
-  // Removals last, so a failure part-way can never leave a variant without the photo it should have.
+  // Removals last, so a failure part-way can never leave a variant without the photos it should have.
   if (removeIds.length > 0) {
     const { error } = await supabaseAdmin.from("product_images").delete().in("id", removeIds)
     if (error) return `Removing old photos failed: ${error.message}`

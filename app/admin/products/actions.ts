@@ -212,7 +212,7 @@ function parseProductFields(
   }
 
   // next/image only loads from allow-listed hosts; an image on any other host would blank the product page.
-  for (const url of variantInputs.map((v) => v.photo)) {
+  for (const url of variantInputs.flatMap((v) => v.photos)) {
     if (url && !isAllowedImageUrl(url)) {
       return { error: "One of the photos isn't from an allowed image host. Remove it and upload the photo with the upload button instead." }
     }
@@ -221,7 +221,7 @@ function parseProductFields(
   // A product can only go live with at least one variant and a photo on every variant, so no page can show
   // another size's picture. Checked against the form's own rows: they are what will be saved.
   if (formData.get("published") === "on") {
-    const blocker = publishBlocker(variantInputs.map((v) => ({ name: v.name, hasPhoto: !!v.photo })))
+    const blocker = publishBlocker(variantInputs.map((v) => ({ name: v.name, hasPhoto: v.photos.length > 0 })))
     if (blocker) return { error: `Can't publish yet. ${blocker} Or untick Published to save it as a draft.` }
   }
 
@@ -939,4 +939,15 @@ export async function updateProductsFromRows(rows: ImportRowInput[], dryRun: boo
     revalidateStorefront()
   }
   return { results }
+}
+
+// Called when a photo is removed in the product form. If it was only uploaded in this form and never saved, its
+// file is deleted from R2 straight away instead of waiting for the daily sweep. A photo the database still uses
+// (a saved one removed but not yet saved, or one shared with another product) is kept: the reference check inside
+// deleteUnreferencedProductImages decides, so this can never delete a photo something still shows.
+export async function discardUnsavedPhoto(url: string): Promise<void> {
+  await requireAdmin()
+  const photoUrl = (url ?? "").trim()
+  if (!photoUrl || !isAllowedImageUrl(photoUrl)) return
+  await deleteUnreferencedProductImages([photoUrl])
 }

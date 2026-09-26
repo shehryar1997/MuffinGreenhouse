@@ -11,7 +11,7 @@ import Link from "next/link"
 import { useCart } from "@/components/providers/cart-provider"
 import { useWishlist } from "@/components/providers/wishlist-provider"
 import { toast } from "sonner"
-import type { Product, ProductVariant } from "@/types"
+import type { Product, ProductImage, ProductVariant } from "@/types"
 import { generateProductBreadcrumb, generateProductSchema, serializeJsonLd } from "@/lib/structured-data"
 import { isPlantProduct } from "@/lib/product-categories"
 import { shipsBareRoot } from "@/lib/shipping"
@@ -122,9 +122,9 @@ export function ProductDetailClient({ product, addOns = [], reviewsSlot, rating 
   const isPlant = isPlantProduct(product)
   const bareRoot = isPlant && shipsBareRoot(product)
 
-  // Only the selected variant's own photos are shown (see pickGallery), never another size's.
-  // A legacy product with no variants falls back to its product photos.
-  const gallery = pickGallery(selectedVariant, shownImageId)
+  // The gallery holds every variant's photos; clicking one selects its variant, and picking a variant shows its
+  // first photo (see pickGallery). A legacy product with no variants falls back to its product photos.
+  const gallery = pickGallery(product.variants, selectedVariant, shownImageId)
   const galleryImages = product.variants.length > 0 ? gallery.galleryImages : product.images
   const mainImage = gallery.mainImage ?? (product.variants.length === 0 ? product.images[0] : undefined)
 
@@ -139,6 +139,13 @@ export function ProductDetailClient({ product, addOns = [], reviewsSlot, rating 
   // Derived (not synced via an effect): a quantity chosen for a higher-stock
   // variant can't carry over past a lower-stock one.
   const quantity = Math.min(Math.max(1, requestedQuantity), Math.max(1, currentStockCount))
+
+  // Clicking a photo selects the variant it belongs to and shows that photo.
+  const selectPhoto = (image: ProductImage) => {
+    const owner = product.variants.find((v) => v.id === image.variantId)
+    if (owner) setSelectedVariant(owner)
+    setShownImageId(image.id)
+  }
 
   const handleAddToCart = () => {
     if (isOutOfStock) return
@@ -194,7 +201,7 @@ export function ProductDetailClient({ product, addOns = [], reviewsSlot, rating 
             </div>
             <div className="flex gap-2 max-lg:overflow-x-auto max-lg:pb-1">
               {galleryImages.length > 1 && galleryImages.map((img, i) => (
-                <button key={img.id} type="button" onClick={() => setShownImageId(img.id)} aria-label={`Show photo ${i + 1} of ${galleryImages.length}`} aria-current={mainImage?.id === img.id} className={`w-20 h-20 max-lg:shrink-0 rounded-lg overflow-hidden border-2 ${mainImage?.id === img.id ? "border-clay-500" : "border-transparent"}`}>
+                <button key={img.id} type="button" onClick={() => selectPhoto(img)} aria-label={`Show photo ${i + 1} of ${galleryImages.length}${product.variants.length > 1 && img.alt ? `, ${img.alt}` : ""}`} aria-current={mainImage?.id === img.id} className={`w-20 h-20 max-lg:shrink-0 rounded-lg overflow-hidden border-2 ${mainImage?.id === img.id ? "border-clay-500" : "border-transparent"}`}>
                   <Image src={img.url} alt={img.alt} width={80} height={80} className="object-cover w-full h-full" />
                 </button>
               ))}

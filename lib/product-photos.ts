@@ -59,16 +59,19 @@ export function displayPrice(product: Pick<Product, "variants" | "price">): numb
 }
 
 /**
- * The product page gallery for the selected variant: only that variant's own photos, so switching size never
- * shows another size's plant. The main photo is the one the shopper chose if it belongs to this variant, else the
- * variant's first photo. A variant with no photo yields no main image (the page shows its placeholder).
+ * The product page gallery: every variant's photos, variant by variant, so each thumbnail can select the variant it
+ * belongs to. The main photo is the thumbnail the shopper clicked, else the selected variant's first photo (picking
+ * a variant shows its first photo). A variant with no photo yields no main image (the page shows its placeholder),
+ * never another variant's photo.
  */
 export function pickGallery(
+  variants: { images?: ProductImage[] }[],
   selectedVariant: { images?: ProductImage[] } | null,
   shownImageId: string | null
 ): { galleryImages: ProductImage[]; mainImage: ProductImage | undefined } {
-  const galleryImages = selectedVariant?.images ?? []
-  return { galleryImages, mainImage: galleryImages.find((image) => image.id === shownImageId) ?? galleryImages[0] }
+  const galleryImages = variants.flatMap((variant) => variant.images ?? [])
+  const shown = galleryImages.find((image) => image.id === shownImageId)
+  return { galleryImages, mainImage: shown ?? selectedVariant?.images?.[0] }
 }
 
 /**

@@ -10,7 +10,7 @@ import { publishBlocker } from "@/lib/product-photos"
 import { cn, slugify } from "@/lib/utils"
 import { RichEditor } from "../journal/rich-editor"
 import { Alert, CheckField, Field, FormActions, FormSection, buttonClass, inputClass, textareaClass } from "../_components/ui"
-import { findProductsByName, type PrefillProduct, type ProductActionResult } from "./actions"
+import { discardUnsavedPhoto, findProductsByName, type PrefillProduct, type ProductActionResult } from "./actions"
 
 // Weight is mandatory for Tools & Equipment, so its input is tinted to stand out.
 const highlightInputClass = cn(inputClass, "border-primary bg-clay-50")
@@ -56,7 +56,7 @@ type ExistingProduct = {
   sort_position?: number | null
   use_case_tags: string[]
   // Photos in order; each belongs to a variant (variant_id null = a legacy photo from before variants owned photos).
-  images?: { url: string; variant_id?: string | null }[]
+  images?: { url: string; variant_id?: string | null; sort_order?: number | null }[]
   variants?: VariantSource[]
   card_variant_id?: string | null
 }
@@ -78,11 +78,12 @@ type VariantSource = {
 // also how the "show on card" choice points at a variant that may not be saved yet; `id` is the database id of an
 // existing variant ("" for a new one), so saving updates that variant in place instead of recreating it. The name
 // is controlled so the publish check can name the variants that still need a photo; SKU, price and stock stay
-// uncontrolled. `photo_url` is the variant's own photo ("" for none): every variant needs one to be published.
-type PhotoState = { photo_url: string; uploading: boolean; error: string | null }
+// uncontrolled. `photos` are the variant's own photos in order (the first is its thumbnail): every variant needs at
+// least one to be published. `uploading` counts the uploads still running.
+type PhotoState = { photos: string[]; uploading: number; error: string | null }
 type VariantRow = PhotoState & VariantSource & { key: number; id: string; open: boolean }
 let variantRowSeq = 0
-const newVariantRow = (v?: VariantSource, photo_url = ""): VariantRow => ({
+const newVariantRow = (v?: VariantSource, photos: string[] = []): VariantRow => ({
   key: ++variantRowSeq,
   id: v?.id ?? "",
   name: v?.name ?? "",
@@ -96,8 +97,8 @@ const newVariantRow = (v?: VariantSource, photo_url = ""): VariantRow => ({
   box_breadth_cm: v?.box_breadth_cm ?? null,
   // Sizes that already have their own "was" price, weight or box open with those fields showing.
   open: !!(v?.compare_at_price || v?.weight_kg || v?.box_height_cm),
-  photo_url,
-  uploading: false,
+  photos,
+  uploading: 0,
   error: null,
 })
 
@@ -140,14 +141,16 @@ export function ProductForm({
   product?: ExistingProduct
   action: (formData: FormData) => Promise<ProductActionResult>
 }) {
-  // The first photo of each existing variant. A product can be saved as a draft with no variants, but needs at least
-  // one (with a photo) to be published.
+  // The photos of each existing variant, in order. A product can be saved as a draft with no variants, but needs at
+  // least one (with a photo) to be published.
   const [variants, setVariants] = useState<VariantRow[]>(() => {
-    const photoByVariant = new Map<string, string>()
-    for (const image of product?.images ?? []) {
-      if (image.variant_id && !photoByVariant.has(image.variant_id)) photoByVariant.set(image.variant_id, image.url)
+    const photosByVariant = new Map<string, string[]>()
+    const ordered = [...(product?.images ?? [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    for (const image of ordered) {
+      if (!image.variant_id) continue
+      photosByVariant.set(image.variant_id, [...(photosByVariant.get(image.variant_id) ?? []), image.url])
     }
-    return (product?.variants ?? []).map((v) => newVariantRow(v, (v.id && photoByVariant.get(v.id)) || ""))
+    return (product?.variants ?? []).map((v) => newVariantRow(v, (v.id && photosByVariant.get(v.id)) || []))
   })
   // Which variant's photo the shop card shows. null = automatic (the cheapest variant that has a photo).
   const [cardKey, setCardKey] = useState<number | null>(() => variants.find((v) => v.id && v.id === product?.card_variant_id)?.key ?? null)
@@ -266,12 +269,12 @@ export function ProductForm({
 
   // The card shows the ticked variant, or (nothing ticked) the cheapest one that has a photo.
   const cheapestWithPhotoKey = [...namedVariants]
-    .filter((v) => v.photo_url)
+    .filter((v) => v.photos.length > 0)
     .sort((a, b) => a.price - b.price)[0]?.key
   const effectiveCardKey = namedVariants.some((v) => v.key === cardKey) ? cardKey : (cheapestWithPhotoKey ?? namedVariants[0]?.key ?? null)
 
   // Why Published can't be ticked yet (the server enforces the same rule).
-  const publishProblem = publishBlocker(namedVariants.map((v) => ({ name: v.name, hasPhoto: !!v.photo_url })))
+  const publishProblem = publishBlocker(namedVariants.map((v) => ({ name: v.name, hasPhoto: v.photos.length > 0 })))
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -295,15 +298,22 @@ export function ProductForm({
     setVariants((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)))
   }
 
-  // Uploads one photo (downscaled, converted to AVIF, stored in R2) into a variant row. On failure the row keeps
-  // its previous photo and shows the error, so nothing is lost silently.
-  async function uploadPhoto(key: number, file: File) {
-    const patch = (p: Partial<PhotoState>) => updateVariant(key, p)
-    patch({ uploading: true, error: null })
-    try {
-      patch({ photo_url: await uploadAdminImage(file, "products"), uploading: false })
-    } catch (err) {
-      patch({ uploading: false, error: err instanceof Error ? err.message : "Upload failed." })
+  // Functional update, so several uploads finishing at once each add their photo instead of overwriting one another.
+  function changeVariant(key: number, change: (row: VariantRow) => Partial<VariantRow>) {
+    setVariants((rows) => rows.map((r) => (r.key === key ? { ...r, ...change(r) } : r)))
+  }
+
+  // Uploads photos (downscaled, converted to AVIF, stored in R2) and appends them to a variant's list, in the order
+  // they were picked. A failed upload shows the error and leaves the other photos alone, so nothing is lost silently.
+  async function uploadPhotos(key: number, files: File[]) {
+    changeVariant(key, (r) => ({ uploading: r.uploading + files.length, error: null }))
+    for (const file of files) {
+      try {
+        const url = await uploadAdminImage(file, "products")
+        changeVariant(key, (r) => ({ photos: [...r.photos, url], uploading: r.uploading - 1 }))
+      } catch (err) {
+        changeVariant(key, (r) => ({ uploading: r.uploading - 1, error: err instanceof Error ? err.message : "Upload failed." }))
+      }
     }
   }
 
@@ -616,7 +626,7 @@ export function ProductForm({
 
         <FormSection
           title="Variants and photos"
-          description="Every product needs at least one variant, and every variant needs its own photo, showing the exact plant or item you will ship (not a reference image). The variant ticked under Card is the photo shown on the shop grid, with the lowest variant price. Photos are converted to AVIF and stored in Cloudflare R2; replaced ones are deleted when you save."
+          description="Every product needs at least one variant, and every variant needs at least one photo of its own, showing the exact plant or item you will ship (not a reference image). Add as many as you like: the first is the variant’s thumbnail. On the product page, clicking a photo selects its variant and picking a variant shows its first photo. The variant ticked under Card is the one whose photos are shown on the shop grid, with the lowest variant price. Photos are converted to AVIF and stored in Cloudflare R2; replaced ones are deleted when you save."
         >
           {variants.length === 0 ? (
             <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
@@ -625,7 +635,6 @@ export function ProductForm({
           ) : (
             <div className="space-y-3">
               <div className={`hidden gap-2 px-0.5 text-xs font-medium text-muted-foreground sm:grid ${VARIANT_COLUMNS}`} aria-hidden>
-                <span>Photo</span>
                 <span>Card</span>
                 <span>Name</span>
                 <span>SKU</span>
@@ -638,15 +647,8 @@ export function ProductForm({
                   <input type="hidden" name="variant_id" value={v.id} />
                   {/* The key lets the card choice point at this variant even before it has a database id. */}
                   <input type="hidden" name="variant_key" value={v.key} />
-                  {/* Always submitted, even empty, so the photo list stays in step with the other variant fields. */}
-                  <input type="hidden" name="variant_photo" value={v.photo_url} />
-                  <VariantPhoto
-                    url={v.photo_url}
-                    uploading={v.uploading}
-                    error={v.error}
-                    onPick={(file) => void uploadPhoto(v.key, file)}
-                    onClear={() => updateVariant(v.key, { photo_url: "", error: null })}
-                  />
+                  {/* Always submitted, even empty ([]), so the photo lists stay in step with the other variant fields. */}
+                  <input type="hidden" name="variant_photo" value={JSON.stringify(v.photos)} />
                   <label className="flex items-center gap-2 text-[13px] sm:justify-center">
                     <input
                       type="radio"
@@ -681,6 +683,17 @@ export function ProductForm({
                       Remove
                     </button>
                   </div>
+                  <VariantPhotos
+                    photos={v.photos}
+                    uploading={v.uploading}
+                    error={v.error}
+                    onPick={(files) => void uploadPhotos(v.key, files)}
+                    onRemove={(url) => {
+                      changeVariant(v.key, (r) => ({ photos: r.photos.filter((p) => p !== url), error: null }))
+                      void discardUnsavedPhoto(url).catch(() => {}) // frees the file in R2 if it was never saved
+                    }}
+                    onMakeFirst={(url) => changeVariant(v.key, (r) => ({ photos: [url, ...r.photos.filter((p) => p !== url)] }))}
+                  />
                   {/* Per-size extras. Always in the form (hidden when collapsed) so every size submits the same fields. */}
                   <div className={cn("grid gap-2 rounded-md bg-muted/40 p-3 sm:col-span-full sm:grid-cols-5", !v.open && "hidden")}>
                     <Field label="Was price">
@@ -738,8 +751,8 @@ export function ProductForm({
   )
 }
 
-// Photo | card | name | SKU | price | stock | remove: shared by the header row and every variant row so the columns line up.
-const VARIANT_COLUMNS = "sm:grid-cols-[4rem_2.75rem_minmax(0,1.6fr)_minmax(0,1fr)_7rem_6rem_4.5rem]"
+// Card | name | SKU | price | stock | remove: shared by the header row and every variant row so the columns line up.
+const VARIANT_COLUMNS = "sm:grid-cols-[2.75rem_minmax(0,1.6fr)_minmax(0,1fr)_7rem_6rem_4.5rem]"
 
 // Tag checkboxes drawn as toggle chips. The real checkbox stays in the DOM (visually hidden) so the form and the
 // name-prefill code keep working exactly as before.
@@ -761,65 +774,81 @@ function TagGroup({ legend, name, tags, selected }: { legend: string; name: stri
   )
 }
 
-// The variant's own photo: a square that opens the file picker (camera or gallery on a phone). Picking a file
-// replaces the photo; Clear removes it. The file itself is never part of the form submit (no name attribute): the
+// The variant's own photos: a strip of squares in order, then an add tile that opens the file picker (camera or
+// gallery on a phone, several files at once). The first photo is the variant's thumbnail on the shop; "First"
+// moves another photo to the front. The files themselves are never part of the form submit (no name attribute): each
 // upload returns a URL, which the caller keeps in a hidden input.
-function VariantPhoto({
-  url,
+function VariantPhotos({
+  photos,
   uploading,
   error,
   onPick,
-  onClear,
+  onRemove,
+  onMakeFirst,
 }: {
-  url: string
-  uploading: boolean
+  photos: string[]
+  uploading: number
   error: string | null
-  onPick: (file: File) => void
-  onClear: () => void
+  onPick: (files: File[]) => void
+  onRemove: (url: string) => void
+  onMakeFirst: (url: string) => void
 }) {
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null)
-  const showPreview = /^https?:\/\//i.test(url) && brokenUrl !== url
+  const [brokenUrls, setBrokenUrls] = useState<string[]>([])
 
   return (
-    <div className="flex items-center gap-2 sm:flex-col sm:items-start sm:gap-1">
-      <label
-        className={cn(
-          "relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-input bg-muted text-muted-foreground transition-colors hover:border-primary focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-          uploading ? "cursor-wait" : "cursor-pointer",
-          url && "border-solid"
-        )}
-      >
-        {showPreview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="Variant photo" onError={() => setBrokenUrl(url)} className="h-full w-full object-cover" />
-        ) : (
-          <Camera className="h-5 w-5" aria-hidden />
-        )}
-        {uploading && (
-          <span className="absolute inset-0 flex items-center justify-center bg-surface/70">
-            <Loader2 className="h-4 w-4 animate-spin text-foreground/70" aria-label="Uploading" />
-          </span>
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          disabled={uploading}
-          aria-label={url ? "Replace photo" : "Add photo"}
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            e.target.value = "" // allow re-selecting the same file
-            if (file) onPick(file)
-          }}
-          className="sr-only"
-        />
-      </label>
-      {url && !uploading && (
-        <button type="button" onClick={onClear} className="text-xs text-red-700 underline underline-offset-2 hover:text-red-800">
-          Clear
-        </button>
-      )}
+    <div className="sm:col-span-full">
+      <div className="flex flex-wrap items-start gap-2">
+        {photos.map((url, i) => (
+          <div key={url} className="flex w-16 flex-col items-stretch gap-0.5">
+            <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-md border border-input bg-muted">
+              {/^https?:\/\//i.test(url) && !brokenUrls.includes(url) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt={`Photo ${i + 1}`} onError={() => setBrokenUrls((b) => [...b, url])} className="h-full w-full object-cover" />
+              ) : (
+                <Camera className="h-5 w-5 text-muted-foreground" aria-hidden />
+              )}
+              {i === 0 && (
+                <span className="absolute inset-x-0 bottom-0 bg-forest-800/85 px-1 text-center text-[10px] font-medium leading-4 text-white">Thumbnail</span>
+              )}
+            </div>
+            <div className="flex justify-between gap-1 text-[11px] leading-4">
+              {i > 0 ? (
+                <button type="button" onClick={() => onMakeFirst(url)} title="Use as the thumbnail" className="text-forest-700 underline underline-offset-2 hover:text-forest-900">
+                  First
+                </button>
+              ) : (
+                <span />
+              )}
+              <button type="button" onClick={() => onRemove(url)} aria-label={`Remove photo ${i + 1}`} className="text-red-700 underline underline-offset-2 hover:text-red-800">
+                Remove
+              </button>
+            </div>
+          </div>
+        ))}
+        <label
+          className={cn(
+            "relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed border-input bg-muted text-muted-foreground transition-colors hover:border-primary focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+            uploading > 0 ? "cursor-wait" : "cursor-pointer"
+          )}
+        >
+          {uploading > 0 ? <Loader2 className="h-4 w-4 animate-spin text-foreground/70" aria-label="Uploading" /> : <Plus className="h-5 w-5" aria-hidden />}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            aria-label={photos.length > 0 ? "Add more photos" : "Add photos"}
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? [])
+              e.target.value = "" // allow re-selecting the same file
+              if (files.length > 0) onPick(files)
+            }}
+            className="sr-only"
+          />
+        </label>
+      </div>
+      {photos.length === 0 && uploading === 0 && <p className="mt-1 text-xs text-muted-foreground">Add one or more photos. The first is the thumbnail.</p>}
       {error && (
-        <p role="alert" className="text-xs text-red-700">
+        <p role="alert" className="mt-1 text-xs text-red-700">
           {error}
         </p>
       )}
