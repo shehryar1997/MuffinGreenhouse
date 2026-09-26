@@ -224,6 +224,13 @@ export function ProductDetailClient({ product, addOns = [], reviewsSlot, rating 
               {isOutOfStock ? <Badge variant="outOfStock">{allSoldOut ? "Out of Stock" : "This size is sold out"}</Badge> : stockStatus === "low_stock" ? <Badge variant="lowStock">Only {currentStockCount} left</Badge> : <Badge variant="success">In stock</Badge>}
             </div>
 
+            {product.category.slug === "other-equipment" && (
+              <ul className="mb-6 flex flex-wrap gap-2" aria-label="Order protection">
+                <li><Badge variant="outline">Rs 200 credit in case of delays</Badge></li>
+                <li><Badge variant="outline">Return if item damaged</Badge></li>
+              </ul>
+            )}
+
             {product.variants.length > 1 && (
               <fieldset className="mb-6">
                 <legend className="font-medium text-forest-900 mb-2">Size</legend>

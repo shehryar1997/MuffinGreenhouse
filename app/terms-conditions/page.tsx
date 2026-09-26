@@ -38,11 +38,20 @@ export default function TermsConditionsPage() {
               Plants are living things. The variety and quality you receive will be the same as shown on the product
               page, but the exact plant can differ a little from the photo in leaf pattern, size, shape and colour.
             </p>
-            <h2 className="font-serif text-xl text-forest-950">6. Reviews</h2>
+            <h2 className="font-serif text-xl text-forest-950">6. Other Equipment: Delays &amp; Damage</h2>
+            <p>
+              For products in the Other Equipment category: if your order arrives later than the delivery date we
+              committed to, you receive Rs 200 store credit for the delay.
+            </p>
+            <p>
+              If the item you receive is damaged, you can return it. We will ship a replacement free of cost (we cover
+              the shipping charges), or, if you prefer, give you store credit instead. The choice is yours.
+            </p>
+            <h2 className="font-serif text-xl text-forest-950">7. Reviews</h2>
             <p>No fake reviews. All reviews are authentic customer feedback.</p>
-            <h2 className="font-serif text-xl text-forest-950">7. Law</h2>
+            <h2 className="font-serif text-xl text-forest-950">8. Law</h2>
             <p>Governed by Pakistani law. Karachi jurisdiction.</p>
-            <h2 className="font-serif text-xl text-forest-950">8. Contact</h2>
+            <h2 className="font-serif text-xl text-forest-950">9. Contact</h2>
             <p>WhatsApp: +92 309 5360009 | E-mail: support@muffinplants.com | Instagram: @muffinsgreenhouse</p>
           </div>
         </div>
